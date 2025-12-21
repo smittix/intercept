@@ -5959,27 +5959,53 @@ def reset_bt_adapter():
     # Reset the adapter
     try:
         import time
+        import os
 
         # Kill any processes that might be using the adapter
         subprocess.run(['pkill', '-f', 'hcitool'], capture_output=True, timeout=2)
         subprocess.run(['pkill', '-f', 'bluetoothctl'], capture_output=True, timeout=2)
         time.sleep(0.5)
 
+        # Check if running as root
+        is_root = os.geteuid() == 0
+
+        # Try rfkill unblock first
+        subprocess.run(['rfkill', 'unblock', 'bluetooth'], capture_output=True, timeout=5)
+
         # Reset the adapter with a delay between down and up
-        subprocess.run(['hciconfig', interface, 'down'], capture_output=True, timeout=5)
-        time.sleep(1)
-        subprocess.run(['hciconfig', interface, 'up'], capture_output=True, timeout=5)
+        if is_root:
+            down_result = subprocess.run(['hciconfig', interface, 'down'], capture_output=True, text=True, timeout=5)
+            time.sleep(1)
+            up_result = subprocess.run(['hciconfig', interface, 'up'], capture_output=True, text=True, timeout=5)
+        else:
+            # Try with sudo
+            down_result = subprocess.run(['sudo', '-n', 'hciconfig', interface, 'down'], capture_output=True, text=True, timeout=5)
+            time.sleep(1)
+            up_result = subprocess.run(['sudo', '-n', 'hciconfig', interface, 'up'], capture_output=True, text=True, timeout=5)
+
         time.sleep(0.5)
 
         # Check if adapter is up
         result = subprocess.run(['hciconfig', interface], capture_output=True, text=True, timeout=5)
         is_up = 'UP RUNNING' in result.stdout
 
-        bt_queue.put({'type': 'info', 'text': f'Bluetooth adapter {interface} reset'})
+        # If still not up, try bluetoothctl
+        if not is_up:
+            subprocess.run(['bluetoothctl', 'power', 'off'], capture_output=True, timeout=5)
+            time.sleep(1)
+            subprocess.run(['bluetoothctl', 'power', 'on'], capture_output=True, timeout=5)
+            time.sleep(0.5)
+            result = subprocess.run(['hciconfig', interface], capture_output=True, text=True, timeout=5)
+            is_up = 'UP RUNNING' in result.stdout
+
+        if is_up:
+            bt_queue.put({'type': 'info', 'text': f'Bluetooth adapter {interface} reset successfully'})
+        else:
+            bt_queue.put({'type': 'error', 'text': f'Adapter {interface} may need manual reset. Try: sudo hciconfig {interface} up'})
 
         return jsonify({
-            'status': 'success',
-            'message': f'Adapter {interface} reset',
+            'status': 'success' if is_up else 'warning',
+            'message': f'Adapter {interface} reset' if is_up else f'Reset attempted but adapter still down. Run: sudo hciconfig {interface} up',
             'is_up': is_up
         })
 
