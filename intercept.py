@@ -5885,13 +5885,21 @@ def start_bt_scan():
 
                 error_msg = stderr_output or stdout_output or f'Process exited with code {exit_code}'
 
-                # Common error explanations
+                # Common error explanations and auto-recovery
                 if 'No such device' in error_msg or 'hci0' in error_msg.lower():
                     error_msg = f'Bluetooth interface "{interface}" not found or not available.'
                 elif 'Operation not permitted' in error_msg or 'Permission denied' in error_msg:
                     error_msg = 'Permission denied. Try running with sudo or add user to bluetooth group.'
                 elif 'busy' in error_msg.lower():
                     error_msg = f'Bluetooth interface "{interface}" is busy. Stop other Bluetooth operations first.'
+                elif 'set scan parameters failed' in error_msg.lower() or 'input/output error' in error_msg.lower():
+                    # Try to auto-reset the adapter
+                    try:
+                        subprocess.run(['hciconfig', interface, 'down'], capture_output=True, timeout=5)
+                        subprocess.run(['hciconfig', interface, 'up'], capture_output=True, timeout=5)
+                        error_msg = f'Adapter error - attempted auto-reset. Click "Reset Adapter" and try again.'
+                    except:
+                        error_msg = 'Bluetooth adapter I/O error. Click "Reset Adapter" to reset the adapter and try again.'
 
                 return jsonify({'status': 'error', 'message': error_msg})
 
@@ -5950,8 +5958,18 @@ def reset_bt_adapter():
 
     # Reset the adapter
     try:
+        import time
+
+        # Kill any processes that might be using the adapter
+        subprocess.run(['pkill', '-f', 'hcitool'], capture_output=True, timeout=2)
+        subprocess.run(['pkill', '-f', 'bluetoothctl'], capture_output=True, timeout=2)
+        time.sleep(0.5)
+
+        # Reset the adapter with a delay between down and up
         subprocess.run(['hciconfig', interface, 'down'], capture_output=True, timeout=5)
+        time.sleep(1)
         subprocess.run(['hciconfig', interface, 'up'], capture_output=True, timeout=5)
+        time.sleep(0.5)
 
         # Check if adapter is up
         result = subprocess.run(['hciconfig', interface], capture_output=True, text=True, timeout=5)
