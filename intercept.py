@@ -65,6 +65,39 @@ AIRTAG_PREFIXES = ['4C:00']  # Apple continuity
 TILE_PREFIXES = ['C4:E7', 'DC:54', 'E4:B0', 'F8:8A']
 SAMSUNG_TRACKER = ['58:4D', 'A0:75']
 
+# Drone detection patterns
+DRONE_SSID_PATTERNS = [
+    # DJI
+    'DJI-', 'DJI_', 'Mavic', 'Phantom', 'Spark-', 'Mini-', 'Air-', 'Inspire',
+    'Matrice', 'Avata', 'FPV-', 'Osmo', 'RoboMaster', 'Tello',
+    # Parrot
+    'Parrot', 'Bebop', 'Anafi', 'Disco-', 'Mambo', 'Swing',
+    # Autel
+    'Autel', 'EVO-', 'Dragonfish', 'Lite+', 'Nano',
+    # Skydio
+    'Skydio',
+    # Other brands
+    'Holy Stone', 'Potensic', 'SYMA', 'Hubsan', 'Eachine', 'FIMI',
+    'Xiaomi_FIMI', 'Yuneec', 'Typhoon', 'PowerVision', 'PowerEgg',
+    # Generic drone patterns
+    'Drone', 'UAV-', 'Quadcopter', 'FPV_', 'RC-Drone'
+]
+
+# Drone OUI prefixes (MAC address prefixes for drone manufacturers)
+DRONE_OUI_PREFIXES = {
+    # DJI
+    '60:60:1F': 'DJI', '48:1C:B9': 'DJI', '34:D2:62': 'DJI', 'E0:DB:55': 'DJI',
+    'C8:6C:87': 'DJI', 'A0:14:3D': 'DJI', '70:D7:11': 'DJI', '98:3A:56': 'DJI',
+    # Parrot
+    '90:03:B7': 'Parrot', 'A0:14:3D': 'Parrot', '00:12:1C': 'Parrot', '00:26:7E': 'Parrot',
+    # Autel
+    '8C:F5:A3': 'Autel', 'D8:E0:E1': 'Autel',
+    # Yuneec
+    '60:60:1F': 'Yuneec',
+    # Skydio
+    'F8:0F:6F': 'Skydio',
+}
+
 # OUI Database for manufacturer lookup (expanded)
 OUI_DATABASE = {
     # Apple (extensive list)
@@ -1658,6 +1691,12 @@ HTML_TEMPLATE = '''
                                 Disable Monitor
                             </button>
                         </div>
+                        <div class="checkbox-group" style="margin-top: 8px;">
+                            <label style="font-size: 10px;">
+                                <input type="checkbox" id="killProcesses">
+                                Kill interfering processes (may drop other connections)
+                            </label>
+                        </div>
                         <div id="monitorStatus" class="info-text" style="margin-top: 8px;">
                             Monitor mode: <span style="color: var(--accent-red);">Inactive</span>
                         </div>
@@ -1713,6 +1752,37 @@ HTML_TEMPLATE = '''
                         <button class="preset-btn" onclick="sendDeauth()" style="width: 100%; border-color: var(--accent-red); color: var(--accent-red);">
                             Send Deauth
                         </button>
+                    </div>
+
+                    <!-- Handshake Capture Status Panel -->
+                    <div class="section" id="captureStatusPanel" style="display: none; border: 1px solid var(--accent-orange); border-radius: 4px; padding: 10px; background: rgba(255, 165, 0, 0.1);">
+                        <h3 style="color: var(--accent-orange); margin: 0 0 8px 0;">🎯 Handshake Capture</h3>
+                        <div style="font-size: 11px;">
+                            <div style="margin-bottom: 4px;">
+                                <span style="color: var(--text-dim);">Target:</span>
+                                <span id="captureTargetBssid" style="font-family: monospace;">--</span>
+                            </div>
+                            <div style="margin-bottom: 4px;">
+                                <span style="color: var(--text-dim);">Channel:</span>
+                                <span id="captureTargetChannel">--</span>
+                            </div>
+                            <div style="margin-bottom: 4px;">
+                                <span style="color: var(--text-dim);">File:</span>
+                                <span id="captureFilePath" style="font-size: 9px; word-break: break-all;">--</span>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <span style="color: var(--text-dim);">Status:</span>
+                                <span id="captureStatus" style="font-weight: bold;">--</span>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="preset-btn" onclick="checkCaptureStatus()" style="flex: 1; font-size: 10px; padding: 4px;">
+                                    Check Status
+                                </button>
+                                <button class="preset-btn" onclick="stopHandshakeCapture()" style="flex: 1; font-size: 10px; padding: 4px; border-color: var(--accent-red); color: var(--accent-red);">
+                                    Stop Capture
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <button class="run-btn" id="startWifiBtn" onclick="startWifiScan()">
@@ -1773,23 +1843,9 @@ HTML_TEMPLATE = '''
                             <label>Target MAC</label>
                             <input type="text" id="btTargetMac" placeholder="AA:BB:CC:DD:EE:FF">
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px;">
-                            <button class="preset-btn" onclick="btEnumServices()">Enum Services</button>
-                            <button class="preset-btn" onclick="btPing()">L2CAP Ping</button>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <h3>Attack Options</h3>
-                        <div class="info-text" style="color: var(--accent-red); margin-bottom: 10px;">
-                            ⚠ Authorized testing only
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                            <button class="preset-btn" onclick="btReplayAttack()" style="border-color: var(--accent-orange); color: var(--accent-orange);">Replay</button>
-                            <button class="preset-btn" onclick="btDosAttack()" style="border-color: var(--accent-red); color: var(--accent-red);">DoS Ping</button>
-                            <button class="preset-btn" onclick="btSpoofMac()" style="border-color: var(--accent-orange); color: var(--accent-orange);">Spoof MAC</button>
-                            <button class="preset-btn" onclick="btScanVulns()" style="border-color: var(--accent-red); color: var(--accent-red);">Vuln Scan</button>
-                        </div>
+                        <button class="preset-btn" onclick="btEnumServices()" style="width: 100%;">
+                            Enumerate Services
+                        </button>
                     </div>
 
                     <button class="run-btn" id="startBtBtn" onclick="startBtScan()">
@@ -1832,7 +1888,8 @@ HTML_TEMPLATE = '''
                             <div>APs: <span id="apCount">0</span></div>
                             <div>CLIENTS: <span id="clientCount">0</span></div>
                             <div>HANDSHAKES: <span id="handshakeCount" style="color: var(--accent-green);">0</span></div>
-                            <div style="color: var(--accent-red);">ROGUE: <span id="rogueApCount">0</span></div>
+                            <div style="color: var(--accent-orange);">DRONES: <span id="droneCount">0</span></div>
+                            <div style="color: var(--accent-red); cursor: pointer;" onclick="showRogueApDetails()" title="Click to see rogue AP details">ROGUE: <span id="rogueApCount">0</span></div>
                         </div>
                         <div class="stats" id="btStats" style="display: none;">
                             <div>DEVICES: <span id="btDeviceCount">0</span></div>
@@ -3133,12 +3190,115 @@ HTML_TEMPLATE = '''
         let clientCount = 0;
         let handshakeCount = 0;
         let rogueApCount = 0;
+        let droneCount = 0;
+        let detectedDrones = {};  // Track detected drones by BSSID
         let ssidToBssids = {};  // Track SSIDs to their BSSIDs for rogue AP detection
+        let rogueApDetails = {};  // Store details about rogue APs: {ssid: [{bssid, signal, channel, firstSeen}]}
+        let activeCapture = null;  // {bssid, channel, file, startTime, pollInterval}
         let watchMacs = JSON.parse(localStorage.getItem('watchMacs') || '[]');
         let alertedMacs = new Set();  // Prevent duplicate alerts per session
 
         // 5GHz channel mapping for the graph
         const channels5g = ['36', '40', '44', '48', '52', '56', '60', '64', '100', '149', '153', '157', '161', '165'];
+
+        // Drone SSID patterns for detection
+        const dronePatterns = [
+            /^DJI[-_]/i, /Mavic/i, /Phantom/i, /^Spark[-_]/i, /^Mini[-_]/i, /^Air[-_]/i,
+            /Inspire/i, /Matrice/i, /Avata/i, /^FPV[-_]/i, /Osmo/i, /RoboMaster/i, /Tello/i,
+            /Parrot/i, /Bebop/i, /Anafi/i, /^Disco[-_]/i, /Mambo/i, /Swing/i,
+            /Autel/i, /^EVO[-_]/i, /Dragonfish/i, /Skydio/i,
+            /Holy.?Stone/i, /Potensic/i, /SYMA/i, /Hubsan/i, /Eachine/i, /FIMI/i,
+            /Yuneec/i, /Typhoon/i, /PowerVision/i, /PowerEgg/i,
+            /Drone/i, /^UAV[-_]/i, /Quadcopter/i, /^RC[-_]Drone/i
+        ];
+
+        // Drone OUI prefixes
+        const droneOuiPrefixes = {
+            '60:60:1F': 'DJI', '48:1C:B9': 'DJI', '34:D2:62': 'DJI', 'E0:DB:55': 'DJI',
+            'C8:6C:87': 'DJI', 'A0:14:3D': 'DJI', '70:D7:11': 'DJI', '98:3A:56': 'DJI',
+            '90:03:B7': 'Parrot', '00:12:1C': 'Parrot', '00:26:7E': 'Parrot',
+            '8C:F5:A3': 'Autel', 'D8:E0:E1': 'Autel', 'F8:0F:6F': 'Skydio'
+        };
+
+        // Check if network is a drone
+        function isDrone(ssid, bssid) {
+            // Check SSID patterns
+            if (ssid) {
+                for (const pattern of dronePatterns) {
+                    if (pattern.test(ssid)) {
+                        return { isDrone: true, method: 'SSID', brand: ssid.split(/[-_\s]/)[0] };
+                    }
+                }
+            }
+            // Check OUI prefix
+            if (bssid) {
+                const prefix = bssid.substring(0, 8).toUpperCase();
+                if (droneOuiPrefixes[prefix]) {
+                    return { isDrone: true, method: 'OUI', brand: droneOuiPrefixes[prefix] };
+                }
+            }
+            return { isDrone: false };
+        }
+
+        // Handle drone detection
+        function handleDroneDetection(net, droneInfo) {
+            if (detectedDrones[net.bssid]) return; // Already detected
+
+            detectedDrones[net.bssid] = {
+                ssid: net.essid,
+                bssid: net.bssid,
+                brand: droneInfo.brand,
+                method: droneInfo.method,
+                signal: net.power,
+                channel: net.channel,
+                firstSeen: new Date().toISOString()
+            };
+
+            droneCount++;
+            document.getElementById('droneCount').textContent = droneCount;
+
+            // Calculate approximate distance from signal strength
+            const rssi = parseInt(net.power) || -70;
+            const distance = estimateDroneDistance(rssi);
+
+            // Triple alert for drones
+            playAlert();
+            setTimeout(playAlert, 200);
+            setTimeout(playAlert, 400);
+
+            // Show drone alert
+            showDroneAlert(net.essid, net.bssid, droneInfo.brand, distance, rssi);
+        }
+
+        // Estimate distance from RSSI (rough approximation)
+        function estimateDroneDistance(rssi) {
+            // Using free-space path loss model (very approximate)
+            // Reference: -30 dBm at 1 meter
+            const txPower = -30;
+            const n = 2.5; // Path loss exponent (2-4, higher for obstacles)
+            const distance = Math.pow(10, (txPower - rssi) / (10 * n));
+            return Math.round(distance);
+        }
+
+        // Show drone alert popup
+        function showDroneAlert(ssid, bssid, brand, distance, rssi) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'drone-alert';
+            alertDiv.innerHTML = `
+                <div style="font-weight: bold; color: var(--accent-orange); font-size: 16px;">🚁 DRONE DETECTED</div>
+                <div style="margin: 10px 0;">
+                    <div><strong>SSID:</strong> ${escapeHtml(ssid || 'Unknown')}</div>
+                    <div><strong>BSSID:</strong> ${bssid}</div>
+                    <div><strong>Brand:</strong> ${brand || 'Unknown'}</div>
+                    <div><strong>Signal:</strong> ${rssi} dBm</div>
+                    <div><strong>Est. Distance:</strong> ~${distance}m</div>
+                </div>
+                <button onclick="this.parentElement.remove()" style="padding: 6px 16px; cursor: pointer; background: var(--accent-orange); border: none; color: #000; border-radius: 4px;">Dismiss</button>
+            `;
+            alertDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a2e; border: 2px solid var(--accent-orange); padding: 20px; border-radius: 8px; z-index: 10000; text-align: center; box-shadow: 0 0 30px rgba(255,165,0,0.5); min-width: 280px;';
+            document.body.appendChild(alertDiv);
+            setTimeout(() => { if (alertDiv.parentElement) alertDiv.remove(); }, 15000);
+        }
 
         // Initialize watch list display
         function initWatchList() {
@@ -3216,11 +3376,27 @@ HTML_TEMPLATE = '''
         }
 
         // Check for rogue APs (same SSID, different BSSID)
-        function checkRogueAP(ssid, bssid) {
+        function checkRogueAP(ssid, bssid, channel, signal) {
             if (!ssid || ssid === 'Hidden' || ssid === '[Hidden]') return false;
 
             if (!ssidToBssids[ssid]) {
                 ssidToBssids[ssid] = new Set();
+            }
+
+            // Store details for this BSSID
+            if (!rogueApDetails[ssid]) {
+                rogueApDetails[ssid] = [];
+            }
+
+            // Check if we already have this BSSID stored
+            const existingEntry = rogueApDetails[ssid].find(e => e.bssid === bssid);
+            if (!existingEntry) {
+                rogueApDetails[ssid].push({
+                    bssid: bssid,
+                    channel: channel || '?',
+                    signal: signal || '?',
+                    firstSeen: new Date().toLocaleTimeString()
+                });
             }
 
             const isNewBssid = !ssidToBssids[ssid].has(bssid);
@@ -3231,10 +3407,86 @@ HTML_TEMPLATE = '''
                 rogueApCount++;
                 document.getElementById('rogueApCount').textContent = rogueApCount;
                 playAlert();
-                showInfo(`⚠ Potential Rogue AP: "${ssid}" seen on multiple BSSIDs (${ssidToBssids[ssid].size} total)`);
+
+                // Get the BSSIDs to show in alert
+                const bssidList = rogueApDetails[ssid].map(e => e.bssid).join(', ');
+                showInfo(`⚠ Rogue AP: "${ssid}" has ${ssidToBssids[ssid].size} BSSIDs: ${bssidList}`);
                 return true;
             }
             return false;
+        }
+
+        // Show rogue AP details popup
+        function showRogueApDetails() {
+            const rogueSSIDs = Object.keys(rogueApDetails).filter(ssid =>
+                rogueApDetails[ssid].length > 1
+            );
+
+            if (rogueSSIDs.length === 0) {
+                showInfo('No rogue APs detected. Rogue AP = same SSID on multiple BSSIDs.');
+                return;
+            }
+
+            // Remove existing popup if any
+            const existing = document.getElementById('rogueApPopup');
+            if (existing) existing.remove();
+
+            // Build details HTML
+            let html = '<div style="max-height: 300px; overflow-y: auto;">';
+            rogueSSIDs.forEach(ssid => {
+                const aps = rogueApDetails[ssid];
+                html += `<div style="margin-bottom: 12px;">
+                    <div style="color: var(--accent-red); font-weight: bold; margin-bottom: 4px;">
+                        📡 "${ssid}" (${aps.length} BSSIDs)
+                    </div>
+                    <table style="width: 100%; font-size: 10px; border-collapse: collapse;">
+                        <tr style="color: var(--text-dim);">
+                            <th style="text-align: left; padding: 2px 8px;">BSSID</th>
+                            <th style="text-align: left; padding: 2px 8px;">CH</th>
+                            <th style="text-align: left; padding: 2px 8px;">Signal</th>
+                            <th style="text-align: left; padding: 2px 8px;">First Seen</th>
+                        </tr>`;
+                aps.forEach((ap, idx) => {
+                    const bgColor = idx % 2 === 0 ? 'rgba(255,255,255,0.05)' : 'transparent';
+                    html += `<tr style="background: ${bgColor};">
+                        <td style="padding: 2px 8px; font-family: monospace;">${ap.bssid}</td>
+                        <td style="padding: 2px 8px;">${ap.channel}</td>
+                        <td style="padding: 2px 8px;">${ap.signal} dBm</td>
+                        <td style="padding: 2px 8px;">${ap.firstSeen}</td>
+                    </tr>`;
+                });
+                html += '</table></div>';
+            });
+            html += '</div>';
+            html += '<div style="margin-top: 8px; font-size: 9px; color: var(--text-dim);">⚠ Multiple BSSIDs for same SSID may indicate rogue AP or legitimate multi-AP setup</div>';
+
+            // Create popup
+            const popup = document.createElement('div');
+            popup.id = 'rogueApPopup';
+            popup.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: var(--bg-primary);
+                border: 1px solid var(--accent-red);
+                border-radius: 8px;
+                padding: 16px;
+                z-index: 10000;
+                min-width: 400px;
+                max-width: 600px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            `;
+            popup.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-weight: bold; color: var(--accent-red);">🚨 Rogue AP Details</span>
+                    <button onclick="this.parentElement.parentElement.remove()"
+                            style="background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px;">✕</button>
+                </div>
+                ${html}
+            `;
+
+            document.body.appendChild(popup);
         }
 
         // Update 5GHz channel graph
@@ -3301,6 +3553,8 @@ HTML_TEMPLATE = '''
                 return;
             }
 
+            const killProcesses = document.getElementById('killProcesses').checked;
+
             // Show loading state
             const btn = document.getElementById('monitorStartBtn');
             const originalText = btn.textContent;
@@ -3310,7 +3564,7 @@ HTML_TEMPLATE = '''
             fetch('/wifi/monitor', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({interface: iface, action: 'start'})
+                body: JSON.stringify({interface: iface, action: 'start', kill_processes: killProcesses})
             }).then(r => r.json())
               .then(data => {
                   btn.textContent = originalText;
@@ -3464,20 +3718,29 @@ HTML_TEMPLATE = '''
                 pulseSignal();
 
                 // Check for rogue AP (same SSID, different BSSID)
-                checkRogueAP(net.essid, net.bssid);
+                checkRogueAP(net.essid, net.bssid, net.channel, net.power);
 
                 // Check proximity watch list
                 checkWatchList(net.bssid, 'AP');
+
+                // Check for drone
+                const droneCheck = isDrone(net.essid, net.bssid);
+                if (droneCheck.isDrone) {
+                    handleDroneDetection(net, droneCheck);
+                }
             }
 
             // Update recon display
+            const droneInfo = isDrone(net.essid, net.bssid);
             trackDevice({
-                protocol: 'WiFi-AP',
+                protocol: droneInfo.isDrone ? 'DRONE' : 'WiFi-AP',
                 address: net.bssid,
                 message: net.essid || '[Hidden SSID]',
                 model: net.essid,
                 channel: net.channel,
-                privacy: net.privacy
+                privacy: net.privacy,
+                isDrone: droneInfo.isDrone,
+                droneBrand: droneInfo.brand
             });
 
             // Add to output
@@ -3586,16 +3849,105 @@ HTML_TEMPLATE = '''
             }).then(r => r.json())
               .then(data => {
                   if (data.status === 'started') {
-                      showInfo('🎯 Capturing handshakes for ' + bssid + '. File: ' + data.capture_file);
+                      showInfo('🎯 Capturing handshakes for ' + bssid);
                       setWifiRunning(true);
+
                       // Update handshake indicator to show active capture
                       const hsSpan = document.getElementById('handshakeCount');
                       hsSpan.style.animation = 'pulse 1s infinite';
                       hsSpan.title = 'Capturing: ' + bssid;
+
+                      // Show capture status panel
+                      const panel = document.getElementById('captureStatusPanel');
+                      panel.style.display = 'block';
+                      document.getElementById('captureTargetBssid').textContent = bssid;
+                      document.getElementById('captureTargetChannel').textContent = channel;
+                      document.getElementById('captureFilePath').textContent = data.capture_file;
+                      document.getElementById('captureStatus').textContent = 'Waiting for handshake...';
+                      document.getElementById('captureStatus').style.color = 'var(--accent-orange)';
+
+                      // Store active capture info and start polling
+                      activeCapture = {
+                          bssid: bssid,
+                          channel: channel,
+                          file: data.capture_file,
+                          startTime: Date.now(),
+                          pollInterval: setInterval(checkCaptureStatus, 5000)  // Check every 5 seconds
+                      };
                   } else {
                       alert('Error: ' + data.message);
                   }
               });
+        }
+
+        // Check handshake capture status
+        function checkCaptureStatus() {
+            if (!activeCapture) {
+                showInfo('No active handshake capture');
+                return;
+            }
+
+            fetch('/wifi/handshake/status', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({file: activeCapture.file, bssid: activeCapture.bssid})
+            }).then(r => r.json())
+              .then(data => {
+                  const statusSpan = document.getElementById('captureStatus');
+                  const elapsed = Math.round((Date.now() - activeCapture.startTime) / 1000);
+                  const elapsedStr = elapsed < 60 ? elapsed + 's' : Math.floor(elapsed/60) + 'm ' + (elapsed%60) + 's';
+
+                  if (data.handshake_found) {
+                      // Handshake captured!
+                      statusSpan.textContent = '✓ HANDSHAKE CAPTURED!';
+                      statusSpan.style.color = 'var(--accent-green)';
+                      handshakeCount++;
+                      document.getElementById('handshakeCount').textContent = handshakeCount;
+                      playAlert();
+                      showInfo('🎉 Handshake captured for ' + activeCapture.bssid + '! File: ' + data.file);
+
+                      // Stop polling
+                      if (activeCapture.pollInterval) {
+                          clearInterval(activeCapture.pollInterval);
+                      }
+                      document.getElementById('handshakeCount').style.animation = '';
+                  } else if (data.file_exists) {
+                      const sizeKB = (data.file_size / 1024).toFixed(1);
+                      statusSpan.textContent = 'Capturing... (' + sizeKB + ' KB, ' + elapsedStr + ')';
+                      statusSpan.style.color = 'var(--accent-orange)';
+                  } else if (data.status === 'stopped') {
+                      statusSpan.textContent = 'Capture stopped';
+                      statusSpan.style.color = 'var(--text-dim)';
+                      if (activeCapture.pollInterval) {
+                          clearInterval(activeCapture.pollInterval);
+                      }
+                  } else {
+                      statusSpan.textContent = 'Waiting for data... (' + elapsedStr + ')';
+                      statusSpan.style.color = 'var(--accent-orange)';
+                  }
+              })
+              .catch(err => {
+                  console.error('Capture status check failed:', err);
+              });
+        }
+
+        // Stop handshake capture
+        function stopHandshakeCapture() {
+            if (activeCapture && activeCapture.pollInterval) {
+                clearInterval(activeCapture.pollInterval);
+            }
+
+            // Stop the WiFi scan (which stops airodump-ng)
+            stopWifiScan();
+
+            document.getElementById('captureStatus').textContent = 'Stopped';
+            document.getElementById('captureStatus').style.color = 'var(--text-dim)';
+            document.getElementById('handshakeCount').style.animation = '';
+
+            // Keep the panel visible so user can see the file path
+            showInfo('Handshake capture stopped. Check ' + (activeCapture ? activeCapture.file : 'capture file'));
+
+            activeCapture = null;
         }
 
         // Send deauth
@@ -4217,49 +4569,6 @@ HTML_TEMPLATE = '''
                   }
               });
         }
-
-        // L2CAP Ping
-        function btPing() {
-            const mac = document.getElementById('btTargetMac').value;
-            if (!mac) { alert('Enter target MAC'); return; }
-
-            fetch('/bt/ping', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({mac: mac, count: 5})
-            }).then(r => r.json())
-              .then(data => {
-                  if (data.status === 'success') {
-                      showInfo('Ping ' + mac + ': ' + (data.reachable ? 'Reachable' : 'Unreachable'));
-                  } else {
-                      showInfo('Ping error: ' + data.message);
-                  }
-              });
-        }
-
-        // DoS attack
-        function btDosAttack() {
-            const mac = document.getElementById('btTargetMac').value;
-            if (!mac) { alert('Enter target MAC'); return; }
-
-            if (!confirm('Send DoS ping flood to ' + mac + '?\\n\\n⚠ Only test on devices you own!')) return;
-
-            showInfo('Starting DoS test on ' + mac + '...');
-
-            fetch('/bt/dos', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({mac: mac, count: 100, size: 600})
-            }).then(r => r.json())
-              .then(data => {
-                  showInfo('DoS test complete: ' + (data.message || 'Done'));
-              });
-        }
-
-        // Stub functions for other attacks
-        function btReplayAttack() { alert('Replay attack requires captured packets'); }
-        function btSpoofMac() { alert('MAC spoofing requires root privileges'); }
-        function btScanVulns() { alert('Vulnerability scanning not yet implemented'); }
 
         // Initialize Bluetooth radar
         function initBtRadar() {
@@ -5118,8 +5427,13 @@ def toggle_monitor_mode():
                 interfaces_before = get_wireless_interfaces()
                 print(f"[WiFi] Interfaces before monitor mode: {interfaces_before}", flush=True)
 
-                # Kill interfering processes
-                subprocess.run(['airmon-ng', 'check', 'kill'], capture_output=True, timeout=10)
+                # Optionally kill interfering processes (can drop other connections)
+                kill_processes = data.get('kill_processes', False)
+                if kill_processes:
+                    print("[WiFi] Killing interfering processes...", flush=True)
+                    subprocess.run(['airmon-ng', 'check', 'kill'], capture_output=True, timeout=10)
+                else:
+                    print("[WiFi] Skipping process kill (other connections preserved)", flush=True)
 
                 # Start monitor mode
                 result = subprocess.run(['airmon-ng', 'start', interface],
@@ -5641,6 +5955,71 @@ def capture_handshake():
             return jsonify({'status': 'started', 'capture_file': capture_path + '-01.cap'})
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)})
+
+
+@app.route('/wifi/handshake/status', methods=['POST'])
+def check_handshake_status():
+    """Check if a handshake has been captured in the specified file."""
+    import os
+
+    data = request.json
+    capture_file = data.get('file', '')
+    target_bssid = data.get('bssid', '')
+
+    # Security: ensure the file path is in /tmp and looks like our capture files
+    if not capture_file.startswith('/tmp/intercept_handshake_') or '..' in capture_file:
+        return jsonify({'status': 'error', 'message': 'Invalid capture file path'})
+
+    # Check if file exists
+    if not os.path.exists(capture_file):
+        # Check if capture is still running
+        with wifi_lock:
+            if wifi_process and wifi_process.poll() is None:
+                return jsonify({
+                    'status': 'running',
+                    'file_exists': False,
+                    'handshake_found': False
+                })
+            else:
+                return jsonify({
+                    'status': 'stopped',
+                    'file_exists': False,
+                    'handshake_found': False
+                })
+
+    # File exists - get size
+    file_size = os.path.getsize(capture_file)
+
+    # Use aircrack-ng to check if handshake is present
+    # aircrack-ng -a 2 -b <BSSID> <capture_file> will show if EAPOL handshake exists
+    handshake_found = False
+    try:
+        if target_bssid and is_valid_mac(target_bssid):
+            result = subprocess.run(
+                ['aircrack-ng', '-a', '2', '-b', target_bssid, capture_file],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            # Check output for handshake indicators
+            # aircrack-ng shows "1 handshake" if found, or "0 handshake" if not
+            output = result.stdout + result.stderr
+            if '1 handshake' in output or 'handshake' in output.lower() and 'wpa' in output.lower():
+                # Also check it's not "0 handshake"
+                if '0 handshake' not in output:
+                    handshake_found = True
+    except subprocess.TimeoutExpired:
+        pass  # aircrack-ng timed out, assume no handshake yet
+    except Exception as e:
+        print(f"[WiFi] Error checking handshake: {e}", flush=True)
+
+    return jsonify({
+        'status': 'running' if wifi_process and wifi_process.poll() is None else 'stopped',
+        'file_exists': True,
+        'file_size': file_size,
+        'file': capture_file,
+        'handshake_found': handshake_found
+    })
 
 
 @app.route('/wifi/networks')
@@ -6329,100 +6708,6 @@ def enum_bt_services():
         return jsonify({'status': 'error', 'message': 'Connection timed out'})
     except FileNotFoundError:
         return jsonify({'status': 'error', 'message': 'sdptool not found'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
-
-
-@app.route('/bt/ping', methods=['POST'])
-def ping_bt_device():
-    """Ping a Bluetooth device using l2ping."""
-    data = request.json
-    target_mac = data.get('mac')
-    count = data.get('count', 5)
-
-    if not target_mac:
-        return jsonify({'status': 'error', 'message': 'Target MAC required'})
-
-    # Validate MAC address
-    if not is_valid_mac(target_mac):
-        return jsonify({'status': 'error', 'message': 'Invalid MAC address format'})
-
-    # Validate count
-    try:
-        count = int(count)
-        if count < 1 or count > 50:
-            count = 5
-    except (ValueError, TypeError):
-        count = 5
-
-    try:
-        result = subprocess.run(
-            ['l2ping', '-c', str(count), target_mac],
-            capture_output=True, text=True, timeout=30
-        )
-
-        return jsonify({
-            'status': 'success',
-            'output': result.stdout,
-            'reachable': result.returncode == 0
-        })
-
-    except subprocess.TimeoutExpired:
-        return jsonify({'status': 'error', 'message': 'Ping timed out'})
-    except FileNotFoundError:
-        return jsonify({'status': 'error', 'message': 'l2ping not found'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
-
-
-@app.route('/bt/dos', methods=['POST'])
-def dos_bt_device():
-    """Flood ping a Bluetooth device (DoS test)."""
-    data = request.json
-    target_mac = data.get('mac')
-    count = data.get('count', 100)
-    size = data.get('size', 600)
-
-    if not target_mac:
-        return jsonify({'status': 'error', 'message': 'Target MAC required'})
-
-    # Validate MAC address
-    if not is_valid_mac(target_mac):
-        return jsonify({'status': 'error', 'message': 'Invalid MAC address format'})
-
-    # Validate count and size to prevent abuse
-    try:
-        count = int(count)
-        if count < 1 or count > 1000:
-            count = 100
-    except (ValueError, TypeError):
-        count = 100
-
-    try:
-        size = int(size)
-        if size < 1 or size > 1500:
-            size = 600
-    except (ValueError, TypeError):
-        size = 600
-
-    try:
-        # l2ping flood with large packets
-        result = subprocess.run(
-            ['l2ping', '-c', str(count), '-s', str(size), '-f', target_mac],
-            capture_output=True, text=True, timeout=60
-        )
-
-        bt_queue.put({'type': 'info', 'text': f'DoS test complete on {target_mac}'})
-
-        return jsonify({
-            'status': 'success',
-            'output': result.stdout
-        })
-
-    except subprocess.TimeoutExpired:
-        return jsonify({'status': 'success', 'message': 'DoS test timed out (expected)'})
-    except FileNotFoundError:
-        return jsonify({'status': 'error', 'message': 'l2ping not found'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
