@@ -478,8 +478,12 @@ Created by **smittix** - [GitHub](https://github.com/smittix)
 - [rtl-sdr](https://osmocom.org/projects/rtl-sdr/wiki) - RTL-SDR drivers
 - [multimon-ng](https://github.com/EliasOenal/multimon-ng) - Multi-protocol pager decoder
 - [rtl_433](https://github.com/merbanan/rtl_433) - 433MHz sensor decoder
+- [dump1090](https://github.com/flightaware/dump1090) - ADS-B decoder for aircraft tracking
 - [aircrack-ng](https://www.aircrack-ng.org/) - WiFi security auditing tools
 - [BlueZ](http://www.bluez.org/) - Official Linux Bluetooth protocol stack
+- [Leaflet.js](https://leafletjs.com/) - Interactive maps for aircraft tracking
+- [OpenStreetMap](https://www.openstreetmap.org/) - Map tile data
+- [Celestrak](https://celestrak.org/) - Satellite TLE data
 - Inspired by the SpaceX mission control aesthetic
 
 ---
