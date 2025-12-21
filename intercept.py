@@ -2814,6 +2814,7 @@ HTML_TEMPLATE = '''
 
         // Track a device transmission
         function trackDevice(data) {
+            console.log('[INTEL] trackDevice called:', data.protocol, data.address, 'reconEnabled:', reconEnabled);
             const now = Date.now();
             const deviceId = generateDeviceId(data);
             const protocol = data.protocol || data.model || 'Unknown';
@@ -2878,6 +2879,7 @@ HTML_TEMPLATE = '''
 
         // Update reconnaissance display
         function updateReconDisplay(deviceId, profile, isNewDevice, anomalies) {
+            console.log('[INTEL] updateReconDisplay:', deviceId, 'protocol:', profile.protocol);
             const content = document.getElementById('reconContent');
 
             // Remove placeholder if present
@@ -3835,6 +3837,7 @@ HTML_TEMPLATE = '''
 
         // Handle discovered Bluetooth device
         function handleBtDevice(device) {
+            console.log('[BT] handleBtDevice:', device.mac, 'device_type:', device.device_type, 'manufacturer:', device.manufacturer);
             const isNew = !btDevices[device.mac];
             btDevices[device.mac] = device;
 
@@ -4125,10 +4128,11 @@ HTML_TEMPLATE = '''
             let phones = 0, audio = 0, wearables = 0, trackers = 0, other = 0;
 
             Object.values(btDevices).forEach(d => {
+                const devType = d.device_type || 'other';
                 if (d.tracker) trackers++;
-                else if (d.type === 'phone') phones++;
-                else if (d.type === 'audio') audio++;
-                else if (d.type === 'wearable') wearables++;
+                else if (devType === 'phone') phones++;
+                else if (devType === 'audio') audio++;
+                else if (devType === 'wearable') wearables++;
                 else other++;
             });
 
@@ -5693,11 +5697,13 @@ def stream_bt_scan(process, scan_mode):
                     is_new = mac not in bt_devices
                     bt_devices[mac] = device
 
-                    bt_queue.put({
-                        'type': 'device',
+                    queue_data = {
+                        **device,
+                        'type': 'device',  # Must come after **device to not be overwritten
+                        'device_type': device.get('type', 'other'),
                         'action': 'new' if is_new else 'update',
-                        **device
-                    })
+                    }
+                    bt_queue.put(queue_data)
 
         elif scan_mode == 'bluetoothctl':
             # bluetoothctl scan output - read from pty
