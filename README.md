@@ -68,19 +68,28 @@ Instead of running command-line tools manually, INTERCEPT handles the process ma
 
 ### ✈️ ADS-B Aircraft Tracking
 - **Real-time aircraft tracking** via dump1090 or rtl_adsb
-- **Interactive Leaflet map** with OpenStreetMap tiles
-- **Dark-themed map** matching application aesthetic
-- **Aircraft details** - callsign, altitude, speed, heading, squawk
-- **Click aircraft markers** for detailed popup information
-- **Auto-fit view** to show all tracked aircraft
-- **Emergency aircraft highlighting** in red
+- **Full-screen dashboard** - dedicated popout with virtual radar scope
+- **Interactive Leaflet map** with OpenStreetMap tiles (dark-themed)
+- **Aircraft trails** - optional flight path history visualization
+- **Range rings** - distance reference circles from observer position
+- **Aircraft filtering** - show all, military only, civil only, or emergency only
+- **Marker clustering** - group nearby aircraft at lower zoom levels
+- **Reception statistics** - max range, message rate, busiest hour, total seen
+- **Observer location** - manual input or GPS geolocation
+- **Audio alerts** - notifications for military and emergency aircraft
+- **Emergency squawk highlighting** - visual alerts for 7500/7600/7700
+- **Aircraft details popup** - callsign, altitude, speed, heading, squawk, ICAO
 
 ### 🛰️ Satellite Tracking
+- **Full-screen dashboard** - dedicated popout with polar plot and ground track
+- **Polar sky plot** - real-time satellite positions on azimuth/elevation display
+- **Ground track map** - satellite orbit path with past/future trajectory
 - **Pass prediction** for satellites using TLE data
 - **Add satellites** via manual TLE entry or Celestrak import
-- **Celestrak integration** - fetch satellites by category (Amateur, Weather, ISS, Starlink, etc.)
-- **Iridium burst detection** monitoring
-- **Next pass countdown** with elevation and duration
+- **Celestrak integration** - fetch by category (Amateur, Weather, ISS, Starlink, etc.)
+- **Next pass countdown** - time remaining, visibility duration, max elevation
+- **Telemetry panel** - real-time azimuth, elevation, range, velocity
+- **Iridium burst detection** monitoring (demo mode)
 - **Multiple satellite tracking** simultaneously
 
 ### 📶 WiFi Reconnaissance
@@ -121,10 +130,13 @@ Instead of running command-line tools manually, INTERCEPT handles the process ma
 - **Keyboard shortcut**: Press Escape to close
 
 ### 🎨 User Interface
+- **Mode-specific header stats** - real-time badges showing key metrics per mode
+- **UTC clock** - always visible in header for time-critical operations
+- **Active mode indicator** - shows current mode with pulse animation
 - **Collapsible sections** - click any header to collapse/expand
-- **Icon-based stats bar** with tooltips
+- **Panel styling** - gradient backgrounds with indicator dots
 - **Tabbed mode selector** with icons (grouped by SDR/RF and Wireless)
-- **Compact, modern design** with consistent styling
+- **Consistent design** - unified styling across main dashboard and popouts
 - **Dark/Light theme toggle** - click moon/sun icon in header, preference saved
 - **Keyboard shortcuts** - F1 or ? to open help
 
@@ -233,17 +245,22 @@ python3 intercept.py --help
 
 ### Aircraft Mode
 1. **Check Tools** - Ensure dump1090 or rtl_adsb is installed
-2. **Start Tracking** - Click "Start Tracking" to begin ADS-B reception
-3. **View Map** - Aircraft appear on the interactive Leaflet map
-4. **Click Aircraft** - Click markers for detailed information (altitude, speed, heading)
-5. **Toggle Labels** - Use checkboxes to show/hide callsigns and flight levels
+2. **Set Location** - Enter observer coordinates or click "Use GPS Location"
+3. **Start Tracking** - Click "Start Tracking" to begin ADS-B reception
+4. **View Map** - Aircraft appear on the interactive Leaflet map
+5. **Click Aircraft** - Click markers for detailed information
+6. **Display Options** - Toggle callsigns, altitude, trails, range rings, clustering
+7. **Filter Aircraft** - Use dropdown to show all, military, civil, or emergency only
+8. **Full Dashboard** - Click "Full Screen Dashboard" for dedicated radar view
 
 ### Satellite Mode
-1. **Add Satellites** - Click "Add Satellite" to enter TLE data manually, or use "Celestrak" to fetch by category
-2. **Select Category** - Choose from Amateur, Weather, ISS, Starlink, GPS, etc.
-3. **View Passes** - Next pass predictions shown with elevation and duration
-4. **Track Multiple** - Add multiple satellites to track simultaneously
-5. **Iridium Bursts** - Monitor for Iridium satellite burst transmissions
+1. **Set Location** - Enter observer coordinates or click "Use My Location"
+2. **Add Satellites** - Click "Add Satellite" to enter TLE data or fetch from Celestrak
+3. **Calculate Passes** - Click "Calculate Passes" to predict upcoming passes
+4. **View Sky Plot** - Polar plot shows satellite positions in real-time
+5. **Ground Track** - Map displays satellite orbit path and current position
+6. **Full Dashboard** - Click "Full Screen Dashboard" for dedicated satellite view
+7. **Iridium Mode** - Switch tabs to monitor for Iridium burst transmissions
 
 ### Frequency Presets
 
