@@ -255,7 +255,7 @@ def start_adsb():
             pass
         app_module.adsb_process = None
 
-    cmd = [dump1090_path, '--net', '--gain', gain, '--device-index', str(device), '--quiet']
+    cmd = [dump1090_path, '--net', '--gain', str(gain), '--device-index', str(device), '--quiet']
 
     try:
         app_module.adsb_process = subprocess.Popen(
