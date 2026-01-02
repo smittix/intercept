@@ -391,12 +391,18 @@ class GPSReader:
         """Background thread loop for reading GPS data."""
         buffer = ""
         sentence_count = 0
+        bytes_read = 0
+
+        logger.info(f"GPS read loop started on {self.device_path} at {self.baudrate} baud")
 
         while self._running and self._serial:
             try:
                 # Read available data
                 if self._serial.in_waiting:
                     data = self._serial.read(self._serial.in_waiting)
+                    bytes_read += len(data)
+                    if bytes_read <= 100 or bytes_read % 1000 == 0:
+                        logger.info(f"GPS: Read {len(data)} bytes (total: {bytes_read})")
                     buffer += data.decode('ascii', errors='ignore')
 
                     # Process complete lines
