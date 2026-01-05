@@ -15,6 +15,7 @@ from typing import Optional
 
 class SDRType(Enum):
     """Supported SDR hardware types."""
+
     RTL_SDR = "rtlsdr"
     LIME_SDR = "limesdr"
     HACKRF = "hackrf"
@@ -26,25 +27,27 @@ class SDRType(Enum):
 @dataclass
 class SDRCapabilities:
     """Hardware capabilities for an SDR device."""
+
     sdr_type: SDRType
-    freq_min_mhz: float          # Minimum frequency in MHz
-    freq_max_mhz: float          # Maximum frequency in MHz
-    gain_min: float              # Minimum gain in dB
-    gain_max: float              # Maximum gain in dB
+    freq_min_mhz: float  # Minimum frequency in MHz
+    freq_max_mhz: float  # Maximum frequency in MHz
+    gain_min: float  # Minimum gain in dB
+    gain_max: float  # Maximum gain in dB
     sample_rates: list[int] = field(default_factory=list)  # Supported sample rates
-    supports_bias_t: bool = False    # Bias-T support
-    supports_ppm: bool = True        # PPM correction support
-    tx_capable: bool = False         # Can transmit
+    supports_bias_t: bool = False  # Bias-T support
+    supports_ppm: bool = True  # PPM correction support
+    tx_capable: bool = False  # Can transmit
 
 
 @dataclass
 class SDRDevice:
     """Detected SDR device."""
+
     sdr_type: SDRType
     index: int
     name: str
     serial: str
-    driver: str                  # e.g., "rtlsdr", "lime", "hackrf"
+    driver: str  # e.g., "rtlsdr", "lime", "hackrf"
     capabilities: SDRCapabilities
     rtl_tcp_host: Optional[str] = None   # Remote rtl_tcp server host
     rtl_tcp_port: Optional[int] = None   # Remote rtl_tcp server port
@@ -92,7 +95,7 @@ class CommandBuilder(ABC):
         gain: Optional[float] = None,
         ppm: Optional[int] = None,
         modulation: str = "fm",
-        squelch: Optional[int] = None
+        squelch: Optional[int] = None,
     ) -> list[str]:
         """
         Build FM demodulation command (for pager decoding).
@@ -112,11 +115,7 @@ class CommandBuilder(ABC):
         pass
 
     @abstractmethod
-    def build_adsb_command(
-        self,
-        device: SDRDevice,
-        gain: Optional[float] = None
-    ) -> list[str]:
+    def build_adsb_command(self, device: SDRDevice, gain: Optional[float] = None) -> list[str]:
         """
         Build ADS-B decoder command.
 
@@ -131,11 +130,7 @@ class CommandBuilder(ABC):
 
     @abstractmethod
     def build_ism_command(
-        self,
-        device: SDRDevice,
-        frequency_mhz: float = 433.92,
-        gain: Optional[float] = None,
-        ppm: Optional[int] = None
+        self, device: SDRDevice, frequency_mhz: float = 433.92, gain: Optional[float] = None, ppm: Optional[int] = None
     ) -> list[str]:
         """
         Build ISM band decoder command (433MHz sensors).

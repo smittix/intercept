@@ -24,7 +24,7 @@ class RTLSDRCommandBuilder(CommandBuilder):
         sample_rates=[250000, 1024000, 1800000, 2048000, 2400000],
         supports_bias_t=True,
         supports_ppm=True,
-        tx_capable=False
+        tx_capable=False,
     )
 
     def _get_device_arg(self, device: SDRDevice) -> str:
@@ -45,7 +45,7 @@ class RTLSDRCommandBuilder(CommandBuilder):
         gain: Optional[float] = None,
         ppm: Optional[int] = None,
         modulation: str = "fm",
-        squelch: Optional[int] = None
+        squelch: Optional[int] = None,
     ) -> list[str]:
         """
         Build rtl_fm command for FM demodulation.
@@ -61,24 +61,20 @@ class RTLSDRCommandBuilder(CommandBuilder):
         ]
 
         if gain is not None and gain > 0:
-            cmd.extend(['-g', str(gain)])
+            cmd.extend(["-g", str(gain)])
 
         if ppm is not None and ppm != 0:
-            cmd.extend(['-p', str(ppm)])
+            cmd.extend(["-p", str(ppm)])
 
         if squelch is not None and squelch > 0:
-            cmd.extend(['-l', str(squelch)])
+            cmd.extend(["-l", str(squelch)])
 
         # Output to stdout for piping
-        cmd.append('-')
+        cmd.append("-")
 
         return cmd
 
-    def build_adsb_command(
-        self,
-        device: SDRDevice,
-        gain: Optional[float] = None
-    ) -> list[str]:
+    def build_adsb_command(self, device: SDRDevice, gain: Optional[float] = None) -> list[str]:
         """
         Build dump1090 command for ADS-B decoding.
 
@@ -102,16 +98,12 @@ class RTLSDRCommandBuilder(CommandBuilder):
         ]
 
         if gain is not None:
-            cmd.extend(['--gain', str(int(gain))])
+            cmd.extend(["--gain", str(int(gain))])
 
         return cmd
 
     def build_ism_command(
-        self,
-        device: SDRDevice,
-        frequency_mhz: float = 433.92,
-        gain: Optional[float] = None,
-        ppm: Optional[int] = None
+        self, device: SDRDevice, frequency_mhz: float = 433.92, gain: Optional[float] = None, ppm: Optional[int] = None
     ) -> list[str]:
         """
         Build rtl_433 command for ISM band sensor decoding.
@@ -126,10 +118,10 @@ class RTLSDRCommandBuilder(CommandBuilder):
         ]
 
         if gain is not None and gain > 0:
-            cmd.extend(['-g', str(int(gain))])
+            cmd.extend(["-g", str(int(gain))])
 
         if ppm is not None and ppm != 0:
-            cmd.extend(['-p', str(ppm)])
+            cmd.extend(["-p", str(ppm)])
 
         return cmd
 

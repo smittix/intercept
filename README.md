@@ -55,6 +55,12 @@ black . # For Python
 
 Open http://localhost:5050 in your browser.
 
+## Usage of Black Formatter
+```bash
+uv run black . # If you use UV
+black . # For Python
+```
+
 > **Note:** Requires Python 3.9+ and external tools. See [Hardware & Installation](docs/HARDWARE.md).
 
 ---

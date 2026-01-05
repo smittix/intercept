@@ -23,7 +23,7 @@ from utils.validation import (
 from utils.sse import format_sse
 from utils.sdr import SDRFactory, SDRType
 
-adsb_bp = Blueprint('adsb', __name__, url_prefix='/adsb')
+adsb_bp = Blueprint("adsb", __name__, url_prefix="/adsb")
 
 # Track if using service
 adsb_using_service = False
@@ -34,24 +34,24 @@ adsb_last_message_time = None
 # Common installation paths for dump1090 (when not in PATH)
 DUMP1090_PATHS = [
     # Homebrew on Apple Silicon (M1/M2/M3)
-    '/opt/homebrew/bin/dump1090',
-    '/opt/homebrew/bin/dump1090-fa',
-    '/opt/homebrew/bin/dump1090-mutability',
+    "/opt/homebrew/bin/dump1090",
+    "/opt/homebrew/bin/dump1090-fa",
+    "/opt/homebrew/bin/dump1090-mutability",
     # Homebrew on Intel Mac
-    '/usr/local/bin/dump1090',
-    '/usr/local/bin/dump1090-fa',
-    '/usr/local/bin/dump1090-mutability',
+    "/usr/local/bin/dump1090",
+    "/usr/local/bin/dump1090-fa",
+    "/usr/local/bin/dump1090-mutability",
     # Linux system paths
-    '/usr/bin/dump1090',
-    '/usr/bin/dump1090-fa',
-    '/usr/bin/dump1090-mutability',
+    "/usr/bin/dump1090",
+    "/usr/bin/dump1090-fa",
+    "/usr/bin/dump1090-mutability",
 ]
 
 
 def find_dump1090():
     """Find dump1090 binary, checking PATH and common locations."""
     # First try PATH
-    for name in ['dump1090', 'dump1090-mutability', 'dump1090-fa']:
+    for name in ["dump1090", "dump1090-mutability", "dump1090-fa"]:
         path = shutil.which(name)
         if path:
             return path
@@ -67,10 +67,10 @@ def check_dump1090_service():
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(2)
-        result = sock.connect_ex(('localhost', 30003))
+        result = sock.connect_ex(("localhost", 30003))
         sock.close()
         if result == 0:
-            return 'localhost:30003'
+            return "localhost:30003"
     except Exception:
         pass
     return None
@@ -80,7 +80,7 @@ def parse_sbs_stream(service_addr):
     """Parse SBS format data from dump1090 port 30003."""
     global adsb_using_service, adsb_connected, adsb_messages_received, adsb_last_message_time
 
-    host, port = service_addr.split(':')
+    host, port = service_addr.split(":")
     port = int(port)
 
     logger.info(f"SBS stream parser started, connecting to {host}:{port}")
@@ -101,19 +101,19 @@ def parse_sbs_stream(service_addr):
 
             while adsb_using_service:
                 try:
-                    data = sock.recv(4096).decode('utf-8', errors='ignore')
+                    data = sock.recv(4096).decode("utf-8", errors="ignore")
                     if not data:
                         break
                     buffer += data
 
-                    while '\n' in buffer:
-                        line, buffer = buffer.split('\n', 1)
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
                         line = line.strip()
                         if not line:
                             continue
 
-                        parts = line.split(',')
-                        if len(parts) < 11 or parts[0] != 'MSG':
+                        parts = line.split(",")
+                        if len(parts) < 11 or parts[0] != "MSG":
                             continue
 
                         msg_type = parts[1]
@@ -121,52 +121,52 @@ def parse_sbs_stream(service_addr):
                         if not icao:
                             continue
 
-                        aircraft = app_module.adsb_aircraft.get(icao, {'icao': icao})
+                        aircraft = app_module.adsb_aircraft.get(icao, {"icao": icao})
 
-                        if msg_type == '1' and len(parts) > 10:
+                        if msg_type == "1" and len(parts) > 10:
                             callsign = parts[10].strip()
                             if callsign:
-                                aircraft['callsign'] = callsign
+                                aircraft["callsign"] = callsign
 
-                        elif msg_type == '3' and len(parts) > 15:
+                        elif msg_type == "3" and len(parts) > 15:
                             if parts[11]:
                                 try:
-                                    aircraft['altitude'] = int(float(parts[11]))
+                                    aircraft["altitude"] = int(float(parts[11]))
                                 except (ValueError, TypeError):
                                     pass
                             if parts[14] and parts[15]:
                                 try:
-                                    aircraft['lat'] = float(parts[14])
-                                    aircraft['lon'] = float(parts[15])
+                                    aircraft["lat"] = float(parts[14])
+                                    aircraft["lon"] = float(parts[15])
                                 except (ValueError, TypeError):
                                     pass
 
-                        elif msg_type == '4' and len(parts) > 13:
+                        elif msg_type == "4" and len(parts) > 13:
                             if parts[12]:
                                 try:
-                                    aircraft['speed'] = int(float(parts[12]))
+                                    aircraft["speed"] = int(float(parts[12]))
                                 except (ValueError, TypeError):
                                     pass
                             if parts[13]:
                                 try:
-                                    aircraft['heading'] = int(float(parts[13]))
+                                    aircraft["heading"] = int(float(parts[13]))
                                 except (ValueError, TypeError):
                                     pass
 
-                        elif msg_type == '5' and len(parts) > 11:
+                        elif msg_type == "5" and len(parts) > 11:
                             if parts[10]:
                                 callsign = parts[10].strip()
                                 if callsign:
-                                    aircraft['callsign'] = callsign
+                                    aircraft["callsign"] = callsign
                             if parts[11]:
                                 try:
-                                    aircraft['altitude'] = int(float(parts[11]))
+                                    aircraft["altitude"] = int(float(parts[11]))
                                 except (ValueError, TypeError):
                                     pass
 
-                        elif msg_type == '6' and len(parts) > 17:
+                        elif msg_type == "6" and len(parts) > 17:
                             if parts[17]:
-                                aircraft['squawk'] = parts[17]
+                                aircraft["squawk"] = parts[17]
 
                         app_module.adsb_aircraft[icao] = aircraft
                         pending_updates.add(icao)
@@ -177,10 +177,9 @@ def parse_sbs_stream(service_addr):
                         if now - last_update >= 1.0:
                             for update_icao in pending_updates:
                                 if update_icao in app_module.adsb_aircraft:
-                                    app_module.adsb_queue.put({
-                                        'type': 'aircraft',
-                                        **app_module.adsb_aircraft[update_icao]
-                                    })
+                                    app_module.adsb_queue.put(
+                                        {"type": "aircraft", **app_module.adsb_aircraft[update_icao]}
+                                    )
                             pending_updates.clear()
                             last_update = now
 
@@ -198,48 +197,47 @@ def parse_sbs_stream(service_addr):
     logger.info("SBS stream parser stopped")
 
 
-@adsb_bp.route('/tools')
+@adsb_bp.route("/tools")
 def check_adsb_tools():
     """Check for ADS-B decoding tools."""
-    return jsonify({
-        'dump1090': find_dump1090() is not None,
-        'rtl_adsb': shutil.which('rtl_adsb') is not None
-    })
+    return jsonify({"dump1090": find_dump1090() is not None, "rtl_adsb": shutil.which("rtl_adsb") is not None})
 
 
-@adsb_bp.route('/status')
+@adsb_bp.route("/status")
 def adsb_status():
     """Get ADS-B tracking status for debugging."""
-    return jsonify({
-        'tracking_active': adsb_using_service,
-        'connected_to_sbs': adsb_connected,
-        'messages_received': adsb_messages_received,
-        'last_message_time': adsb_last_message_time,
-        'aircraft_count': len(app_module.adsb_aircraft),
-        'aircraft': dict(app_module.adsb_aircraft),  # Full aircraft data
-        'queue_size': app_module.adsb_queue.qsize(),
-        'dump1090_path': find_dump1090(),
-        'port_30003_open': check_dump1090_service() is not None
-    })
+    return jsonify(
+        {
+            "tracking_active": adsb_using_service,
+            "connected_to_sbs": adsb_connected,
+            "messages_received": adsb_messages_received,
+            "last_message_time": adsb_last_message_time,
+            "aircraft_count": len(app_module.adsb_aircraft),
+            "aircraft": dict(app_module.adsb_aircraft),  # Full aircraft data
+            "queue_size": app_module.adsb_queue.qsize(),
+            "dump1090_path": find_dump1090(),
+            "port_30003_open": check_dump1090_service() is not None,
+        }
+    )
 
 
-@adsb_bp.route('/start', methods=['POST'])
+@adsb_bp.route("/start", methods=["POST"])
 def start_adsb():
     """Start ADS-B tracking."""
     global adsb_using_service
 
     with app_module.adsb_lock:
         if adsb_using_service:
-            return jsonify({'status': 'already_running', 'message': 'ADS-B tracking already active'}), 409
+            return jsonify({"status": "already_running", "message": "ADS-B tracking already active"}), 409
 
     data = request.json or {}
 
     # Validate inputs
     try:
-        gain = int(validate_gain(data.get('gain', '40')))
-        device = validate_device_index(data.get('device', '0'))
+        gain = int(validate_gain(data.get("gain", "40")))
+        device = validate_device_index(data.get("device", "0"))
     except ValueError as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 400
+        return jsonify({"status": "error", "message": str(e)}), 400
 
     # Check for remote SBS connection (e.g., remote dump1090)
     remote_sbs_host = data.get('remote_sbs_host')
@@ -267,10 +265,10 @@ def start_adsb():
         adsb_using_service = True
         thread = threading.Thread(target=parse_sbs_stream, args=(existing_service,), daemon=True)
         thread.start()
-        return jsonify({'status': 'started', 'message': 'Connected to existing dump1090 service'})
+        return jsonify({"status": "started", "message": "Connected to existing dump1090 service"})
 
     # Get SDR type from request
-    sdr_type_str = data.get('sdr_type', 'rtlsdr')
+    sdr_type_str = data.get("sdr_type", "rtlsdr")
     try:
         sdr_type = SDRType(sdr_type_str)
     except ValueError:
@@ -280,12 +278,22 @@ def start_adsb():
     if sdr_type == SDRType.RTL_SDR:
         dump1090_path = find_dump1090()
         if not dump1090_path:
-            return jsonify({'status': 'error', 'message': 'dump1090 not found. Install dump1090/dump1090-fa or ensure it is in /usr/local/bin/'})
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "dump1090 not found. Install dump1090/dump1090-fa or ensure it is in /usr/local/bin/",
+                }
+            )
     else:
         # For LimeSDR/HackRF, check for readsb (dump1090 with SoapySDR support)
-        dump1090_path = shutil.which('readsb') or find_dump1090()
+        dump1090_path = shutil.which("readsb") or find_dump1090()
         if not dump1090_path:
-            return jsonify({'status': 'error', 'message': f'readsb or dump1090 not found for {sdr_type.value}. Install readsb with SoapySDR support.'})
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": f"readsb or dump1090 not found for {sdr_type.value}. Install readsb with SoapySDR support.",
+                }
+            )
 
     # Kill any stale app-started process
     if app_module.adsb_process:
@@ -301,37 +309,35 @@ def start_adsb():
     builder = SDRFactory.get_builder(sdr_type)
 
     # Build ADS-B decoder command
-    cmd = builder.build_adsb_command(
-        device=sdr_device,
-        gain=float(gain)
-    )
+    cmd = builder.build_adsb_command(device=sdr_device, gain=float(gain))
 
     # For RTL-SDR, ensure we use the found dump1090 path
     if sdr_type == SDRType.RTL_SDR:
         cmd[0] = dump1090_path
 
     try:
-        app_module.adsb_process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
+        app_module.adsb_process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         time.sleep(3)
 
         if app_module.adsb_process.poll() is not None:
-            return jsonify({'status': 'error', 'message': 'dump1090 failed to start. Check RTL-SDR device permissions or if another process is using it.'})
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "dump1090 failed to start. Check RTL-SDR device permissions or if another process is using it.",
+                }
+            )
 
         adsb_using_service = True
-        thread = threading.Thread(target=parse_sbs_stream, args=('localhost:30003',), daemon=True)
+        thread = threading.Thread(target=parse_sbs_stream, args=("localhost:30003",), daemon=True)
         thread.start()
 
-        return jsonify({'status': 'started', 'message': 'ADS-B tracking started'})
+        return jsonify({"status": "started", "message": "ADS-B tracking started"})
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+        return jsonify({"status": "error", "message": str(e)})
 
 
-@adsb_bp.route('/stop', methods=['POST'])
+@adsb_bp.route("/stop", methods=["POST"])
 def stop_adsb():
     """Stop ADS-B tracking."""
     global adsb_using_service
@@ -347,12 +353,13 @@ def stop_adsb():
         adsb_using_service = False
 
     app_module.adsb_aircraft = {}
-    return jsonify({'status': 'stopped'})
+    return jsonify({"status": "stopped"})
 
 
-@adsb_bp.route('/stream')
+@adsb_bp.route("/stream")
 def stream_adsb():
     """SSE stream for ADS-B aircraft."""
+
     def generate():
         last_keepalive = time.time()
         keepalive_interval = 30.0
@@ -365,16 +372,16 @@ def stream_adsb():
             except queue.Empty:
                 now = time.time()
                 if now - last_keepalive >= keepalive_interval:
-                    yield format_sse({'type': 'keepalive'})
+                    yield format_sse({"type": "keepalive"})
                     last_keepalive = now
 
-    response = Response(generate(), mimetype='text/event-stream')
-    response.headers['Cache-Control'] = 'no-cache'
-    response.headers['X-Accel-Buffering'] = 'no'
+    response = Response(generate(), mimetype="text/event-stream")
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"
     return response
 
 
-@adsb_bp.route('/dashboard')
+@adsb_bp.route("/dashboard")
 def adsb_dashboard():
     """Popout ADS-B dashboard."""
-    return render_template('adsb_dashboard.html')
+    return render_template("adsb_dashboard.html")

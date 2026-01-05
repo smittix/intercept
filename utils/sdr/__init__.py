@@ -129,25 +129,20 @@ class SDRFactory:
         for sdr_type in cls._builders:
             caps = cls.get_capabilities(sdr_type)
             capabilities[sdr_type.value] = {
-                'name': sdr_type.name.replace('_', ' '),
-                'freq_min_mhz': caps.freq_min_mhz,
-                'freq_max_mhz': caps.freq_max_mhz,
-                'gain_min': caps.gain_min,
-                'gain_max': caps.gain_max,
-                'sample_rates': caps.sample_rates,
-                'supports_bias_t': caps.supports_bias_t,
-                'supports_ppm': caps.supports_ppm,
-                'tx_capable': caps.tx_capable,
+                "name": sdr_type.name.replace("_", " "),
+                "freq_min_mhz": caps.freq_min_mhz,
+                "freq_max_mhz": caps.freq_max_mhz,
+                "gain_min": caps.gain_min,
+                "gain_max": caps.gain_max,
+                "sample_rates": caps.sample_rates,
+                "supports_bias_t": caps.supports_bias_t,
+                "supports_ppm": caps.supports_ppm,
+                "tx_capable": caps.tx_capable,
             }
         return capabilities
 
     @classmethod
-    def create_default_device(
-        cls,
-        sdr_type: SDRType,
-        index: int = 0,
-        serial: str = 'N/A'
-    ) -> SDRDevice:
+    def create_default_device(cls, sdr_type: SDRType, index: int = 0, serial: str = "N/A") -> SDRDevice:
         """
         Create a default device object for a given SDR type.
 
@@ -169,7 +164,7 @@ class SDRFactory:
             name=f'{sdr_type.name.replace("_", " ")} Device {index}',
             serial=serial,
             driver=sdr_type.value,
-            capabilities=caps
+            capabilities=caps,
         )
 
     @classmethod
@@ -204,23 +199,23 @@ class SDRFactory:
 # Export commonly used items at package level
 __all__ = [
     # Factory
-    'SDRFactory',
+    "SDRFactory",
     # Types and classes
-    'SDRType',
-    'SDRDevice',
-    'SDRCapabilities',
-    'CommandBuilder',
+    "SDRType",
+    "SDRDevice",
+    "SDRCapabilities",
+    "CommandBuilder",
     # Builders
-    'RTLSDRCommandBuilder',
-    'LimeSDRCommandBuilder',
-    'HackRFCommandBuilder',
+    "RTLSDRCommandBuilder",
+    "LimeSDRCommandBuilder",
+    "HackRFCommandBuilder",
     # Validation
-    'SDRValidationError',
-    'validate_frequency',
-    'validate_gain',
-    'validate_sample_rate',
-    'validate_ppm',
-    'validate_device_index',
-    'validate_squelch',
-    'get_capabilities_for_type',
+    "SDRValidationError",
+    "validate_frequency",
+    "validate_gain",
+    "validate_sample_rate",
+    "validate_ppm",
+    "validate_device_index",
+    "validate_squelch",
+    "get_capabilities_for_type",
 ]
