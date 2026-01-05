@@ -4,11 +4,13 @@
 # Testing
 pytest>=7.0.0
 pytest-cov>=4.0.0
+pytest-mock>=3.15.1
 
 # Code quality
 ruff>=0.1.0
 black>=23.0.0
 mypy>=1.0.0
+black>=24.12.0
 
 # Type stubs
 types-flask>=1.1.0
