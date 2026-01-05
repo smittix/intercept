@@ -57,19 +57,54 @@ install_python_deps() {
 
     if ! check_cmd python3; then
         echo -e "${RED}Error: Python 3 is not installed${NC}"
-        echo "Please install Python 3.7 or later"
+        echo "Please install Python 3.9 or later"
         exit 1
     fi
 
+    # Check Python version (need 3.9+)
     PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+    PYTHON_MAJOR=$(python3 -c 'import sys; print(sys.version_info.major)')
+    PYTHON_MINOR=$(python3 -c 'import sys; print(sys.version_info.minor)')
     echo "Python version: $PYTHON_VERSION"
 
-    if check_cmd pip3; then
-        pip3 install -r requirements.txt
-    elif check_cmd pip; then
+    if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 9 ]); then
+        echo -e "${RED}Error: Python 3.9 or later is required${NC}"
+        echo "You have Python $PYTHON_VERSION"
+        echo ""
+        echo "Please upgrade Python:"
+        echo "  Ubuntu/Debian: sudo apt install python3.11"
+        echo "  macOS: brew install python@3.11"
+        exit 1
+    fi
+
+    # Check if we're in a virtual environment
+    if [ -n "$VIRTUAL_ENV" ]; then
+        echo "Using virtual environment: $VIRTUAL_ENV"
+        pip install -r requirements.txt
+    elif [ -d "venv" ]; then
+        echo "Found existing venv, activating..."
+        source venv/bin/activate
         pip install -r requirements.txt
     else
-        python3 -m pip install -r requirements.txt
+        # Try direct pip install first, fall back to venv if it fails (PEP 668)
+        echo "Attempting to install dependencies..."
+        if python3 -m pip install -r requirements.txt 2>/dev/null; then
+            echo -e "${GREEN}Python dependencies installed successfully${NC}"
+            return
+        fi
+
+        # If pip install failed (likely PEP 668), create a virtual environment
+        echo ""
+        echo -e "${YELLOW}System Python is externally managed (PEP 668).${NC}"
+        echo "Creating virtual environment..."
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+        echo ""
+        echo -e "${YELLOW}NOTE: A virtual environment was created.${NC}"
+        echo "You must activate it before running INTERCEPT:"
+        echo "  source venv/bin/activate"
+        echo "  sudo venv/bin/python intercept.py"
     fi
 
     echo -e "${GREEN}Python dependencies installed successfully${NC}"
@@ -238,7 +273,12 @@ main() {
     echo -e "${GREEN}Setup complete!${NC}"
     echo ""
     echo "To start INTERCEPT:"
-    echo "  sudo python3 intercept.py"
+    if [ -d "venv" ]; then
+        echo "  source venv/bin/activate"
+        echo "  sudo venv/bin/python intercept.py"
+    else
+        echo "  sudo python3 intercept.py"
+    fi
     echo ""
     echo "Then open http://localhost:5050 in your browser"
     echo ""

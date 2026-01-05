@@ -335,19 +335,26 @@ def toggle_monitor_mode():
                         monitor_iface = list(new_interfaces)[0]
 
                 if not monitor_iface:
+                    # Patterns to extract monitor interface name from airmon-ng output
+                    # Interface names: start with letter, contain alphanumeric/underscore/dash
                     patterns = [
-                        r'monitor mode.*enabled.*on\s+(\S+)',
-                        r'\(monitor mode.*enabled.*?(\S+mon)\)',
-                        r'created\s+(\S+mon)',
-                        r'\bon\s+(\S+mon)\b',
-                        r'\b(\S+mon)\b.*monitor',
+                        # Look for interface names ending in 'mon' (most reliable)
+                        r'\b([a-zA-Z][a-zA-Z0-9_-]*mon)\b',
+                        # Airmon-ng format: [phyX]interfacename
+                        r'\[phy\d+\]([a-zA-Z][a-zA-Z0-9_-]*mon)',
+                        # "enabled for/on [phyX]interface" format
+                        r'enabled.*?\[phy\d+\]([a-zA-Z][a-zA-Z0-9_-]*)',
+                        # Original interface with 'mon' appended
                         r'\b(' + re.escape(interface) + r'mon)\b',
                     ]
                     for pattern in patterns:
                         match = re.search(pattern, output, re.IGNORECASE)
                         if match:
-                            monitor_iface = match.group(1)
-                            break
+                            candidate = match.group(1)
+                            # Validate it looks like an interface name (not channel info like "10)")
+                            if candidate and not candidate[0].isdigit() and ')' not in candidate:
+                                monitor_iface = candidate
+                                break
 
                 if not monitor_iface:
                     try:

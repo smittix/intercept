@@ -14,6 +14,17 @@ Requires RTL-SDR hardware for RF modes.
 """
 
 import sys
+
+# Check Python version early, before imports that use 3.9+ syntax
+if sys.version_info < (3, 9):
+    print(f"Error: Python 3.9 or higher is required.")
+    print(f"You are running Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+    print("\nTo fix this:")
+    print("  - On Ubuntu/Debian: sudo apt install python3.9 (or newer)")
+    print("  - On macOS: brew install python@3.11")
+    print("  - Or use pyenv to install a newer version")
+    sys.exit(1)
+
 import site
 
 # Ensure user site-packages is available (may be disabled when running as root/sudo)
