@@ -115,3 +115,4 @@ def test_reload_oui_route(client, mocker):
     assert response.status_code == 200
     assert data['status'] == 'success'
     assert data['entries'] > 0
+
