@@ -12,13 +12,12 @@ from .base import SDRCapabilities, SDRDevice, SDRType
 
 class SDRValidationError(ValueError):
     """Raised when SDR parameter validation fails."""
+
     pass
 
 
 def validate_frequency(
-    freq_mhz: float,
-    device: Optional[SDRDevice] = None,
-    capabilities: Optional[SDRCapabilities] = None
+    freq_mhz: float, device: Optional[SDRDevice] = None, capabilities: Optional[SDRCapabilities] = None
 ) -> float:
     """
     Validate frequency against device capabilities.
@@ -41,11 +40,7 @@ def validate_frequency(
     else:
         # Default RTL-SDR range for backwards compatibility
         caps = SDRCapabilities(
-            sdr_type=SDRType.RTL_SDR,
-            freq_min_mhz=24.0,
-            freq_max_mhz=1766.0,
-            gain_min=0.0,
-            gain_max=50.0
+            sdr_type=SDRType.RTL_SDR, freq_min_mhz=24.0, freq_max_mhz=1766.0, gain_min=0.0, gain_max=50.0
         )
 
     if not caps.freq_min_mhz <= freq_mhz <= caps.freq_max_mhz:
@@ -58,9 +53,7 @@ def validate_frequency(
 
 
 def validate_gain(
-    gain: float,
-    device: Optional[SDRDevice] = None,
-    capabilities: Optional[SDRCapabilities] = None
+    gain: float, device: Optional[SDRDevice] = None, capabilities: Optional[SDRCapabilities] = None
 ) -> float:
     """
     Validate gain against device capabilities.
@@ -83,11 +76,7 @@ def validate_gain(
     else:
         # Default range for backwards compatibility
         caps = SDRCapabilities(
-            sdr_type=SDRType.RTL_SDR,
-            freq_min_mhz=24.0,
-            freq_max_mhz=1766.0,
-            gain_min=0.0,
-            gain_max=50.0
+            sdr_type=SDRType.RTL_SDR, freq_min_mhz=24.0, freq_max_mhz=1766.0, gain_min=0.0, gain_max=50.0
         )
 
     # Allow 0 for auto gain
@@ -107,7 +96,7 @@ def validate_sample_rate(
     rate: int,
     device: Optional[SDRDevice] = None,
     capabilities: Optional[SDRCapabilities] = None,
-    snap_to_nearest: bool = True
+    snap_to_nearest: bool = True,
 ) -> int:
     """
     Validate sample rate against device capabilities.
@@ -143,16 +132,11 @@ def validate_sample_rate(
         return closest
 
     raise SDRValidationError(
-        f"Sample rate {rate} Hz not supported by {caps.sdr_type.value}. "
-        f"Valid rates: {caps.sample_rates}"
+        f"Sample rate {rate} Hz not supported by {caps.sdr_type.value}. " f"Valid rates: {caps.sample_rates}"
     )
 
 
-def validate_ppm(
-    ppm: int,
-    device: Optional[SDRDevice] = None,
-    capabilities: Optional[SDRCapabilities] = None
-) -> int:
+def validate_ppm(ppm: int, device: Optional[SDRDevice] = None, capabilities: Optional[SDRCapabilities] = None) -> int:
     """
     Validate PPM frequency correction.
 
@@ -183,9 +167,7 @@ def validate_ppm(
 
     # Standard PPM range
     if not -1000 <= ppm <= 1000:
-        raise SDRValidationError(
-            f"PPM correction {ppm} out of range. Valid range: -1000 to 1000"
-        )
+        raise SDRValidationError(f"PPM correction {ppm} out of range. Valid range: -1000 to 1000")
 
     return ppm
 
@@ -204,9 +186,7 @@ def validate_device_index(index: int) -> int:
         SDRValidationError: If index is out of range
     """
     if not 0 <= index <= 255:
-        raise SDRValidationError(
-            f"Device index {index} out of range. Valid range: 0-255"
-        )
+        raise SDRValidationError(f"Device index {index} out of range. Valid range: 0-255")
     return index
 
 
@@ -224,9 +204,7 @@ def validate_squelch(squelch: int) -> int:
         SDRValidationError: If squelch is out of range
     """
     if not 0 <= squelch <= 1000:
-        raise SDRValidationError(
-            f"Squelch {squelch} out of range. Valid range: 0-1000"
-        )
+        raise SDRValidationError(f"Squelch {squelch} out of range. Valid range: 0-1000")
     return squelch
 
 

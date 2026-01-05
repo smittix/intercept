@@ -15,6 +15,7 @@ from typing import Optional
 
 class SDRType(Enum):
     """Supported SDR hardware types."""
+
     RTL_SDR = "rtlsdr"
     LIME_SDR = "limesdr"
     HACKRF = "hackrf"
@@ -26,45 +27,47 @@ class SDRType(Enum):
 @dataclass
 class SDRCapabilities:
     """Hardware capabilities for an SDR device."""
+
     sdr_type: SDRType
-    freq_min_mhz: float          # Minimum frequency in MHz
-    freq_max_mhz: float          # Maximum frequency in MHz
-    gain_min: float              # Minimum gain in dB
-    gain_max: float              # Maximum gain in dB
+    freq_min_mhz: float  # Minimum frequency in MHz
+    freq_max_mhz: float  # Maximum frequency in MHz
+    gain_min: float  # Minimum gain in dB
+    gain_max: float  # Maximum gain in dB
     sample_rates: list[int] = field(default_factory=list)  # Supported sample rates
-    supports_bias_t: bool = False    # Bias-T support
-    supports_ppm: bool = True        # PPM correction support
-    tx_capable: bool = False         # Can transmit
+    supports_bias_t: bool = False  # Bias-T support
+    supports_ppm: bool = True  # PPM correction support
+    tx_capable: bool = False  # Can transmit
 
 
 @dataclass
 class SDRDevice:
     """Detected SDR device."""
+
     sdr_type: SDRType
     index: int
     name: str
     serial: str
-    driver: str                  # e.g., "rtlsdr", "lime", "hackrf"
+    driver: str  # e.g., "rtlsdr", "lime", "hackrf"
     capabilities: SDRCapabilities
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         return {
-            'index': self.index,
-            'name': self.name,
-            'serial': self.serial,
-            'sdr_type': self.sdr_type.value,
-            'driver': self.driver,
-            'capabilities': {
-                'freq_min_mhz': self.capabilities.freq_min_mhz,
-                'freq_max_mhz': self.capabilities.freq_max_mhz,
-                'gain_min': self.capabilities.gain_min,
-                'gain_max': self.capabilities.gain_max,
-                'sample_rates': self.capabilities.sample_rates,
-                'supports_bias_t': self.capabilities.supports_bias_t,
-                'supports_ppm': self.capabilities.supports_ppm,
-                'tx_capable': self.capabilities.tx_capable,
-            }
+            "index": self.index,
+            "name": self.name,
+            "serial": self.serial,
+            "sdr_type": self.sdr_type.value,
+            "driver": self.driver,
+            "capabilities": {
+                "freq_min_mhz": self.capabilities.freq_min_mhz,
+                "freq_max_mhz": self.capabilities.freq_max_mhz,
+                "gain_min": self.capabilities.gain_min,
+                "gain_max": self.capabilities.gain_max,
+                "sample_rates": self.capabilities.sample_rates,
+                "supports_bias_t": self.capabilities.supports_bias_t,
+                "supports_ppm": self.capabilities.supports_ppm,
+                "tx_capable": self.capabilities.tx_capable,
+            },
         }
 
 
@@ -80,7 +83,7 @@ class CommandBuilder(ABC):
         gain: Optional[float] = None,
         ppm: Optional[int] = None,
         modulation: str = "fm",
-        squelch: Optional[int] = None
+        squelch: Optional[int] = None,
     ) -> list[str]:
         """
         Build FM demodulation command (for pager, iridium).
@@ -100,11 +103,7 @@ class CommandBuilder(ABC):
         pass
 
     @abstractmethod
-    def build_adsb_command(
-        self,
-        device: SDRDevice,
-        gain: Optional[float] = None
-    ) -> list[str]:
+    def build_adsb_command(self, device: SDRDevice, gain: Optional[float] = None) -> list[str]:
         """
         Build ADS-B decoder command.
 
@@ -119,11 +118,7 @@ class CommandBuilder(ABC):
 
     @abstractmethod
     def build_ism_command(
-        self,
-        device: SDRDevice,
-        frequency_mhz: float = 433.92,
-        gain: Optional[float] = None,
-        ppm: Optional[int] = None
+        self, device: SDRDevice, frequency_mhz: float = 433.92, gain: Optional[float] = None, ppm: Optional[int] = None
     ) -> list[str]:
         """
         Build ISM band decoder command (433MHz sensors).

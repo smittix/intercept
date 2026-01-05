@@ -9,10 +9,7 @@ from typing import Any, Generator
 
 
 def sse_stream(
-    data_queue: queue.Queue,
-    timeout: float = 1.0,
-    keepalive_interval: float = 30.0,
-    stop_check: callable = None
+    data_queue: queue.Queue, timeout: float = 1.0, keepalive_interval: float = 30.0, stop_check: callable = None
 ) -> Generator[str, None, None]:
     """
     Generate SSE stream from a queue.
@@ -41,7 +38,7 @@ def sse_stream(
             # Send keepalive if enough time has passed
             now = time.time()
             if now - last_keepalive >= keepalive_interval:
-                yield format_sse({'type': 'keepalive'})
+                yield format_sse({"type": "keepalive"})
                 last_keepalive = now
 
 
@@ -66,7 +63,7 @@ def format_sse(data: dict[str, Any] | str, event: str | None = None) -> str:
     lines.append("")
     lines.append("")
 
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
 def clear_queue(q: queue.Queue) -> int:

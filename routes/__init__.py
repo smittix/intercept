@@ -1,5 +1,6 @@
 # Routes package - registers all blueprints with the Flask app
 
+
 def register_blueprints(app):
     """Register all route blueprints with the Flask app."""
     from .pager import pager_bp
