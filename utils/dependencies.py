@@ -46,17 +46,17 @@ TOOL_DEPENDENCIES = {
             },
         },
     },
-    'sdr_hardware': {
-        'name': 'SDR Hardware Support',
-        'tools': {
-            'SoapySDRUtil': {
-                'required': False,
-                'description': 'Universal SDR abstraction (required for LimeSDR, HackRF)',
-                'install': {
-                    'apt': 'sudo apt install soapysdr-tools',
-                    'brew': 'brew install soapysdr',
-                    'manual': 'https://github.com/pothosware/SoapySDR'
-                }
+    "wifi": {
+        "name": "WiFi Reconnaissance",
+        "tools": {
+            "airmon-ng": {
+                "required": True,
+                "description": "Monitor mode controller",
+                "install": {
+                    "apt": "sudo apt install aircrack-ng",
+                    "brew": "Not available on macOS",
+                    "manual": "https://aircrack-ng.org",
+                },
             },
             "airodump-ng": {
                 "required": True,
