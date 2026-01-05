@@ -9,7 +9,7 @@ from routes import register_blueprints
 def app():
     """Create application for testing."""
     register_blueprints(flask_app)
-    flask_app.config['TESTING'] = True
+    flask_app.config["TESTING"] = True
     return flask_app
 
 

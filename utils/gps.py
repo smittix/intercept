@@ -17,11 +17,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Callable
 
-logger = logging.getLogger('intercept.gps')
+logger = logging.getLogger("intercept.gps")
 
 # Try to import serial, but don't fail if not available
 try:
     import serial
+
     SERIAL_AVAILABLE = True
 except ImportError:
     SERIAL_AVAILABLE = False
@@ -31,6 +32,7 @@ except ImportError:
 @dataclass
 class GPSPosition:
     """GPS position data."""
+
     latitude: float
     longitude: float
     altitude: Optional[float] = None
@@ -44,15 +46,15 @@ class GPSPosition:
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         return {
-            'latitude': self.latitude,
-            'longitude': self.longitude,
-            'altitude': self.altitude,
-            'speed': self.speed,
-            'heading': self.heading,
-            'satellites': self.satellites,
-            'fix_quality': self.fix_quality,
-            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
-            'device': self.device,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "altitude": self.altitude,
+            "speed": self.speed,
+            "heading": self.heading,
+            "satellites": self.satellites,
+            "fix_quality": self.fix_quality,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "device": self.device,
         }
 
 
@@ -67,36 +69,40 @@ def detect_gps_devices() -> list[dict]:
     # Common GPS device patterns by platform
     patterns = []
 
-    if os.name == 'posix':
+    if os.name == "posix":
         # Linux
-        patterns.extend([
-            '/dev/ttyUSB*',      # USB serial adapters
-            '/dev/ttyACM*',      # USB CDC ACM devices (many GPS)
-            '/dev/gps*',         # gpsd symlinks
-        ])
+        patterns.extend(
+            [
+                "/dev/ttyUSB*",  # USB serial adapters
+                "/dev/ttyACM*",  # USB CDC ACM devices (many GPS)
+                "/dev/gps*",  # gpsd symlinks
+            ]
+        )
         # macOS
-        patterns.extend([
-            '/dev/tty.usbserial*',
-            '/dev/tty.usbmodem*',
-            '/dev/cu.usbserial*',
-            '/dev/cu.usbmodem*',
-        ])
+        patterns.extend(
+            [
+                "/dev/tty.usbserial*",
+                "/dev/tty.usbmodem*",
+                "/dev/cu.usbserial*",
+                "/dev/cu.usbmodem*",
+            ]
+        )
 
     for pattern in patterns:
         for path in glob.glob(pattern):
             # Try to get device info
             device_info = {
-                'path': path,
-                'name': os.path.basename(path),
-                'type': 'serial',
+                "path": path,
+                "name": os.path.basename(path),
+                "type": "serial",
             }
 
             # Check if it's readable
             if os.access(path, os.R_OK):
-                device_info['accessible'] = True
+                device_info["accessible"] = True
             else:
-                device_info['accessible'] = False
-                device_info['error'] = 'Permission denied'
+                device_info["accessible"] = False
+                device_info["error"] = "Permission denied"
 
             devices.append(device_info)
 
@@ -114,16 +120,16 @@ def parse_nmea_coordinate(coord: str, direction: str) -> Optional[float]:
 
     try:
         # Find the decimal point
-        dot_pos = coord.index('.')
+        dot_pos = coord.index(".")
 
         # Degrees are everything before the last 2 digits before decimal
-        degrees = int(coord[:dot_pos - 2])
-        minutes = float(coord[dot_pos - 2:])
+        degrees = int(coord[: dot_pos - 2])
+        minutes = float(coord[dot_pos - 2 :])
 
         result = degrees + (minutes / 60.0)
 
         # Apply direction
-        if direction in ('S', 'W'):
+        if direction in ("S", "W"):
             result = -result
 
         return result
@@ -161,14 +167,11 @@ def parse_gga(parts: list[str]) -> Optional[GPSPosition]:
         timestamp = None
         if parts[1]:
             try:
-                time_str = parts[1].split('.')[0]
+                time_str = parts[1].split(".")[0]
                 if len(time_str) >= 6:
                     now = datetime.utcnow()
                     timestamp = now.replace(
-                        hour=int(time_str[0:2]),
-                        minute=int(time_str[2:4]),
-                        second=int(time_str[4:6]),
-                        microsecond=0
+                        hour=int(time_str[0:2]), minute=int(time_str[2:4]), second=int(time_str[4:6]), microsecond=0
                     )
             except (ValueError, IndexError):
                 pass
@@ -197,7 +200,7 @@ def parse_rmc(parts: list[str]) -> Optional[GPSPosition]:
 
     try:
         # Check status (A=active/valid, V=void/invalid)
-        if parts[2] != 'A':
+        if parts[2] != "A":
             return None
 
         lat = parse_nmea_coordinate(parts[3], parts[4])
@@ -214,7 +217,7 @@ def parse_rmc(parts: list[str]) -> Optional[GPSPosition]:
         timestamp = None
         if parts[1] and len(parts) > 9 and parts[9]:
             try:
-                time_str = parts[1].split('.')[0]
+                time_str = parts[1].split(".")[0]
                 date_str = parts[9]
                 if len(time_str) >= 6 and len(date_str) >= 6:
                     timestamp = datetime(
@@ -250,9 +253,9 @@ def parse_nmea_sentence(sentence: str) -> Optional[GPSPosition]:
     sentence = sentence.strip()
 
     # Validate checksum if present
-    if '*' in sentence:
-        data, checksum = sentence.rsplit('*', 1)
-        if data.startswith('$'):
+    if "*" in sentence:
+        data, checksum = sentence.rsplit("*", 1)
+        if data.startswith("$"):
             data = data[1:]
 
         # Calculate checksum
@@ -268,23 +271,23 @@ def parse_nmea_sentence(sentence: str) -> Optional[GPSPosition]:
             pass
 
     # Remove $ prefix if present
-    if sentence.startswith('$'):
+    if sentence.startswith("$"):
         sentence = sentence[1:]
 
     # Remove checksum for parsing
-    if '*' in sentence:
-        sentence = sentence.split('*')[0]
+    if "*" in sentence:
+        sentence = sentence.split("*")[0]
 
-    parts = sentence.split(',')
+    parts = sentence.split(",")
     if not parts:
         return None
 
     msg_type = parts[0]
 
     # Handle various NMEA talker IDs (GP=GPS, GN=GNSS, GL=GLONASS, GA=Galileo)
-    if msg_type.endswith('GGA'):
+    if msg_type.endswith("GGA"):
         return parse_gga(parts)
-    elif msg_type.endswith('RMC'):
+    elif msg_type.endswith("RMC"):
         return parse_rmc(parts)
 
     return None
@@ -304,7 +307,7 @@ class GPSReader:
         self._lock = threading.Lock()
         self._running = False
         self._thread: Optional[threading.Thread] = None
-        self._serial: Optional['serial.Serial'] = None
+        self._serial: Optional["serial.Serial"] = None
         self._last_update: Optional[datetime] = None
         self._error: Optional[str] = None
         self._callbacks: list[Callable[[GPSPosition], None]] = []
@@ -351,11 +354,7 @@ class GPSReader:
             return True
 
         try:
-            self._serial = serial.Serial(
-                self.device_path,
-                baudrate=self.baudrate,
-                timeout=1.0
-            )
+            self._serial = serial.Serial(self.device_path, baudrate=self.baudrate, timeout=1.0)
             self._running = True
             self._error = None
 
@@ -404,14 +403,14 @@ class GPSReader:
                     bytes_read += len(data)
                     if bytes_read <= 500 or bytes_read % 1000 == 0:
                         print(f"[GPS] Read {len(data)} bytes (total: {bytes_read})", flush=True)
-                    buffer += data.decode('ascii', errors='ignore')
+                    buffer += data.decode("ascii", errors="ignore")
 
                     # Process complete lines
-                    while '\n' in buffer:
-                        line, buffer = buffer.split('\n', 1)
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
                         line = line.strip()
 
-                        if line.startswith('$'):
+                        if line.startswith("$"):
                             sentence_count += 1
                             # Log first few sentences and periodically after that
                             if sentence_count <= 10 or sentence_count % 50 == 0:
@@ -419,7 +418,10 @@ class GPSReader:
 
                             position = parse_nmea_sentence(line)
                             if position:
-                                print(f"[GPS] FIX: {position.latitude:.6f}, {position.longitude:.6f} (sats: {position.satellites}, quality: {position.fix_quality})", flush=True)
+                                print(
+                                    f"[GPS] FIX: {position.latitude:.6f}, {position.longitude:.6f} (sats: {position.satellites}, quality: {position.fix_quality})",
+                                    flush=True,
+                                )
                                 position.device = self.device_path
                                 self._update_position(position)
                 else:

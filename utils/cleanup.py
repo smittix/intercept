@@ -7,13 +7,13 @@ import threading
 import time
 from typing import Any
 
-logger = logging.getLogger('intercept.cleanup')
+logger = logging.getLogger("intercept.cleanup")
 
 
 class DataStore:
     """Thread-safe data store with automatic cleanup of stale entries."""
 
-    def __init__(self, max_age_seconds: float = 300.0, name: str = 'data'):
+    def __init__(self, max_age_seconds: float = 300.0, name: str = "data"):
         """
         Initialize data store.
 
@@ -211,11 +211,7 @@ class CleanupManager:
 cleanup_manager = CleanupManager(interval=60.0)
 
 
-def cleanup_dict(
-    data: dict[str, Any],
-    timestamps: dict[str, float],
-    max_age_seconds: float = 300.0
-) -> list[str]:
+def cleanup_dict(data: dict[str, Any], timestamps: dict[str, float], max_age_seconds: float = 300.0) -> list[str]:
     """
     Clean up stale entries from a dictionary.
 
