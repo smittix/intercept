@@ -3,20 +3,38 @@
     <div class="section">
         <h3>CW/Morse Decoder</h3>
         <p class="info-text" style="font-size: 11px; color: var(--text-dim); margin-bottom: 12px;">
-            Decode CW (continuous wave) Morse code from amateur radio HF bands using USB demodulation
-            and Goertzel tone detection.
+            Decode CW (continuous wave) Morse code. Supports HF amateur bands (USB + Goertzel tone
+            detection) and ISM/UHF OOK signals (AM + envelope detection).
         </p>
+    </div>
+
+    <div class="section">
+        <h3>Detection Mode</h3>
+        <div class="form-group">
+            <div style="display: flex; gap: 4px;">
+                <button class="preset-btn morseDetectBtn" id="morseDetectGoertzel"
+                        onclick="MorseMode.setDetectMode('goertzel')"
+                        style="flex: 1; background: var(--accent); color: #000;">CW Tone</button>
+                <button class="preset-btn morseDetectBtn" id="morseDetectEnvelope"
+                        onclick="MorseMode.setDetectMode('envelope')"
+                        style="flex: 1;">OOK Envelope</button>
+            </div>
+            <input type="hidden" id="morseDetectMode" value="goertzel">
+            <p id="morseDetectHint" class="info-text" style="font-size: 10px; color: var(--text-dim); margin-top: 4px;">
+                CW Tone: HF bands, USB demod, Goertzel filter. For amateur CW.
+            </p>
+        </div>
     </div>
 
     <div class="section">
         <h3>Frequency</h3>
         <div class="form-group">
             <label>Frequency (MHz)</label>
-            <input type="number" id="morseFrequency" value="14.060" step="0.001" min="1" max="30">
+            <input type="number" id="morseFrequency" value="14.060" step="0.001" min="1" max="1766">
         </div>
         <div class="form-group">
             <label>Band Presets</label>
-            <div class="morse-presets" style="display: flex; flex-wrap: wrap; gap: 4px;">
+            <div class="morse-presets" id="morseHFPresets" style="display: flex; flex-wrap: wrap; gap: 4px;">
                 <button class="preset-btn" onclick="MorseMode.setFreq(3.560)">80m</button>
                 <button class="preset-btn" onclick="MorseMode.setFreq(7.030)">40m</button>
                 <button class="preset-btn" onclick="MorseMode.setFreq(10.116)">30m</button>
@@ -25,6 +43,13 @@
                 <button class="preset-btn" onclick="MorseMode.setFreq(21.060)">15m</button>
                 <button class="preset-btn" onclick="MorseMode.setFreq(24.910)">12m</button>
                 <button class="preset-btn" onclick="MorseMode.setFreq(28.060)">10m</button>
+            </div>
+            <div class="morse-presets" id="morseISMPresets" style="display: none; flex-wrap: wrap; gap: 4px;">
+                <button class="preset-btn" onclick="MorseMode.setFreq(315.000)">315</button>
+                <button class="preset-btn" onclick="MorseMode.setFreq(433.300)">433.3</button>
+                <button class="preset-btn" onclick="MorseMode.setFreq(433.920)">433.9</button>
+                <button class="preset-btn" onclick="MorseMode.setFreq(868.000)">868</button>
+                <button class="preset-btn" onclick="MorseMode.setFreq(915.000)">915</button>
             </div>
         </div>
     </div>
@@ -43,7 +68,7 @@
 
     <div class="section">
         <h3>CW Settings</h3>
-        <div class="form-group">
+        <div class="form-group" id="morseToneFreqGroup">
             <label>Tone Frequency: <span id="morseToneFreqLabel">700</span> Hz</label>
             <input type="range" id="morseToneFreq" value="700" min="300" max="1200" step="10"
                    oninput="document.getElementById('morseToneFreqLabel').textContent = this.value">
@@ -85,11 +110,17 @@
         </div>
     </div>
 
-    <!-- HF Antenna Note -->
-    <div class="section">
+    <!-- Mode-specific antenna notes -->
+    <div class="section" id="morseHFNote">
         <p class="info-text" style="font-size: 11px; color: #ffaa00; line-height: 1.5;">
-            CW operates on HF bands (1-30 MHz). Requires an HF-capable SDR with direct sampling
-            or an upconverter, plus an appropriate HF antenna (dipole, end-fed, or random wire).
+            CW Tone mode operates on HF bands (1-30 MHz). Requires an HF-capable SDR with direct
+            sampling or an upconverter, plus an appropriate HF antenna (dipole, end-fed, or random wire).
+        </p>
+    </div>
+    <div class="section" id="morseEnvelopeNote" style="display: none;">
+        <p class="info-text" style="font-size: 11px; color: #ffaa00; line-height: 1.5;">
+            OOK Envelope mode uses AM demodulation to detect carrier on/off keying.
+            Suitable for ISM-band (315/433/868/915 MHz) Morse transmitters.
         </p>
     </div>
 

@@ -1,6 +1,12 @@
-"""Morse code (CW) decoder using Goertzel tone detection.
+"""Morse code (CW) decoder with dual detection modes.
 
-Signal chain: rtl_fm -M usb → raw PCM → Goertzel filter → timing state machine → characters.
+Supports two signal chains:
+  goertzel: rtl_fm -M usb → raw PCM → Goertzel tone filter → timing state machine → characters
+  envelope: rtl_fm -M am  → raw PCM → RMS envelope       → timing state machine → characters
+
+Goertzel mode is the original upstream path for HF CW (beat note detection).
+Envelope mode adds support for OOK/AM signals (e.g. 433 MHz carrier keying)
+where AM demod already produces a baseband envelope — no tone to detect.
 """
 
 from __future__ import annotations
@@ -66,11 +72,36 @@ class GoertzelFilter:
         return math.sqrt(s1 * s1 + s2 * s2 - coeff * s1 * s2)
 
 
+class EnvelopeDetector:
+    """RMS envelope detector for AM-demodulated OOK signals.
+
+    When rtl_fm uses -M am, carrier-on produces a high amplitude envelope
+    and carrier-off produces near-silence.  RMS over a short block gives
+    a clean on/off metric without needing a specific tone frequency.
+    """
+
+    def __init__(self, block_size: int):
+        self.block_size = block_size
+
+    def magnitude(self, samples: list[float] | tuple[float, ...]) -> float:
+        """Compute RMS magnitude of the sample block."""
+        if not samples:
+            return 0.0
+        sum_sq = 0.0
+        for s in samples:
+            sum_sq += s * s
+        return math.sqrt(sum_sq / len(samples))
+
+
 class MorseDecoder:
     """Real-time Morse decoder with adaptive threshold.
 
     Processes blocks of PCM audio and emits decoded characters.
     Timing based on PARIS standard: dit = 1.2/WPM seconds.
+
+    detect_mode:
+      'goertzel' — Goertzel single-frequency tone detection (HF CW via USB demod)
+      'envelope' — RMS envelope detection (OOK/AM signals, e.g. 433 MHz keying)
     """
 
     def __init__(
@@ -78,28 +109,41 @@ class MorseDecoder:
         sample_rate: int = 8000,
         tone_freq: float = 700.0,
         wpm: int = 15,
+        detect_mode: str = 'goertzel',
     ):
         self.sample_rate = sample_rate
         self.tone_freq = tone_freq
         self.wpm = wpm
+        self.detect_mode = detect_mode
 
-        # Goertzel filter: ~50 blocks/sec at 8kHz
+        # ~50 blocks/sec at 8kHz, scales with sample rate
         self._block_size = sample_rate // 50
-        self._filter = GoertzelFilter(tone_freq, sample_rate, self._block_size)
         self._block_duration = self._block_size / sample_rate  # seconds per block
 
-        # Timing thresholds (in blocks, converted from seconds)
+        # Select detection backend
+        if detect_mode == 'envelope':
+            self._filter = EnvelopeDetector(self._block_size)
+        else:
+            self._filter = GoertzelFilter(tone_freq, sample_rate, self._block_size)
+
+        # Timing thresholds (in blocks, converted from seconds).
+        # Gap thresholds use midpoint values between adjacent gap types
+        # to tolerate edge-detection jitter from the adaptive threshold EMA:
+        #   element gap = 1 dit  →  char threshold at 2.0 dit  ←  char gap = 3 dit
+        #   char gap    = 3 dit  →  word threshold at 5.0 dit  ←  word gap = 7 dit
         dit_sec = 1.2 / wpm
         self._dah_threshold = 2.0 * dit_sec / self._block_duration  # blocks
         self._dit_min = 0.3 * dit_sec / self._block_duration  # min blocks for dit
-        self._char_gap = 3.0 * dit_sec / self._block_duration  # blocks
-        self._word_gap = 7.0 * dit_sec / self._block_duration  # blocks
+        self._char_gap = 2.0 * dit_sec / self._block_duration  # blocks
+        self._word_gap = 5.0 * dit_sec / self._block_duration  # blocks
 
-        # Adaptive threshold via EMA
+        # Adaptive threshold via EMA.
+        # Envelope mode uses a faster alpha — OOK has clean binary transitions,
+        # unlike the gradual fading of HF CW through QSB.
         self._noise_floor = 0.0
         self._signal_peak = 0.0
         self._threshold = 0.0
-        self._ema_alpha = 0.1  # smoothing factor
+        self._ema_alpha = 0.25 if detect_mode == 'envelope' else 0.1
 
         # State machine (counts in blocks, not wall-clock time)
         self._tone_on = False
@@ -227,11 +271,14 @@ def morse_decoder_thread(
     sample_rate: int = 8000,
     tone_freq: float = 700.0,
     wpm: int = 15,
+    detect_mode: str = 'goertzel',
 ) -> None:
     """Thread function: reads PCM from rtl_fm, decodes Morse, pushes to queue.
 
     Reads raw 16-bit LE PCM from *rtl_stdout* and feeds it through the
     MorseDecoder, pushing scope and character events onto *output_queue*.
+
+    detect_mode: 'goertzel' for HF CW tone detection, 'envelope' for OOK/AM.
     """
     import logging
     logger = logging.getLogger('intercept.morse')
@@ -244,6 +291,7 @@ def morse_decoder_thread(
         sample_rate=sample_rate,
         tone_freq=tone_freq,
         wpm=wpm,
+        detect_mode=detect_mode,
     )
 
     try:

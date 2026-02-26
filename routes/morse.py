@@ -52,6 +52,14 @@ def _validate_wpm(value: Any) -> int:
         raise ValueError(f"Invalid WPM: {value}") from e
 
 
+def _validate_detect_mode(value: Any) -> str:
+    """Validate detection mode ('goertzel' or 'envelope')."""
+    mode = str(value).lower().strip()
+    if mode not in ('goertzel', 'envelope'):
+        raise ValueError("detect_mode must be 'goertzel' or 'envelope'")
+    return mode
+
+
 @morse_bp.route('/morse/start', methods=['POST'])
 def start_morse() -> Response:
     global morse_active_device
@@ -72,6 +80,11 @@ def start_morse() -> Response:
             return jsonify({'status': 'error', 'message': str(e)}), 400
 
         # Validate Morse-specific inputs
+        try:
+            detect_mode = _validate_detect_mode(data.get('detect_mode', 'goertzel'))
+        except ValueError as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 400
+
         try:
             tone_freq = _validate_tone_freq(data.get('tone_freq', '700'))
         except ValueError as e:
@@ -100,7 +113,7 @@ def start_morse() -> Response:
             except queue.Empty:
                 break
 
-        # Build rtl_fm USB demodulation command
+        # Build rtl_fm demodulation command
         sdr_type_str = data.get('sdr_type', 'rtlsdr')
         try:
             sdr_type = SDRType(sdr_type_str)
@@ -110,7 +123,15 @@ def start_morse() -> Response:
         sdr_device = SDRFactory.create_default_device(sdr_type, index=device)
         builder = SDRFactory.get_builder(sdr_device.sdr_type)
 
-        sample_rate = 8000
+        # Envelope mode (OOK/AM): use AM demod, higher sample rate for better
+        # envelope resolution.  Goertzel mode (HF CW): use USB demod at 8kHz.
+        if detect_mode == 'envelope':
+            sample_rate = 48000
+            modulation = 'am'
+        else:
+            sample_rate = 8000
+            modulation = 'usb'
+
         bias_t = data.get('bias_t', False)
 
         rtl_cmd = builder.build_fm_demod_command(
@@ -119,7 +140,7 @@ def start_morse() -> Response:
             sample_rate=sample_rate,
             gain=float(gain) if gain and gain != '0' else None,
             ppm=int(ppm) if ppm and ppm != '0' else None,
-            modulation='usb',
+            modulation=modulation,
             bias_t=bias_t,
         )
 
@@ -156,6 +177,7 @@ def start_morse() -> Response:
                     sample_rate,
                     tone_freq,
                     wpm,
+                    detect_mode,
                 ),
             )
             decoder_thread.daemon = True
@@ -170,6 +192,8 @@ def start_morse() -> Response:
             return jsonify({
                 'status': 'started',
                 'command': full_cmd,
+                'detect_mode': detect_mode,
+                'modulation': modulation,
                 'tone_freq': tone_freq,
                 'wpm': wpm,
             })

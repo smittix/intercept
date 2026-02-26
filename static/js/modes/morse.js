@@ -69,6 +69,7 @@ var MorseMode = (function () {
             ppm: document.getElementById('morsePPM').value || '0',
             device: document.getElementById('deviceSelect')?.value || '0',
             sdr_type: document.getElementById('sdrTypeSelect')?.value || 'rtlsdr',
+            detect_mode: document.getElementById('morseDetectMode')?.value || 'goertzel',
             tone_freq: document.getElementById('morseToneFreq').value || '700',
             wpm: document.getElementById('morseWpm').value || '15',
             bias_t: typeof getBiasTEnabled === 'function' ? getBiasTEnabled() : false,
@@ -384,6 +385,73 @@ var MorseMode = (function () {
         if (el) el.value = mhz;
     }
 
+    function setDetectMode(mode) {
+        var hidden = document.getElementById('morseDetectMode');
+        if (hidden) hidden.value = mode;
+
+        // Update toggle button styles
+        var btnGoertzel = document.getElementById('morseDetectGoertzel');
+        var btnEnvelope = document.getElementById('morseDetectEnvelope');
+        if (btnGoertzel && btnEnvelope) {
+            if (mode === 'envelope') {
+                btnEnvelope.style.background = 'var(--accent)';
+                btnEnvelope.style.color = '#000';
+                btnGoertzel.style.background = '';
+                btnGoertzel.style.color = '';
+            } else {
+                btnGoertzel.style.background = 'var(--accent)';
+                btnGoertzel.style.color = '#000';
+                btnEnvelope.style.background = '';
+                btnEnvelope.style.color = '';
+            }
+        }
+
+        // Toggle preset groups
+        var hfPresets = document.getElementById('morseHFPresets');
+        var ismPresets = document.getElementById('morseISMPresets');
+        if (hfPresets) hfPresets.style.display = mode === 'envelope' ? 'none' : 'flex';
+        if (ismPresets) ismPresets.style.display = mode === 'envelope' ? 'flex' : 'none';
+
+        // Toggle tone frequency slider (not needed for envelope mode)
+        var toneGroup = document.getElementById('morseToneFreqGroup');
+        if (toneGroup) toneGroup.style.display = mode === 'envelope' ? 'none' : '';
+
+        // Toggle antenna notes
+        var hfNote = document.getElementById('morseHFNote');
+        var envNote = document.getElementById('morseEnvelopeNote');
+        if (hfNote) hfNote.style.display = mode === 'envelope' ? 'none' : '';
+        if (envNote) envNote.style.display = mode === 'envelope' ? '' : 'none';
+
+        // Update hint text
+        var hint = document.getElementById('morseDetectHint');
+        if (hint) {
+            if (mode === 'envelope') {
+                hint.textContent = 'OOK Envelope: AM demod, RMS detection. For ISM-band OOK/CW.';
+            } else {
+                hint.textContent = 'CW Tone: HF bands, USB demod, Goertzel filter. For amateur CW.';
+            }
+        }
+
+        // Set sensible default frequency when switching modes
+        var freqEl = document.getElementById('morseFrequency');
+        if (freqEl) {
+            var curFreq = parseFloat(freqEl.value);
+            if (mode === 'envelope' && curFreq < 30) {
+                freqEl.value = '433.300';
+            } else if (mode === 'goertzel' && curFreq > 30) {
+                freqEl.value = '14.060';
+            }
+        }
+
+        // Set WPM default for envelope mode (OOK transmitters tend to be slower)
+        var wpmEl = document.getElementById('morseWpm');
+        var wpmLabel = document.getElementById('morseWpmLabel');
+        if (mode === 'envelope' && wpmEl) {
+            wpmEl.value = '12';
+            if (wpmLabel) wpmLabel.textContent = '12';
+        }
+    }
+
     // ---- Public API ----
 
     return {
@@ -392,6 +460,7 @@ var MorseMode = (function () {
         start: start,
         stop: stop,
         setFreq: setFreq,
+        setDetectMode: setDetectMode,
         exportTxt: exportTxt,
         exportCsv: exportCsv,
         copyToClipboard: copyToClipboard,
