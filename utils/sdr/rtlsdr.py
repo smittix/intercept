@@ -75,6 +75,35 @@ def enable_bias_t_via_rtl_biast(device_index: int = 0) -> bool:
         return False
 
 
+def disable_bias_t_via_rtl_biast(device_index: int = 0) -> bool:
+    """Disable bias-t power using rtl_biast (RTL-SDR Blog drivers).
+
+    Should be called when stopping an SDR mode that had bias-t enabled,
+    since the hardware register persists after the device is closed.
+
+    Returns True if bias-t was disabled successfully.
+    """
+    rtl_biast_path = get_tool_path('rtl_biast') or 'rtl_biast'
+    try:
+        result = subprocess.run(
+            [rtl_biast_path, '-b', '0', '-d', str(device_index)],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            logger.info(f"Bias-t disabled via rtl_biast on device {device_index}")
+            return True
+        logger.warning(f"rtl_biast failed (exit {result.returncode}): {result.stderr.strip()}")
+        return False
+    except FileNotFoundError:
+        logger.warning("rtl_biast not found — bias-t may remain on after stop")
+        return False
+    except Exception as e:
+        logger.warning(f"Failed to disable bias-t via rtl_biast: {e}")
+        return False
+
+
 def _get_dump1090_bias_t_flag(dump1090_path: str) -> str | None:
     """Detect the correct bias-t flag for the installed dump1090 variant.
 

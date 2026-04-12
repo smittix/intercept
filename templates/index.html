@@ -6349,6 +6349,14 @@
         function saveBiasTSetting() {
             const enabled = document.getElementById('biasT')?.checked || false;
             localStorage.setItem('biasTEnabled', enabled);
+            // Warn if any SDR mode is currently running — bias-T is applied at
+            // start time and cannot be toggled on a running device.
+            const anyRunning = isRunning || isSensorRunning
+                || (typeof isAdsbRunning !== 'undefined' && isAdsbRunning)
+                || (typeof isAisRunning !== 'undefined' && isAisRunning);
+            if (anyRunning) {
+                showInfo('Bias-T change will take effect after restarting the active SDR mode');
+            }
         }
 
         function getBiasTEnabled() {
