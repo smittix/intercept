@@ -19,12 +19,9 @@ from flask import Response, jsonify, request
 from data.tscm_frequencies import get_all_sweep_presets, get_sweep_preset
 from routes.tscm import (
     _baseline_recorder,
-    _current_sweep_id,
     _emit_event,
     _start_sweep_internal,
-    _sweep_running,
     tscm_bp,
-    tscm_queue,
 )
 from utils.database import get_tscm_sweep, update_tscm_sweep
 from utils.event_pipeline import process_event
