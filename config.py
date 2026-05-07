@@ -447,6 +447,8 @@ ADSB_DB_PASSWORD = _get_env('ADSB_DB_PASSWORD', 'intercept')
 ADSB_HISTORY_BATCH_SIZE = _get_env_int('ADSB_HISTORY_BATCH_SIZE', 500)
 ADSB_HISTORY_FLUSH_INTERVAL = _get_env_float('ADSB_HISTORY_FLUSH_INTERVAL', 1.0)
 ADSB_HISTORY_QUEUE_SIZE = _get_env_int('ADSB_HISTORY_QUEUE_SIZE', 50000)
+ADSB_DB_BACKEND = _get_env('ADSB_DB_BACKEND', 'auto')  # 'auto', 'sqlite', 'postgres'
+ADSB_SQLITE_PATH = _get_env('ADSB_SQLITE_PATH', 'instance/adsb_history.db')
 
 # Observer location settings
 SHARED_OBSERVER_LOCATION_ENABLED = _get_env_bool('SHARED_OBSERVER_LOCATION', True)
