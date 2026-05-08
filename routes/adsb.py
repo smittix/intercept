@@ -19,34 +19,24 @@ from flask import Blueprint, Response, jsonify, make_response, render_template, 
 
 from utils.responses import api_error, api_success
 
-# psycopg2 is optional - only needed for PostgreSQL history persistence
-try:
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
-    PSYCOPG2_AVAILABLE = True
-except ImportError:
-    psycopg2 = None  # type: ignore
-    RealDictCursor = None  # type: ignore
-    PSYCOPG2_AVAILABLE = False
-
 import contextlib
 
 import app as app_module
 from config import (
     ADSB_AUTO_START,
-    ADSB_DB_HOST,
-    ADSB_DB_NAME,
-    ADSB_DB_PASSWORD,
-    ADSB_DB_PORT,
-    ADSB_DB_USER,
-    ADSB_HISTORY_ENABLED,
     DEFAULT_LATITUDE,
     DEFAULT_LONGITUDE,
     SHARED_OBSERVER_LOCATION_ENABLED,
 )
 from utils import aircraft_db
 from utils.acars_translator import translate_message
-from utils.adsb_history import _ensure_adsb_schema, adsb_history_writer, adsb_snapshot_writer
+from utils.adsb_history import (
+    HISTORY_AVAILABLE,
+    HISTORY_BACKEND,
+    _history_cursor,
+    adsb_history_writer,
+    adsb_snapshot_writer,
+)
 from utils.constants import (
     ADSB_SBS_PORT,
     ADSB_TERMINATE_TIMEOUT,
@@ -179,29 +169,6 @@ def _build_history_record(
     }
 
 
-_history_schema_checked = False
-
-
-def _get_history_connection():
-    return psycopg2.connect(
-        host=ADSB_DB_HOST,
-        port=ADSB_DB_PORT,
-        dbname=ADSB_DB_NAME,
-        user=ADSB_DB_USER,
-        password=ADSB_DB_PASSWORD,
-    )
-
-
-def _ensure_history_schema() -> None:
-    global _history_schema_checked
-    if _history_schema_checked:
-        return
-    try:
-        with _get_history_connection() as conn:
-            _ensure_adsb_schema(conn)
-        _history_schema_checked = True
-    except Exception as exc:
-        logger.warning("ADS-B schema check failed: %s", exc)
 
 
 MILITARY_ICAO_RANGES = [
@@ -294,11 +261,19 @@ def _add_time_filter(
     if scope == 'all':
         return
     if scope == 'custom' and start is not None and end is not None:
-        where_parts.append(f"{timestamp_field} >= %s AND {timestamp_field} < %s")
-        params.extend([start, end])
+        if HISTORY_BACKEND == 'sqlite':
+            where_parts.append(f"{timestamp_field} >= ? AND {timestamp_field} < ?")
+            params.extend([start.isoformat(), end.isoformat()])
+        else:
+            where_parts.append(f"{timestamp_field} >= %s AND {timestamp_field} < %s")
+            params.extend([start, end])
         return
-    where_parts.append(f"{timestamp_field} >= NOW() - INTERVAL %s")
-    params.append(f'{since_minutes} minutes')
+    if HISTORY_BACKEND == 'sqlite':
+        where_parts.append(f"{timestamp_field} >= datetime('now', ?)")
+        params.append(f'-{since_minutes} minutes')
+    else:
+        where_parts.append(f"{timestamp_field} >= NOW() - INTERVAL %s")
+        params.append(f'{since_minutes} minutes')
 
 
 def _serialize_export_value(value: Any) -> Any:
@@ -407,19 +382,12 @@ def _adsb_stream_queue_depth() -> int:
 
 
 def _get_active_session() -> dict[str, Any] | None:
-    if not ADSB_HISTORY_ENABLED or not PSYCOPG2_AVAILABLE:
+    if not HISTORY_AVAILABLE:
         return None
-    _ensure_history_schema()
     try:
-        with _get_history_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+        with _history_cursor() as cur:
             cur.execute(
-                """
-                    SELECT *
-                    FROM adsb_sessions
-                    WHERE ended_at IS NULL
-                    ORDER BY started_at DESC
-                    LIMIT 1
-                    """
+                "SELECT * FROM adsb_sessions WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1"
             )
             return cur.fetchone()
     except Exception as exc:
@@ -436,33 +404,30 @@ def _record_session_start(
     start_source: str | None,
     started_by: str | None,
 ) -> dict[str, Any] | None:
-    if not ADSB_HISTORY_ENABLED or not PSYCOPG2_AVAILABLE:
+    if not HISTORY_AVAILABLE:
         return None
-    _ensure_history_schema()
     try:
-        with _get_history_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                    INSERT INTO adsb_sessions (
-                        device_index,
-                        sdr_type,
-                        remote_host,
-                        remote_port,
-                        start_source,
-                        started_by
-                    )
+        with _history_cursor() as cur:
+            if HISTORY_BACKEND == 'sqlite':
+                cur.execute(
+                    """
+                    INSERT INTO adsb_sessions
+                        (device_index, sdr_type, remote_host, remote_port, start_source, started_by)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (device_index, sdr_type, remote_host, remote_port, start_source, started_by),
+                )
+                cur.execute("SELECT * FROM adsb_sessions WHERE id = ?", (cur.lastrowid,))
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO adsb_sessions
+                        (device_index, sdr_type, remote_host, remote_port, start_source, started_by)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING *
                     """,
-                (
-                    device_index,
-                    sdr_type,
-                    remote_host,
-                    remote_port,
-                    start_source,
-                    started_by,
-                ),
-            )
+                    (device_index, sdr_type, remote_host, remote_port, start_source, started_by),
+                )
             return cur.fetchone()
     except Exception as exc:
         logger.warning("ADS-B session start record failed: %s", exc)
@@ -470,23 +435,40 @@ def _record_session_start(
 
 
 def _record_session_stop(*, stop_source: str | None, stopped_by: str | None) -> dict[str, Any] | None:
-    if not ADSB_HISTORY_ENABLED or not PSYCOPG2_AVAILABLE:
+    if not HISTORY_AVAILABLE:
         return None
-    _ensure_history_schema()
     try:
-        with _get_history_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
+        with _history_cursor() as cur:
+            if HISTORY_BACKEND == 'sqlite':
+                cur.execute(
+                    """
                     UPDATE adsb_sessions
-                    SET ended_at = NOW(),
+                    SET ended_at    = datetime('now'),
+                        stop_source = COALESCE(?, stop_source),
+                        stopped_by  = COALESCE(?, stopped_by)
+                    WHERE ended_at IS NULL
+                    """,
+                    (stop_source, stopped_by),
+                )
+                if cur.rowcount:
+                    cur.execute(
+                        "SELECT * FROM adsb_sessions WHERE ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 1"
+                    )
+                    return cur.fetchone()
+                return None
+            else:
+                cur.execute(
+                    """
+                    UPDATE adsb_sessions
+                    SET ended_at    = NOW(),
                         stop_source = COALESCE(%s, stop_source),
-                        stopped_by = COALESCE(%s, stopped_by)
+                        stopped_by  = COALESCE(%s, stopped_by)
                     WHERE ended_at IS NULL
                     RETURNING *
                     """,
-                (stop_source, stopped_by),
-            )
-            return cur.fetchone()
+                    (stop_source, stopped_by),
+                )
+                return cur.fetchone()
     except Exception as exc:
         logger.warning("ADS-B session stop record failed: %s", exc)
         return None
@@ -1246,8 +1228,7 @@ def adsb_dashboard():
 @adsb_bp.route('/history')
 def adsb_history():
     """ADS-B history reporting dashboard."""
-    history_available = ADSB_HISTORY_ENABLED and PSYCOPG2_AVAILABLE
-    resp = make_response(render_template('adsb_history.html', history_enabled=history_available))
+    resp = make_response(render_template('adsb_history.html', history_enabled=HISTORY_AVAILABLE))
     resp.headers['Cache-Control'] = 'no-store'
     return resp
 
@@ -1255,25 +1236,37 @@ def adsb_history():
 @adsb_bp.route('/history/summary')
 def adsb_history_summary():
     """Summary stats for ADS-B history window."""
-    if not ADSB_HISTORY_ENABLED or not PSYCOPG2_AVAILABLE:
+    if not HISTORY_AVAILABLE:
         return api_error('ADS-B history is disabled', 503)
-    _ensure_history_schema()
 
     since_minutes = _parse_int_param(request.args.get('since_minutes'), 1440, 1, 10080)
-    window = f'{since_minutes} minutes'
 
-    sql = """
-        SELECT
-            (SELECT COUNT(*) FROM adsb_messages WHERE received_at >= NOW() - INTERVAL %s) AS message_count,
-            (SELECT COUNT(*) FROM adsb_snapshots WHERE captured_at >= NOW() - INTERVAL %s) AS snapshot_count,
-            (SELECT COUNT(DISTINCT icao) FROM adsb_snapshots WHERE captured_at >= NOW() - INTERVAL %s) AS aircraft_count,
-            (SELECT MIN(captured_at) FROM adsb_snapshots WHERE captured_at >= NOW() - INTERVAL %s) AS first_seen,
-            (SELECT MAX(captured_at) FROM adsb_snapshots WHERE captured_at >= NOW() - INTERVAL %s) AS last_seen
-    """
+    if HISTORY_BACKEND == 'sqlite':
+        modifier = f'-{since_minutes} minutes'
+        sql = """
+            SELECT
+                (SELECT COUNT(*) FROM adsb_messages  WHERE received_at >= datetime('now', ?)) AS message_count,
+                (SELECT COUNT(*) FROM adsb_snapshots WHERE captured_at  >= datetime('now', ?)) AS snapshot_count,
+                (SELECT COUNT(DISTINCT icao) FROM adsb_snapshots WHERE captured_at >= datetime('now', ?)) AS aircraft_count,
+                (SELECT MIN(captured_at)     FROM adsb_snapshots WHERE captured_at >= datetime('now', ?)) AS first_seen,
+                (SELECT MAX(captured_at)     FROM adsb_snapshots WHERE captured_at >= datetime('now', ?)) AS last_seen
+        """
+        params = (modifier, modifier, modifier, modifier, modifier)
+    else:
+        window = f'{since_minutes} minutes'
+        sql = """
+            SELECT
+                (SELECT COUNT(*) FROM adsb_messages  WHERE received_at >= NOW() - INTERVAL %s) AS message_count,
+                (SELECT COUNT(*) FROM adsb_snapshots WHERE captured_at  >= NOW() - INTERVAL %s) AS snapshot_count,
+                (SELECT COUNT(DISTINCT icao) FROM adsb_snapshots WHERE captured_at >= NOW() - INTERVAL %s) AS aircraft_count,
+                (SELECT MIN(captured_at)     FROM adsb_snapshots WHERE captured_at >= NOW() - INTERVAL %s) AS first_seen,
+                (SELECT MAX(captured_at)     FROM adsb_snapshots WHERE captured_at >= NOW() - INTERVAL %s) AS last_seen
+        """
+        params = (window, window, window, window, window)
 
     try:
-        with _get_history_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, (window, window, window, window, window))
+        with _history_cursor() as cur:
+            cur.execute(sql, params)
             row = cur.fetchone() or {}
         return jsonify(row)
     except Exception as exc:
@@ -1284,45 +1277,54 @@ def adsb_history_summary():
 @adsb_bp.route('/history/aircraft')
 def adsb_history_aircraft():
     """List latest aircraft snapshots for a time window."""
-    if not ADSB_HISTORY_ENABLED or not PSYCOPG2_AVAILABLE:
+    if not HISTORY_AVAILABLE:
         return api_error('ADS-B history is disabled', 503)
-    _ensure_history_schema()
 
     since_minutes = _parse_int_param(request.args.get('since_minutes'), 1440, 1, 10080)
     limit = _parse_int_param(request.args.get('limit'), 200, 1, 2000)
     search = (request.args.get('search') or '').strip()
-    window = f'{since_minutes} minutes'
     pattern = f'%{search}%'
 
-    sql = """
-        SELECT *
-        FROM (
-            SELECT DISTINCT ON (icao)
-                icao,
-                callsign,
-                registration,
-                type_code,
-                type_desc,
-                altitude,
-                speed,
-                heading,
-                vertical_rate,
-                lat,
-                lon,
-                squawk,
-                captured_at AS last_seen
-            FROM adsb_snapshots
-            WHERE captured_at >= NOW() - INTERVAL %s
-              AND (%s = '' OR icao ILIKE %s OR callsign ILIKE %s OR registration ILIKE %s)
-            ORDER BY icao, captured_at DESC
-        ) latest
-        ORDER BY last_seen DESC
-        LIMIT %s
-    """
+    if HISTORY_BACKEND == 'sqlite':
+        modifier = f'-{since_minutes} minutes'
+        sql = """
+            SELECT s.icao, s.callsign, s.registration, s.type_code, s.type_desc,
+                   s.altitude, s.speed, s.heading, s.vertical_rate, s.lat, s.lon, s.squawk,
+                   s.captured_at AS last_seen
+            FROM adsb_snapshots s
+            INNER JOIN (
+                SELECT icao, MAX(captured_at) AS max_at
+                FROM adsb_snapshots
+                WHERE captured_at >= datetime('now', ?)
+                GROUP BY icao
+            ) latest ON s.icao = latest.icao AND s.captured_at = latest.max_at
+            WHERE (? = '' OR s.icao LIKE ? OR s.callsign LIKE ? OR s.registration LIKE ?)
+            ORDER BY s.captured_at DESC
+            LIMIT ?
+        """
+        params = (modifier, search, pattern, pattern, pattern, limit)
+    else:
+        window = f'{since_minutes} minutes'
+        sql = """
+            SELECT *
+            FROM (
+                SELECT DISTINCT ON (icao)
+                    icao, callsign, registration, type_code, type_desc,
+                    altitude, speed, heading, vertical_rate, lat, lon, squawk,
+                    captured_at AS last_seen
+                FROM adsb_snapshots
+                WHERE captured_at >= NOW() - INTERVAL %s
+                  AND (%s = '' OR icao ILIKE %s OR callsign ILIKE %s OR registration ILIKE %s)
+                ORDER BY icao, captured_at DESC
+            ) latest
+            ORDER BY last_seen DESC
+            LIMIT %s
+        """
+        params = (window, search, pattern, pattern, pattern, limit)
 
     try:
-        with _get_history_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, (window, search, pattern, pattern, pattern, limit))
+        with _history_cursor() as cur:
+            cur.execute(sql, params)
             rows = cur.fetchall()
         return jsonify({'aircraft': rows, 'count': len(rows)})
     except Exception as exc:
@@ -1333,9 +1335,8 @@ def adsb_history_aircraft():
 @adsb_bp.route('/history/timeline')
 def adsb_history_timeline():
     """Timeline snapshots for a specific aircraft."""
-    if not ADSB_HISTORY_ENABLED or not PSYCOPG2_AVAILABLE:
+    if not HISTORY_AVAILABLE:
         return api_error('ADS-B history is disabled', 503)
-    _ensure_history_schema()
 
     icao = (request.args.get('icao') or '').strip().upper()
     if not icao:
@@ -1343,20 +1344,29 @@ def adsb_history_timeline():
 
     since_minutes = _parse_int_param(request.args.get('since_minutes'), 1440, 1, 10080)
     limit = _parse_int_param(request.args.get('limit'), 2000, 1, 20000)
-    window = f'{since_minutes} minutes'
 
-    sql = """
-        SELECT captured_at, altitude, speed, heading, vertical_rate, lat, lon, squawk
-        FROM adsb_snapshots
-        WHERE icao = %s
-          AND captured_at >= NOW() - INTERVAL %s
-        ORDER BY captured_at ASC
-        LIMIT %s
-    """
+    if HISTORY_BACKEND == 'sqlite':
+        sql = """
+            SELECT captured_at, altitude, speed, heading, vertical_rate, lat, lon, squawk
+            FROM adsb_snapshots
+            WHERE icao = ? AND captured_at >= datetime('now', ?)
+            ORDER BY captured_at ASC
+            LIMIT ?
+        """
+        params = (icao, f'-{since_minutes} minutes', limit)
+    else:
+        sql = """
+            SELECT captured_at, altitude, speed, heading, vertical_rate, lat, lon, squawk
+            FROM adsb_snapshots
+            WHERE icao = %s AND captured_at >= NOW() - INTERVAL %s
+            ORDER BY captured_at ASC
+            LIMIT %s
+        """
+        params = (icao, f'{since_minutes} minutes', limit)
 
     try:
-        with _get_history_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, (icao, window, limit))
+        with _history_cursor() as cur:
+            cur.execute(sql, params)
             rows = cur.fetchall()
         return jsonify({'icao': icao, 'timeline': rows, 'count': len(rows)})
     except Exception as exc:
@@ -1367,27 +1377,37 @@ def adsb_history_timeline():
 @adsb_bp.route('/history/messages')
 def adsb_history_messages():
     """Raw message history for a specific aircraft."""
-    if not ADSB_HISTORY_ENABLED or not PSYCOPG2_AVAILABLE:
+    if not HISTORY_AVAILABLE:
         return api_error('ADS-B history is disabled', 503)
-    _ensure_history_schema()
 
     icao = (request.args.get('icao') or '').strip().upper()
     since_minutes = _parse_int_param(request.args.get('since_minutes'), 30, 1, 10080)
     limit = _parse_int_param(request.args.get('limit'), 200, 1, 2000)
-    window = f'{since_minutes} minutes'
 
-    sql = """
-        SELECT received_at, msg_type, callsign, altitude, speed, heading, vertical_rate, lat, lon, squawk
-        FROM adsb_messages
-        WHERE received_at >= NOW() - INTERVAL %s
-          AND (%s = '' OR icao = %s)
-        ORDER BY received_at DESC
-        LIMIT %s
-    """
+    if HISTORY_BACKEND == 'sqlite':
+        sql = """
+            SELECT received_at, msg_type, callsign, altitude, speed, heading, vertical_rate, lat, lon, squawk
+            FROM adsb_messages
+            WHERE received_at >= datetime('now', ?)
+              AND (? = '' OR icao = ?)
+            ORDER BY received_at DESC
+            LIMIT ?
+        """
+        params = (f'-{since_minutes} minutes', icao, icao, limit)
+    else:
+        sql = """
+            SELECT received_at, msg_type, callsign, altitude, speed, heading, vertical_rate, lat, lon, squawk
+            FROM adsb_messages
+            WHERE received_at >= NOW() - INTERVAL %s
+              AND (%s = '' OR icao = %s)
+            ORDER BY received_at DESC
+            LIMIT %s
+        """
+        params = (f'{since_minutes} minutes', icao, icao, limit)
 
     try:
-        with _get_history_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, (window, icao, icao, limit))
+        with _history_cursor() as cur:
+            cur.execute(sql, params)
             rows = cur.fetchall()
         return jsonify({'icao': icao, 'messages': rows, 'count': len(rows)})
     except Exception as exc:
@@ -1398,9 +1418,8 @@ def adsb_history_messages():
 @adsb_bp.route('/history/export')
 def adsb_history_export():
     """Export ADS-B history data in CSV or JSON format."""
-    if not ADSB_HISTORY_ENABLED or not PSYCOPG2_AVAILABLE:
+    if not HISTORY_AVAILABLE:
         return api_error('ADS-B history is disabled', 503)
-    _ensure_history_schema()
 
     export_format = str(request.args.get('format') or 'csv').strip().lower()
     export_type = str(request.args.get('type') or 'all').strip().lower()
@@ -1434,8 +1453,13 @@ def adsb_history_export():
             if _is_military_aircraft(r.get(icao_key, ''), r.get(callsign_key)) == want_military
         ]
 
+    ph = '?' if HISTORY_BACKEND == 'sqlite' else '%s'
+
+    def _like_op() -> str:
+        return 'LIKE' if HISTORY_BACKEND == 'sqlite' else 'ILIKE'
+
     try:
-        with _get_history_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+        with _history_cursor() as cur:
             if export_type in {'snapshots', 'all'}:
                 snapshot_where: list[str] = []
                 snapshot_params: list[Any] = []
@@ -1449,10 +1473,11 @@ def adsb_history_export():
                     end=end,
                 )
                 if icao:
-                    snapshot_where.append("icao = %s")
+                    snapshot_where.append(f"icao = {ph}")
                     snapshot_params.append(icao)
                 if search:
-                    snapshot_where.append("(icao ILIKE %s OR callsign ILIKE %s OR registration ILIKE %s)")
+                    like = _like_op()
+                    snapshot_where.append(f"(icao {like} {ph} OR callsign {like} {ph} OR registration {like} {ph})")
                     snapshot_params.extend([pattern, pattern, pattern])
 
                 snapshot_sql = """
@@ -1479,10 +1504,11 @@ def adsb_history_export():
                     end=end,
                 )
                 if icao:
-                    message_where.append("icao = %s")
+                    message_where.append(f"icao = {ph}")
                     message_params.append(icao)
                 if search:
-                    message_where.append("(icao ILIKE %s OR callsign ILIKE %s)")
+                    like = _like_op()
+                    message_where.append(f"(icao {like} {ph} OR callsign {like} {ph})")
                     message_params.extend([pattern, pattern])
 
                 message_sql = """
@@ -1501,11 +1527,19 @@ def adsb_history_export():
                 session_where: list[str] = []
                 session_params: list[Any] = []
                 if scope == 'custom' and start is not None and end is not None:
-                    session_where.append("COALESCE(ended_at, %s) >= %s AND started_at < %s")
-                    session_params.extend([end, start, end])
+                    if HISTORY_BACKEND == 'sqlite':
+                        session_where.append(f"COALESCE(ended_at, datetime('now')) >= {ph} AND started_at < {ph}")
+                        session_params.extend([start.isoformat(), end.isoformat()])
+                    else:
+                        session_where.append(f"COALESCE(ended_at, {ph}) >= {ph} AND started_at < {ph}")
+                        session_params.extend([end, start, end])
                 elif scope == 'window':
-                    session_where.append("COALESCE(ended_at, NOW()) >= NOW() - INTERVAL %s")
-                    session_params.append(f'{since_minutes} minutes')
+                    if HISTORY_BACKEND == 'sqlite':
+                        session_where.append(f"COALESCE(ended_at, datetime('now')) >= datetime('now', {ph})")
+                        session_params.append(f'-{since_minutes} minutes')
+                    else:
+                        session_where.append(f"COALESCE(ended_at, NOW()) >= NOW() - INTERVAL {ph}")
+                        session_params.append(f'{since_minutes} minutes')
 
                 session_sql = """
                         SELECT id, started_at, ended_at, device_index, sdr_type, remote_host,
@@ -1576,17 +1610,18 @@ def adsb_history_export():
 @adsb_bp.route('/history/prune', methods=['POST'])
 def adsb_history_prune():
     """Delete ADS-B history for a selected time range or entire dataset."""
-    if not ADSB_HISTORY_ENABLED or not PSYCOPG2_AVAILABLE:
+    if not HISTORY_AVAILABLE:
         return api_error('ADS-B history is disabled', 503)
-    _ensure_history_schema()
 
     payload = request.get_json(silent=True) or {}
     mode = str(payload.get('mode') or 'range').strip().lower()
     if mode not in {'range', 'all'}:
         return api_error('mode must be range or all', 400)
 
+    ph = '?' if HISTORY_BACKEND == 'sqlite' else '%s'
+
     try:
-        with _get_history_connection() as conn, conn.cursor() as cur:
+        with _history_cursor() as cur:
             deleted = {'messages': 0, 'snapshots': 0}
 
             if mode == 'all':
@@ -1610,23 +1645,18 @@ def adsb_history_prune():
             if end - start > timedelta(days=31):
                 return api_error('range cannot exceed 31 days', 400)
 
+            start_val = start.isoformat() if HISTORY_BACKEND == 'sqlite' else start
+            end_val = end.isoformat() if HISTORY_BACKEND == 'sqlite' else end
+
             cur.execute(
-                """
-                    DELETE FROM adsb_messages
-                    WHERE received_at >= %s
-                      AND received_at < %s
-                    """,
-                (start, end),
+                f"DELETE FROM adsb_messages  WHERE received_at >= {ph} AND received_at < {ph}",
+                (start_val, end_val),
             )
             deleted['messages'] = max(0, cur.rowcount or 0)
 
             cur.execute(
-                """
-                    DELETE FROM adsb_snapshots
-                    WHERE captured_at >= %s
-                      AND captured_at < %s
-                    """,
-                (start, end),
+                f"DELETE FROM adsb_snapshots WHERE captured_at  >= {ph} AND captured_at  < {ph}",
+                (start_val, end_val),
             )
             deleted['snapshots'] = max(0, cur.rowcount or 0)
 
