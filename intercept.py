@@ -24,12 +24,22 @@ if '--version' in sys.argv or '-V' in sys.argv:
     sys.exit(0)
 
 import site
+from pathlib import Path
 
 # Ensure user site-packages is available (may be disabled when running as root/sudo)
 if not site.ENABLE_USER_SITE:
     user_site = site.getusersitepackages()
     if user_site and user_site not in sys.path:
         sys.path.insert(0, user_site)
+
+# Load .env before importing app so env vars are available to config.py
+try:
+    from dotenv import load_dotenv
+    _env_path = Path(__file__).parent / '.env'
+    if _env_path.exists():
+        load_dotenv(_env_path, override=False)
+except ImportError:
+    pass
 
 from app import main
 

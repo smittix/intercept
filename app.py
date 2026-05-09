@@ -40,6 +40,16 @@ from flask import (
 )
 from werkzeug.security import check_password_hash
 
+# Load .env before config so env vars are available regardless of launch path
+# (gunicorn imports app.py directly, bypassing intercept.py)
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _env_path = Path(__file__).parent / '.env'
+    if _env_path.exists():
+        _load_dotenv(_env_path, override=False)
+except ImportError:
+    pass
+
 from config import CHANGELOG, DEFAULT_LATITUDE, DEFAULT_LONGITUDE, SHARED_OBSERVER_LOCATION_ENABLED, VERSION
 from utils.cleanup import DataStore, cleanup_manager
 from utils.constants import (
