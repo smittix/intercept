@@ -2,13 +2,60 @@
 
 ## Supported SDR Hardware
 
-| Hardware | Frequency Range | Price | Notes |
-|----------|-----------------|-------|-------|
-| **RTL-SDR** | 24 - 1766 MHz | ~$25-35 | Recommended for beginners |
-| **LimeSDR** | 0.1 - 3800 MHz | ~$300 | Wide range, requires SoapySDR |
-| **HackRF** | 1 - 6000 MHz | ~$300 | Ultra-wide range, requires SoapySDR |
+| Hardware | Frequency Range | Gain Max | Price | Notes |
+|----------|-----------------|----------|-------|-------|
+| **RTL-SDR** (e.g. NooElec NESDR v5) | 24 – 1766 MHz | 50 dB | ~$25–35 | Recommended for beginners; supports PPM correction and Bias-T |
+| **HackRF HM4 / One** | 1 – 6000 MHz | 102 dB | ~$300 | Ultra-wide range; no PPM correction; requires SoapySDR |
+| **Airspy** | 24 – 1800 MHz | 45 dB | ~$150 | High dynamic range; requires SoapySDR |
+| **LimeSDR** | 0.1 – 3800 MHz | 73 dB | ~$300 | Wide range, TCXO (low PPM drift); requires SoapySDR |
+| **SDRplay RSP** | 0.001 – 2000 MHz | 59 dB | ~$200 | Very wide range; requires SoapySDR |
 
-INTERCEPT automatically detects connected devices.
+INTERCEPT automatically detects connected devices and adjusts gain limits and PPM field visibility per device type.
+
+---
+
+## RTL-SDR v5 (NooElec NESDR) — Bias-T & PPM
+
+The **NooElec NESDR RTL-SDR v5** (and RTL-SDR Blog V4/V5) include a switchable bias-T power output on the SMA port, used to power active antennas and low-noise amplifiers (LNAs) without a separate power supply.
+
+### Enabling Bias-T
+
+Use the **global Bias-T toggle** in the INTERCEPT sidebar. It activates bias-T power for:
+- **Pager** — passed to `rtl_fm` via device string
+- **433 MHz Sensors** — passed to `rtl_433` via device string  
+- **ADS-B** — passed to dump1090 (`--enable-biast`) or via `rtl_biast` fallback
+- **AIS** — passed to AIS-catcher (`-gr BIASTEE on`)
+- **ACARS** — `rtl_biast -b 1` called before acarsdec starts; `-b 0` on stop
+
+Requires `rtl_biast` from RTL-SDR Blog drivers for ACARS/dump1090 fallback:
+```bash
+sudo apt install rtl-sdr   # includes rtl_biast on RTL-SDR Blog packages
+```
+
+### PPM Correction
+
+RTL-SDR dongles have a crystal oscillator with a small frequency error (typically ±5–20 PPM). Enter your dongle's PPM offset in any mode's **PPM Correction** field. To measure it:
+```bash
+kalibrate-rtl -s 1800000 -g 40   # scan GSM towers and derive PPM error
+# or
+rtl_test -p                        # measure PPM drift over ~60 seconds
+```
+
+---
+
+## HackRF HM4 / One — Gain & PPM
+
+The **HackRF** has a combined LNA + VGA gain stage up to **102 dB**. INTERCEPT sets all gain sliders to `max=102` automatically when HackRF is the selected device type.
+
+**PPM correction is not supported** on HackRF via dump1090/AIS-catcher/acarsdec — the PPM input fields are automatically hidden when HackRF is selected.
+
+Typical gain settings:
+| Mode | Recommended Gain |
+|------|-----------------|
+| ADS-B (1090 MHz) | 40–60 dB |
+| AIS (162 MHz) | 40–50 dB |
+| ACARS (130 MHz) | 40–50 dB |
+| Pager (150–930 MHz) | 30–50 dB |
 
 ---
 

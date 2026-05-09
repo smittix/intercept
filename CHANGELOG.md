@@ -2,6 +2,24 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.27.0] - 2026-05-08
+
+### Added
+- **PPM frequency correction for ADS-B** — new PPM input in the ADS-B dashboard; value is passed as `--ppm N` to dump1090. Automatically hidden when HackRF is selected.
+- **PPM frequency correction for AIS** — new PPM input in the AIS panel; value is passed as `-p N` to AIS-catcher.
+- **Bias-T support for ACARS** — the global Bias-T sidebar toggle now activates `rtl_biast -b 1` before acarsdec starts and disables it on stop. Applies to RTL-SDR only; no-op for SoapySDR devices.
+- **Dynamic gain cap per SDR type** — switching the SDR type to HackRF raises all gain inputs from `max=50` to `max=102 dB` across ADS-B, AIS, ACARS, pager, sensor, and all other modes. Reverts when switching back to RTL-SDR.
+- **PPM fields auto-hide for HackRF** — all PPM correction inputs (pager, sensor, AIS, ADS-B) are hidden when HackRF is the selected device type and shown for all others.
+- **ADS-B history SQLite fallback** — `INTERCEPT_ADSB_HISTORY_ENABLED=true` now works without PostgreSQL; history is stored in `instance/adsb_history.db` (SQLite, created automatically). Set `INTERCEPT_ADSB_DB_BACKEND=postgres` to force PostgreSQL.
+- **KALI_INSTALL.md** — copy-paste quick-start guide for Kali Linux live sessions (no PostgreSQL required).
+
+### Changed
+- `build_adsb_command()` and `build_ais_command()` in all SDR backends (`base`, `rtlsdr`, `hackrf`, `airspy`, `limesdr`, `sdrplay`) now accept a `ppm` parameter. RTL-SDR backend applies it; SoapySDR backends accept and ignore it (no PPM support).
+- AIS start request now forwards `sdr_type` to the backend so HackRF users get the correct SoapySDR AIS-catcher command.
+- ACARS start request now forwards `bias_t` and `sdr_type` to the backend.
+
+---
+
 ## [2.26.11] - 2026-03-14
 
 ### Fixed
