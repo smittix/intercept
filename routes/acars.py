@@ -252,7 +252,6 @@ def start_acars() -> Response:
 
     acars_active_device = device_int
     acars_active_sdr_type = sdr_type_str
-    acars_bias_t_active = bias_t and not is_soapy
 
     # Get frequencies - use provided or defaults
     frequencies = data.get('frequencies', DEFAULT_ACARS_FREQUENCIES)
@@ -276,6 +275,7 @@ def start_acars() -> Response:
         sdr_type = SDRType.RTL_SDR
 
     is_soapy = sdr_type not in (SDRType.RTL_SDR,)
+    acars_bias_t_active = bias_t and not is_soapy
 
     # Build acarsdec command
     # Different forks have different syntax:
