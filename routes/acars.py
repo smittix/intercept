@@ -52,6 +52,7 @@ acars_last_message_time = None
 # Track which device is being used
 acars_active_device: int | None = None
 acars_active_sdr_type: str | None = None
+acars_bias_t_active: bool = False
 
 
 def find_acarsdec():
@@ -164,7 +165,7 @@ def stream_acars_output(process: subprocess.Popen, is_text_mode: bool = False) -
         logger.error(f"ACARS stream error: {e}")
         app_module.acars_queue.put({'type': 'error', 'message': str(e)})
     finally:
-        global acars_active_device, acars_active_sdr_type
+        global acars_active_device, acars_active_sdr_type, acars_bias_t_active
         # Ensure process is terminated
         try:
             process.terminate()
@@ -176,6 +177,11 @@ def stream_acars_output(process: subprocess.Popen, is_text_mode: bool = False) -
         app_module.acars_queue.put({'type': 'status', 'status': 'stopped'})
         with app_module.acars_lock:
             app_module.acars_process = None
+        # Disable Bias-T if it was enabled
+        if acars_bias_t_active and acars_active_device is not None:
+            from utils.sdr.rtlsdr import disable_bias_t_via_rtl_biast
+            disable_bias_t_via_rtl_biast(acars_active_device)
+            acars_bias_t_active = False
         # Release SDR device
         if acars_active_device is not None:
             app_module.release_sdr_device(acars_active_device, acars_active_sdr_type or 'rtlsdr')
@@ -212,7 +218,7 @@ def acars_status() -> Response:
 @acars_bp.route('/start', methods=['POST'])
 def start_acars() -> Response:
     """Start ACARS decoder."""
-    global acars_message_count, acars_last_message_time, acars_active_device, acars_active_sdr_type
+    global acars_message_count, acars_last_message_time, acars_active_device, acars_active_sdr_type, acars_bias_t_active
 
     with app_module.acars_lock:
         if app_module.acars_process and app_module.acars_process.poll() is None:
@@ -232,6 +238,8 @@ def start_acars() -> Response:
         ppm = validate_ppm(data.get('ppm', '0'))
     except ValueError as e:
         return api_error(str(e), 400)
+
+    bias_t = bool(data.get('bias_t', False))
 
     # Resolve SDR type for device selection
     sdr_type_str = data.get('sdr_type', 'rtlsdr')
@@ -267,6 +275,7 @@ def start_acars() -> Response:
         sdr_type = SDRType.RTL_SDR
 
     is_soapy = sdr_type not in (SDRType.RTL_SDR,)
+    acars_bias_t_active = bias_t and not is_soapy
 
     # Build acarsdec command
     # Different forks have different syntax:
@@ -316,6 +325,11 @@ def start_acars() -> Response:
     cmd.extend(frequencies)
 
     logger.info(f"Starting ACARS decoder: {' '.join(cmd)}")
+
+    # Enable Bias-T for RTL-SDR if requested (acarsdec has no native flag)
+    if bias_t and not is_soapy:
+        from utils.sdr.rtlsdr import enable_bias_t_via_rtl_biast
+        enable_bias_t_via_rtl_biast(device_int)
 
     try:
         is_text_mode = False
@@ -392,7 +406,7 @@ def start_acars() -> Response:
 @acars_bp.route('/stop', methods=['POST'])
 def stop_acars() -> Response:
     """Stop ACARS decoder."""
-    global acars_active_device, acars_active_sdr_type
+    global acars_active_device, acars_active_sdr_type, acars_bias_t_active
 
     with app_module.acars_lock:
         if not app_module.acars_process:
@@ -407,6 +421,12 @@ def stop_acars() -> Response:
             logger.error(f"Error stopping ACARS: {e}")
 
         app_module.acars_process = None
+
+    # Disable Bias-T if it was enabled
+    if acars_bias_t_active and acars_active_device is not None:
+        from utils.sdr.rtlsdr import disable_bias_t_via_rtl_biast
+        disable_bias_t_via_rtl_biast(acars_active_device)
+        acars_bias_t_active = False
 
     # Release device from registry
     if acars_active_device is not None:

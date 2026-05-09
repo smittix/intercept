@@ -6132,11 +6132,11 @@
 
         // SDR hardware capabilities
         const sdrCapabilities = {
-            'rtlsdr': { name: 'RTL-SDR', freq_min: 24, freq_max: 1766, gain_min: 0, gain_max: 50 },
-            'sdrplay': { name: 'SDRplay', freq_min: 0.001, freq_max: 2000, gain_min: 0, gain_max: 59 },
-            'limesdr': { name: 'LimeSDR', freq_min: 0.1, freq_max: 3800, gain_min: 0, gain_max: 73 },
-            'hackrf': { name: 'HackRF', freq_min: 1, freq_max: 6000, gain_min: 0, gain_max: 102 }, // LNA(40)+VGA(62)
-            'airspy': { name: 'Airspy', freq_min: 24, freq_max: 1800, gain_min: 0, gain_max: 45 }  // LNA(15)+Mix(15)+VGA(15)
+            'rtlsdr': { name: 'RTL-SDR', freq_min: 24, freq_max: 1766, gain_min: 0, gain_max: 50, supports_ppm: true },
+            'sdrplay': { name: 'SDRplay', freq_min: 0.001, freq_max: 2000, gain_min: 0, gain_max: 59, supports_ppm: true },
+            'limesdr': { name: 'LimeSDR', freq_min: 0.1, freq_max: 3800, gain_min: 0, gain_max: 73, supports_ppm: true },
+            'hackrf': { name: 'HackRF', freq_min: 1, freq_max: 6000, gain_min: 0, gain_max: 102, supports_ppm: false }, // LNA(40)+VGA(62)
+            'airspy': { name: 'Airspy', freq_min: 24, freq_max: 1800, gain_min: 0, gain_max: 45, supports_ppm: true }  // LNA(15)+Mix(15)+VGA(15)
         };
 
         // Current device list with SDR type info
@@ -6267,9 +6267,16 @@
                 document.getElementById('capGainRange').textContent = `${caps.gain_min}-${caps.gain_max} dB`;
                 // Update max attribute on all mode gain inputs so constraints match the SDR
                 const gainMax = caps.gain_max;
-                ['gain', 'sensorGain', 'aisGainInput', 'acarsGainInput', 'aprsStripGain', 'weatherSatGain'].forEach(id => {
+                ['gain', 'sensorGain', 'aisGainInput', 'acarsGainInput', 'aprsStripGain', 'weatherSatGain', 'adsbGainInput'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.max = gainMax;
+                });
+                // Also update all elements with gain-input class (catches dynamically added inputs)
+                document.querySelectorAll('input.gain-input').forEach(el => { el.max = gainMax; });
+                // Show/hide PPM fields based on whether this SDR supports frequency correction
+                const showPpm = caps.supports_ppm !== false;
+                document.querySelectorAll('.ppm-section').forEach(el => {
+                    el.style.display = showPpm ? '' : 'none';
                 });
             }
         }

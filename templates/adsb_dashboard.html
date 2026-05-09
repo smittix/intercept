@@ -341,8 +341,11 @@
                         <option value="0">SDR 0</option>
                     </select>
                     <label title="SDR gain in dB (0 = auto)" style="display:flex;align-items:center;gap:3px;font-size:11px;">
-                        Gain <input type="number" id="adsbGainInput" value="40" min="0" max="50" step="1" style="width:46px;" title="SDR gain in dB">
+                        Gain <input type="number" id="adsbGainInput" class="gain-input" value="40" min="0" max="50" step="1" style="width:46px;" title="SDR gain in dB">
                     </label>
+                    <span class="ppm-section" style="display:flex;align-items:center;gap:3px;font-size:11px;" title="Frequency correction (RTL-SDR only)">
+                        PPM <input type="number" id="adsbPpmInput" value="0" min="-1000" max="1000" step="1" style="width:46px;" title="PPM correction (0 = none)">
+                    </span>
                     <label class="bias-t-label" title="Enable Bias-T power for external LNA/preamp"><input type="checkbox" id="adsbBiasT" onchange="saveAdsbBiasTSetting()"> Bias-T</label>
                     <button class="start-btn" id="startBtn" onclick="toggleTracking()">START</button>
                 </div>
@@ -2364,6 +2367,7 @@ sudo make install</code>
                     device: adsbDevice,
                     sdr_type: adsbSdrType,
                     gain: parseInt(document.getElementById('adsbGainInput')?.value || '40'),
+                    ppm: parseInt(document.getElementById('adsbPpmInput')?.value || '0'),
                     bias_t: getBiasTEnabled()
                 };
                 if (remoteConfig) {

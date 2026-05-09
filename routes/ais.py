@@ -32,7 +32,7 @@ from utils.logging import get_logger
 from utils.responses import api_error, api_success
 from utils.sdr import SDRFactory, SDRType
 from utils.sse import sse_stream_fanout
-from utils.validation import validate_device_index, validate_gain
+from utils.validation import validate_device_index, validate_gain, validate_ppm
 
 logger = get_logger('intercept.ais')
 
@@ -365,6 +365,7 @@ def start_ais():
     try:
         gain = int(validate_gain(data.get('gain', '40')))
         device = validate_device_index(data.get('device', '0'))
+        ppm = int(validate_ppm(data.get('ppm', '0')))
     except ValueError as e:
         return api_error(str(e), 400)
 
@@ -426,6 +427,7 @@ def start_ais():
         tcp_port=tcp_port,
         udp_host=udp_host,
         udp_port=udp_port,
+        ppm=ppm,
     )
 
     # Use the found AIS-catcher path

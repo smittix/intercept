@@ -22,7 +22,7 @@
         </div>
         <div class="form-group">
             <label>Gain (dB, 0 = auto)</label>
-            <input type="number" id="acarsGainInput" value="40" min="0" max="50" placeholder="0-50">
+            <input type="number" id="acarsGainInput" class="gain-input" value="40" min="0" max="50" placeholder="0-50">
         </div>
     </div>
 
@@ -139,7 +139,11 @@
         fetch('/acars/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ device, gain, frequencies })
+            body: JSON.stringify({
+                device, gain, frequencies,
+                sdr_type: typeof getSelectedSDRType === 'function' ? getSelectedSDRType() : 'rtlsdr',
+                bias_t: typeof getBiasTEnabled === 'function' ? getBiasTEnabled() : false,
+            })
         })
         .then(r => r.json())
         .then(data => {

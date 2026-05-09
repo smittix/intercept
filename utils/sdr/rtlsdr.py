@@ -222,7 +222,8 @@ class RTLSDRCommandBuilder(CommandBuilder):
         self,
         device: SDRDevice,
         gain: float | None = None,
-        bias_t: bool = False
+        bias_t: bool = False,
+        ppm: int | None = None,
     ) -> list[str]:
         """
         Build dump1090 command for ADS-B decoding.
@@ -249,6 +250,9 @@ class RTLSDRCommandBuilder(CommandBuilder):
 
         if gain is not None:
             cmd.extend(['--gain', str(int(gain))])
+
+        if ppm:
+            cmd.extend(['--ppm', str(int(ppm))])
 
         if bias_t:
             bias_t_flag = _get_dump1090_bias_t_flag(dump1090_path)
@@ -313,6 +317,7 @@ class RTLSDRCommandBuilder(CommandBuilder):
         tcp_port: int = 10110,
         udp_host: str | None = None,
         udp_port: int | None = None,
+        ppm: int | None = None,
     ) -> list[str]:
         """
         Build AIS-catcher command for AIS vessel tracking.
@@ -338,6 +343,9 @@ class RTLSDRCommandBuilder(CommandBuilder):
 
         if bias_t:
             cmd.extend(['-gr', 'BIASTEE', 'on'])
+
+        if ppm:
+            cmd.extend(['-p', str(int(ppm))])
 
         if udp_host and udp_port:
             cmd.extend(['-u', udp_host, str(udp_port)])

@@ -45,12 +45,13 @@ Complete feature list for all modules.
 - **Aircraft filtering** - show all, military only, civil only, or emergency only
 - **Marker clustering** - group nearby aircraft at lower zoom levels
 - **Reception statistics** - max range, message rate, busiest hour, total seen
-- **Persistent ADS-B history** - optional Postgres-backed message and snapshot storage
+- **Persistent ADS-B history** - SQLite (default, no install required) or optional PostgreSQL storage for message and snapshot history
 - **History reporting dashboard** - session controls, aircraft timelines, and detail modal
 - **Observer location** - manual input or GPS geolocation
 - **Audio alerts** - notifications for military and emergency aircraft
 - **Emergency squawk highlighting** - visual alerts for 7500/7600/7700
 - **Aircraft details popup** - callsign, altitude, speed, heading, squawk, ICAO
+- **PPM frequency correction** - input field auto-hides when HackRF is selected (HackRF does not support software PPM)
 
 <p align="center">
   <img src="/static/images/screenshots/screenshot_radar.png" alt="Screenshot">
@@ -64,6 +65,8 @@ Complete feature list for all modules.
 - **Vessel trails** - optional track history visualization
 - **Vessel details popup** - name, MMSI, callsign, destination, ship type, speed, heading
 - **Country identification** - flag lookup via Maritime Identification Digits (MID)
+- **PPM frequency correction** - per-session correction for RTL-SDR frequency drift; auto-hides for HackRF
+- **Multi-SDR command routing** - correct AIS-catcher flags used automatically per device type (RTL-SDR vs SoapySDR)
 
 ### VHF DSC Channel 70 Monitoring
 
@@ -87,6 +90,7 @@ Digital Selective Calling (DSC) monitoring on the international maritime distres
 - **Aircraft datalink messages** - operational, weather, and position reports
 - **Multi-SDR support** - RTL-SDR, HackRF, LimeSDR, Airspy, SDRplay
 - **Message filtering** - filter by message type, flight, or registration
+- **Bias-T support** - global Bias-T toggle activates RTL-SDR Blog bias-T power before acarsdec starts (for active antennas and LNAs)
 
 ## VDL2 (VHF Data Link Mode 2)
 
@@ -506,10 +510,12 @@ The settings modal shows availability status for each bundled asset:
 - **Voice alerts** for configurable event notifications across modes
 - **Multi-SDR hardware support** - RTL-SDR, LimeSDR, HackRF, Airspy, SDRplay
 - **Automatic device detection** across all supported hardware
+- **Hardware-specific gain caps** - gain inputs update automatically per device type (RTL-SDR: 0–50 dB, HackRF: 0–102 dB, Airspy: 0–45 dB, LimeSDR: 0–73 dB, SDRplay: 0–59 dB)
+- **PPM correction fields auto-hide for HackRF** - all PPM inputs are hidden when HackRF is the selected device type
 - **Hardware-specific validation** - frequency/gain ranges per device type
 - **Tool path overrides** via `INTERCEPT_*_PATH` environment variables
 - **Native Homebrew detection** for Apple Silicon tool paths
-- **Configurable gain and PPM correction**
+- **Configurable gain and PPM correction** across all modes
 - **Device intelligence** dashboard with tracking
 - **GPS dongle support** - USB GPS receivers for precise observer location
 - **Disclaimer acceptance** on first use
