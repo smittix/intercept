@@ -14,7 +14,11 @@
         <h3>Settings</h3>
         <div class="form-group">
             <label>Gain (dB, 0 = auto)</label>
-            <input type="number" id="aisGainInput" value="40" min="0" max="50" placeholder="0-50">
+            <input type="number" id="aisGainInput" class="gain-input" value="40" min="0" max="50" placeholder="0-50">
+        </div>
+        <div class="form-group ppm-section">
+            <label>PPM Correction</label>
+            <input type="number" id="aisPpmInput" value="0" min="-1000" max="1000" placeholder="0 = none">
         </div>
     </div>
 
@@ -130,8 +134,9 @@
         const udpHost = document.getElementById('aisUdpHost').value.trim();
         const udpPort = parseInt(document.getElementById('aisUdpPort').value) || 10110;
 
+        const ppm = parseInt(document.getElementById('aisPpmInput')?.value || '0');
         const body = {
-            device, gain,
+            device, gain, ppm,
             bias_t: typeof getBiasTEnabled === 'function' ? getBiasTEnabled() : false,
         };
         if (udpHost) {

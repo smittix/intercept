@@ -98,12 +98,14 @@ class HackRFCommandBuilder(CommandBuilder):
         self,
         device: SDRDevice,
         gain: float | None = None,
-        bias_t: bool = False
+        bias_t: bool = False,
+        ppm: int | None = None,
     ) -> list[str]:
         """
         Build dump1090/readsb command with SoapySDR support for ADS-B decoding.
 
         Uses readsb which has better SoapySDR support.
+        Note: HackRF does not support PPM correction via readsb; ppm is ignored.
         """
         device_str = self._build_device_string(device)
 
@@ -164,11 +166,13 @@ class HackRFCommandBuilder(CommandBuilder):
         tcp_port: int = 10110,
         udp_host: str | None = None,
         udp_port: int | None = None,
+        ppm: int | None = None,
     ) -> list[str]:
         """
         Build AIS-catcher command for AIS vessel tracking with HackRF.
 
         Uses AIS-catcher with SoapySDR support.
+        Note: HackRF does not support PPM correction; ppm is ignored.
         """
         device_str = self._build_device_string(device)
 

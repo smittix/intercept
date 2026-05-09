@@ -77,7 +77,8 @@ class LimeSDRCommandBuilder(CommandBuilder):
         self,
         device: SDRDevice,
         gain: float | None = None,
-        bias_t: bool = False
+        bias_t: bool = False,
+        ppm: int | None = None,
     ) -> list[str]:
         """
         Build dump1090 command with SoapySDR support for ADS-B decoding.
@@ -85,6 +86,7 @@ class LimeSDRCommandBuilder(CommandBuilder):
         Uses dump1090 compiled with SoapySDR support, or readsb as alternative.
         Note: Requires dump1090 with SoapySDR support or readsb.
         Note: LimeSDR does not support bias-T, parameter is ignored.
+        Note: LimeSDR has a TCXO; ppm is accepted but typically unnecessary.
         """
         device_str = self._build_device_string(device)
 
@@ -143,6 +145,7 @@ class LimeSDRCommandBuilder(CommandBuilder):
         tcp_port: int = 10110,
         udp_host: str | None = None,
         udp_port: int | None = None,
+        ppm: int | None = None,
     ) -> list[str]:
         """
         Build AIS-catcher command for AIS vessel tracking with LimeSDR.

@@ -120,7 +120,8 @@ class CommandBuilder(ABC):
         self,
         device: SDRDevice,
         gain: float | None = None,
-        bias_t: bool = False
+        bias_t: bool = False,
+        ppm: int | None = None,
     ) -> list[str]:
         """
         Build ADS-B decoder command.
@@ -129,6 +130,7 @@ class CommandBuilder(ABC):
             device: The SDR device to use
             gain: Gain in dB (None for auto)
             bias_t: Enable bias-T power (for active antennas)
+            ppm: Frequency correction in parts-per-million (RTL-SDR only)
 
         Returns:
             Command as list of strings for subprocess
@@ -168,6 +170,7 @@ class CommandBuilder(ABC):
         tcp_port: int = 10110,
         udp_host: str | None = None,
         udp_port: int | None = None,
+        ppm: int | None = None,
     ) -> list[str]:
         """
         Build AIS decoder command for vessel tracking.
