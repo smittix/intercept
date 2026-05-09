@@ -270,6 +270,17 @@
                 <li><em style="color: var(--text-muted);">Note: This feature is in early development</em></li>
             </ul>
 
+            <h3>Drone Intelligence Mode</h3>
+            <ul class="tip-list">
+                <li>Detects UAVs via three simultaneous vectors: Remote ID (WiFi/BLE), RTL-SDR 433/868 MHz RF, and HackRF 2.4/5.8 GHz</li>
+                <li>Parses ASTM F3411 Remote ID broadcast frames — captures drone ID, operator ID, and GPS position</li>
+                <li>RF fingerprinting on 433/868 MHz ISM bands and 2.4/5.8 GHz to detect drone control links and video downlinks</li>
+                <li>Correlates observations across all vectors into unified <em>DroneContact</em> entries with risk scoring</li>
+                <li>Risk levels: <strong>High</strong> (non-compliant / no Remote ID), <strong>Medium</strong> (multi-vector or RSSI delta &gt;15 dB), <strong>Low</strong> (compliant, single vector)</li>
+                <li>Live map shows last known position for Remote ID contacts with GPS data</li>
+                <li>Requires: WiFi adapter (monitor mode) for BLE Remote ID, RTL-SDR for 433/868 MHz, HackRF for 2.4/5.8 GHz</li>
+            </ul>
+
             <h3>Network Monitor</h3>
             <ul class="tip-list">
                 <li>Aggregates data from multiple remote INTERCEPT agents</li>

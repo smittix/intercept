@@ -56,6 +56,114 @@ function isValidChannel(ch) {
 // ============== TIME FORMATTING ==============
 
 /**
+ * Global time preferences — timezone and 12h/24h format.
+ * Stored in localStorage, used by all modes.
+ */
+const InterceptTime = (function() {
+    const TZ_MAP = {
+        'UTC': 'UTC',
+        'local': undefined,
+        'US/Eastern': 'America/New_York',
+        'US/Central': 'America/Chicago',
+        'US/Mountain': 'America/Denver',
+        'US/Pacific': 'America/Los_Angeles',
+    };
+
+    const TZ_LABELS = {
+        'UTC': 'UTC',
+        'local': '',
+        'US/Eastern': 'ET',
+        'US/Central': 'CT',
+        'US/Mountain': 'MT',
+        'US/Pacific': 'PT',
+    };
+
+    let _timezone = localStorage.getItem('interceptTimezone') || 'US/Eastern';
+    let _hour12 = (localStorage.getItem('interceptHour12') || 'true') === 'true';
+    const _listeners = [];
+
+    function getTimezone() { return _timezone; }
+    function getHour12() { return _hour12; }
+    function getIANA() { return TZ_MAP[_timezone]; }
+    function getLabel() { return TZ_LABELS[_timezone] || ''; }
+
+    function setTimezone(tz) {
+        if (!TZ_MAP.hasOwnProperty(tz)) return;
+        _timezone = tz;
+        localStorage.setItem('interceptTimezone', tz);
+        // Migrate weather-sat specific key
+        localStorage.setItem('wxsatTimezone', tz);
+        _notify();
+    }
+
+    function setHour12(val) {
+        _hour12 = !!val;
+        localStorage.setItem('interceptHour12', _hour12 ? 'true' : 'false');
+        _notify();
+    }
+
+    function onChange(fn) { _listeners.push(fn); }
+    function _notify() { _listeners.forEach(fn => { try { fn(); } catch(e) { console.error(e); } }); }
+
+    /**
+     * Format a Date or ISO string for the global timezone.
+     * @param {Date|string} input - Date object or ISO string
+     * @param {object} [extraOpts] - Additional Intl.DateTimeFormat options
+     * @returns {string}
+     */
+    function format(input, extraOpts) {
+        if (!input) return '--';
+        try {
+            const date = typeof input === 'string' ? new Date(input) : input;
+            if (isNaN(date.getTime())) return typeof input === 'string' ? input : '--';
+            const opts = { hour12: _hour12, ...extraOpts };
+            const iana = getIANA();
+            if (iana) opts.timeZone = iana;
+            return date.toLocaleString(undefined, opts);
+        } catch { return typeof input === 'string' ? input : '--'; }
+    }
+
+    /** HH:MM (or h:MM AM/PM) */
+    function shortTime(input) {
+        return format(input, { hour: '2-digit', minute: '2-digit' });
+    }
+
+    /** HH:MM:SS */
+    function fullTime(input) {
+        return format(input, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    /** Mon 25, 14:30 (or 2:30 PM) */
+    function dateTime(input) {
+        return format(input, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    /** Mon 25, 2026 */
+    function dateOnly(input) {
+        const iana = getIANA();
+        const opts = { year: 'numeric', month: 'short', day: 'numeric' };
+        if (iana) opts.timeZone = iana;
+        try {
+            const date = typeof input === 'string' ? new Date(input) : input;
+            return date.toLocaleDateString(undefined, opts);
+        } catch { return '--'; }
+    }
+
+    /** Short label like " ET" or " UTC" for appending to times */
+    function tzSuffix() {
+        const l = getLabel();
+        return l ? ' ' + l : '';
+    }
+
+    return {
+        getTimezone, getHour12, getIANA, getLabel,
+        setTimezone, setHour12, onChange,
+        format, shortTime, fullTime, dateTime, dateOnly, tzSuffix,
+        TZ_MAP, TZ_LABELS,
+    };
+})();
+
+/**
  * Get relative time string from timestamp
  * @param {string} timestamp - Time string in HH:MM:SS format
  * @returns {string} Relative time like "5s ago", "2m ago"

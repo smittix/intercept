@@ -69,3 +69,6 @@ data/subghz/captures/
 reset-sdr.*
 .superpowers/
 docs/superpowers/
+
+# Git worktrees
+.worktrees/

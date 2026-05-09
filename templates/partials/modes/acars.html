@@ -192,33 +192,49 @@
         return `<span style="display:inline-block;padding:1px 5px;border-radius:3px;font-size:8px;font-weight:700;color:#000;background:${color};">${lbl}</span>`;
     }
 
-    // TODO: Similar to renderAcarsCard in templates/adsb_dashboard.html — consider unifying
     function renderAcarsMainCard(data) {
         const flight = escapeHtml(data.flight || 'UNKNOWN');
+        const tail = escapeHtml(data.tail || data.reg || '');
         const type = data.message_type || 'other';
         const badge = acarsMainTypeBadge(type);
         const desc = escapeHtml(data.label_description || (data.label ? 'Label: ' + data.label : ''));
         const text = data.text || data.msg || '';
-        const truncText = escapeHtml(text.length > 150 ? text.substring(0, 150) + '...' : text);
-        const time = new Date().toLocaleTimeString();
+        const truncText = escapeHtml(text.length > 200 ? text.substring(0, 200) + '...' : text);
+        const time = typeof InterceptTime !== 'undefined'
+            ? InterceptTime.shortTime(new Date()) + InterceptTime.tzSuffix()
+            : new Date().toLocaleTimeString();
 
         let parsedHtml = '';
         if (data.parsed) {
             const p = data.parsed;
             if (type === 'position' && p.lat !== undefined) {
-                parsedHtml = `<div style="color:var(--accent-green);margin-top:2px;font-size:10px;">${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}${p.flight_level ? ' &bull; ' + escapeHtml(String(p.flight_level)) : ''}${p.destination ? ' &rarr; ' + escapeHtml(String(p.destination)) : ''}</div>`;
+                parsedHtml = `<div style="color:var(--accent-green);margin-top:2px;font-size:10px;">${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}${p.flight_level ? ' &bull; FL' + escapeHtml(String(p.flight_level)) : ''}${p.destination ? ' &rarr; ' + escapeHtml(String(p.destination)) : ''}</div>`;
             } else if (type === 'engine_data') {
                 const parts = [];
-                Object.keys(p).forEach(k => parts.push(escapeHtml(k) + ': ' + escapeHtml(String(p[k].value))));
+                Object.keys(p).forEach(k => {
+                    const val = typeof p[k] === 'object' ? p[k].value : p[k];
+                    parts.push(escapeHtml(k) + ': ' + escapeHtml(String(val)));
+                });
                 if (parts.length) parsedHtml = `<div style="color:#ff9500;margin-top:2px;font-size:10px;">${parts.slice(0, 4).join(' | ')}</div>`;
             } else if (type === 'oooi' && p.origin) {
                 parsedHtml = `<div style="color:var(--accent-cyan);margin-top:2px;font-size:10px;">${escapeHtml(String(p.origin))} &rarr; ${escapeHtml(String(p.destination))}${p.out ? ' | OUT ' + escapeHtml(String(p.out)) : ''}${p.off ? ' OFF ' + escapeHtml(String(p.off)) : ''}${p.on ? ' ON ' + escapeHtml(String(p.on)) : ''}${p['in'] ? ' IN ' + escapeHtml(String(p['in'])) : ''}</div>`;
+            } else if (type === 'weather' && (p.wind_speed || p.temperature)) {
+                const wx = [];
+                if (p.wind_speed) wx.push('Wind ' + escapeHtml(String(p.wind_speed)) + (p.wind_dir ? '/' + escapeHtml(String(p.wind_dir)) : ''));
+                if (p.temperature) wx.push(escapeHtml(String(p.temperature)) + '°C');
+                if (p.turbulence) wx.push('Turb: ' + escapeHtml(String(p.turbulence)));
+                if (wx.length) parsedHtml = `<div style="color:#00d4ff;margin-top:2px;font-size:10px;">${wx.join(' | ')}</div>`;
+            } else if (type === 'cpdlc') {
+                const cpdlcText = p.message || p.text || '';
+                if (cpdlcText) parsedHtml = `<div style="color:#b388ff;margin-top:2px;font-size:10px;font-weight:600;">${escapeHtml(String(cpdlcText))}</div>`;
+            } else if (type === 'squawk' && p.squawk) {
+                parsedHtml = `<div style="color:#ff6b6b;margin-top:2px;font-size:10px;font-weight:600;">Squawk: ${escapeHtml(String(p.squawk))}</div>`;
             }
         }
 
         return `<div class="acars-feed-card" style="padding:6px 8px;border-bottom:1px solid var(--border-color);animation:fadeInMsg 0.3s ease;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                <span style="color:var(--accent-cyan);font-weight:bold;">${flight}</span>
+                <span style="color:var(--accent-cyan);font-weight:bold;">${flight}${tail ? ' <span style="color:var(--text-muted);font-weight:normal;font-size:9px;">(' + tail + ')</span>' : ''}</span>
                 <span style="color:var(--text-muted);font-size:9px;">${time}</span>
             </div>
             <div style="margin-top:2px;">${badge} <span style="color:var(--text-primary);">${desc}</span></div>

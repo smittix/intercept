@@ -55,6 +55,7 @@ Support the developer of this open-source project
 - **Spy Stations** - Number stations and diplomatic HF network database
 - **Remote Agents** - Distributed SIGINT with remote sensor nodes
 - **Offline Mode** - Bundled assets for air-gapped/field deployments
+- **Drone Intelligence** - Multi-vector UAV detection via ASTM F3411 Remote ID (WiFi/BLE), RTL-SDR 433/868 MHz RF, and HackRF 2.4/5.8 GHz scanning with live contact map and risk scoring
 
 ---
 

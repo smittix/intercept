@@ -126,6 +126,7 @@ RUN cd /tmp \
     && rm -rf /tmp/slowrx
 
 # Build SatDump (weather satellite decoder - NOAA APT & Meteor LRPT) — pinned to v1.2.2
+# Split into compile (heavy, cached) and staging (light, safe to change) layers
 RUN cd /tmp \
     && git clone --depth 1 --branch 1.2.2 https://github.com/SatDump/SatDump.git \
     && cd SatDump \
@@ -147,13 +148,28 @@ RUN cd /tmp \
             fi; \
         done; \
     fi \
-    # Copy SatDump install artifacts to staging
-    && cp -a /usr/local/bin/satdump /staging/usr/local/bin/ 2>/dev/null || true \
-    && cp -a /usr/local/lib/libsatdump* /staging/usr/local/lib/ 2>/dev/null || true \
-    && cp -a /usr/local/lib/satdump /staging/usr/local/lib/ 2>/dev/null || true \
-    && cp -a /usr/local/share/satdump /staging/usr/local/share/ 2>/dev/null; mkdir -p /staging/usr/local/share \
-    && cp -a /usr/local/share/satdump /staging/usr/local/share/ 2>/dev/null || true \
     && rm -rf /tmp/SatDump
+
+# Stage SatDump artifacts (separate layer so compile cache survives staging changes)
+# On arm64 cmake installs to /usr/{bin,lib,share}; on x86 to /usr/local/{bin,lib,share}
+RUN mkdir -p /staging/usr/local/share /staging/usr/local/lib/satdump/plugins \
+    # Binary
+    && (cp -a /usr/local/bin/satdump /staging/usr/local/bin/ 2>/dev/null \
+        || cp -a /usr/bin/satdump /staging/usr/local/bin/) \
+    # Core shared library
+    && (cp -a /usr/local/lib/libsatdump* /staging/usr/local/lib/ 2>/dev/null \
+        || cp -a /usr/lib/libsatdump* /staging/usr/local/lib/) \
+    # Plugins
+    && (cp -a /usr/local/lib/satdump/plugins/*.so /staging/usr/local/lib/satdump/plugins/ 2>/dev/null \
+        || cp -a /usr/lib/satdump/plugins/*.so /staging/usr/local/lib/satdump/plugins/ 2>/dev/null \
+        || true) \
+    # Pipeline definitions and resources
+    && (cp -a /usr/local/share/satdump /staging/usr/local/share/ 2>/dev/null \
+        || cp -a /usr/share/satdump /staging/usr/local/share/) \
+    # Verify
+    && test -x /staging/usr/local/bin/satdump \
+    && ls /staging/usr/local/share/satdump/pipelines/*.json >/dev/null 2>&1 \
+    && echo "SatDump staging OK: $(ls /staging/usr/local/share/satdump/pipelines/*.json | wc -l) pipeline files"
 
 # Build hackrf CLI tools from source — avoids libhackrf0 version conflict
 # between the 'hackrf' apt package and soapysdr-module-hackrf's newer libhackrf0
@@ -219,6 +235,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng16-16 \
     libtiff6 \
     libjemalloc2 \
+    libfftw3-double3 \
+    libfftw3-single3 \
     libvolk-bin \
     libnng1 \
     libzstd1 \
@@ -254,6 +272,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /staging/usr/bin/ /usr/bin/
 COPY --from=builder /staging/usr/local/bin/ /usr/local/bin/
 COPY --from=builder /staging/usr/local/lib/ /usr/local/lib/
+COPY --from=builder /staging/usr/local/share/ /usr/local/share/
 COPY --from=builder /staging/opt/ /opt/
 
 # Copy radiosonde Python dependencies installed during builder stage

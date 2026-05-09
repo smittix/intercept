@@ -358,6 +358,42 @@ Technical Surveillance Countermeasures (TSCM) screening for detecting wireless s
 - No cryptographic de-randomization
 - Passive screening only (no active probing by default)
 
+## Drone Intelligence
+
+Multi-vector UAV detection and identification system combining three complementary detection methods into unified contact tracking.
+
+### Detection Vectors
+
+- **Remote ID (WiFi/BLE)** — Parses ASTM F3411-22a broadcast frames from WiFi Beacon and BLE Advertisement packets. Extracts drone ID, operator ID, drone type, GPS position, altitude, speed, and emergency status. Mandatory for all drones >250g in the US/EU since 2023.
+- **RTL-SDR RF (433/868 MHz)** — Monitors ISM bands for control link and telemetry signals characteristic of consumer and FPV drones. Detects DJI OcuSync, FrSky, FlySky, and generic FSK/GFSK drone control protocols.
+- **HackRF (2.4/5.8 GHz)** — Wide-scan of video downlink and telemetry bands used by most consumer drones. Detects power above noise floor across 2.400–2.483 GHz and 5.725–5.875 GHz ISM bands.
+
+### Contact Correlation
+
+The `DroneCorrelator` merges raw observations from all three vectors into unified `DroneContact` objects:
+- **TTL-based store** — contacts expire after 120 seconds of no activity
+- **Multi-vector fusion** — a single contact can be seen on 1–3 vectors simultaneously
+- **Deduplication** — observations from the same vector within 5 seconds are collapsed
+
+### Risk Scoring
+
+| Level | Criteria |
+|-------|----------|
+| High | No Remote ID broadcast (non-compliant) or ASTM non-conformant frame |
+| Medium | Multiple detection vectors active, or RSSI delta >15 dB between vectors |
+| Low | Compliant Remote ID present, single detection vector |
+
+### Live Map
+
+Remote ID contacts with GPS position data are plotted on a Leaflet map. Markers show drone ID and last known coordinates. Map updates in real time via SSE.
+
+### Requirements
+
+- WiFi adapter capable of monitor mode (for BLE/WiFi Remote ID)
+- RTL-SDR dongle (for 433/868 MHz RF detection)
+- HackRF One (optional, for 2.4/5.8 GHz detection)
+- Python package: `opendroneid>=1.0`
+
 ## Meshtastic Mesh Networks
 
 Integration with Meshtastic LoRa mesh networking devices for decentralized communication.

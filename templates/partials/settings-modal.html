@@ -227,6 +227,36 @@
                     </label>
                 </div>
             </div>
+
+            <div class="settings-group">
+                <div class="settings-group-title">Time & Timezone</div>
+
+                <div class="settings-row">
+                    <div class="settings-label">
+                        <span class="settings-label-text">Timezone</span>
+                        <span class="settings-label-desc">Applied across all modes</span>
+                    </div>
+                    <select id="globalTimezoneSelect" class="settings-select" onchange="InterceptTime.setTimezone(this.value)">
+                        <option value="UTC">UTC</option>
+                        <option value="local">Local (browser)</option>
+                        <option value="US/Eastern">Eastern (ET)</option>
+                        <option value="US/Central">Central (CT)</option>
+                        <option value="US/Mountain">Mountain (MT)</option>
+                        <option value="US/Pacific">Pacific (PT)</option>
+                    </select>
+                </div>
+
+                <div class="settings-row">
+                    <div class="settings-label">
+                        <span class="settings-label-text">Time Format</span>
+                        <span class="settings-label-desc">12-hour (2:30 PM) or 24-hour (14:30)</span>
+                    </div>
+                    <select id="globalTimeFormatSelect" class="settings-select" onchange="InterceptTime.setHour12(this.value === '12')">
+                        <option value="12">12-hour (AM/PM)</option>
+                        <option value="24">24-hour</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
         <!-- Updates Section -->

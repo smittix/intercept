@@ -18,6 +18,7 @@ def register_blueprints(app):
     from .bt_locate import bt_locate_bp
     from .controller import controller_bp
     from .correlation import correlation_bp
+    from .drone import drone_bp
     from .dsc import dsc_bp
     from .gps import gps_bp
     from .ground_station import ground_station_bp
@@ -91,6 +92,7 @@ def register_blueprints(app):
     app.register_blueprint(system_bp)  # System health monitoring
     app.register_blueprint(ook_bp)  # Generic OOK signal decoder
     app.register_blueprint(ground_station_bp)  # Ground station automation
+    app.register_blueprint(drone_bp)  # Drone intelligence / UAV detection
 
     # Exempt all API blueprints from CSRF (they use JSON, not form tokens)
     if _csrf:
@@ -99,5 +101,6 @@ def register_blueprints(app):
 
     # Initialize TSCM state with queue and lock from app
     import app as app_module
-    if hasattr(app_module, 'tscm_queue') and hasattr(app_module, 'tscm_lock'):
+
+    if hasattr(app_module, "tscm_queue") and hasattr(app_module, "tscm_lock"):
         init_tscm_state(app_module.tscm_queue, app_module.tscm_lock)

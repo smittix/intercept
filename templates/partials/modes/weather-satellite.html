@@ -11,13 +11,83 @@
         </p>
     </div>
 
+    <!-- Getting Started Guide -->
+    <div class="section">
+        <h3>Getting Started</h3>
+        <div style="font-size: 11px; color: var(--text-dim); line-height: 1.6;">
+
+            <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; margin-bottom: 10px;">
+                <strong style="color: var(--accent-cyan); font-size: 12px;">What are Meteor satellites?</strong>
+                <p style="margin-top: 6px;">
+                    Russia's <strong style="color: var(--text-primary);">Meteor-M2-3</strong> and <strong style="color: var(--text-primary);">Meteor-M2-4</strong>
+                    are polar-orbiting weather satellites that continuously transmit real-time color imagery (clouds, land, sea) at <strong style="color: var(--text-primary);">137.900 MHz</strong>
+                    using the LRPT digital format. Unlike old analog NOAA APT, LRPT produces sharp, full-color images.
+                </p>
+                <p style="margin-top: 6px;">
+                    They orbit ~830 km high, circling the Earth every ~100 minutes in a near-polar sun-synchronous orbit.
+                    From any location, you'll typically get <strong style="color: var(--text-primary);">4&ndash;8 usable passes per day</strong>,
+                    each lasting 8&ndash;15 minutes as the satellite crosses your sky.
+                </p>
+            </div>
+
+            <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; margin-bottom: 10px;">
+                <strong style="color: var(--accent-cyan); font-size: 12px;">Step-by-step</strong>
+                <ol style="margin: 6px 0 0 16px; padding: 0;">
+                    <li style="margin-bottom: 4px;"><strong style="color: var(--text-primary);">Set your location</strong> &mdash; Enter your lat/lon in the strip bar above (or click GPS). This is required for pass predictions.</li>
+                    <li style="margin-bottom: 4px;"><strong style="color: var(--text-primary);">Check upcoming passes</strong> &mdash; The pass list shows when each satellite will be overhead. Higher max elevation = better signal. Passes above 30&deg; are "good", above 60&deg; are "excellent".</li>
+                    <li style="margin-bottom: 4px;"><strong style="color: var(--text-primary);">Prepare your antenna</strong> &mdash; You need a 137 MHz antenna outdoors with clear sky (see Antenna Guide below). A $5 V-dipole works for high passes.</li>
+                    <li style="margin-bottom: 4px;"><strong style="color: var(--text-primary);">Click Capture</strong> on a pass card when it's about to start, or enable <strong style="color: var(--text-primary);">AUTO</strong> to let the scheduler capture automatically.</li>
+                    <li style="margin-bottom: 4px;"><strong style="color: var(--text-primary);">Wait for images</strong> &mdash; SatDump will tune, lock the signal, and decode. Decoded images appear in the gallery after the pass completes.</li>
+                </ol>
+            </div>
+
+            <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; margin-bottom: 10px;">
+                <strong style="color: var(--accent-cyan); font-size: 12px;">When to look</strong>
+                <ul style="margin: 6px 0 0 14px; padding: 0;">
+                    <li><strong style="color: var(--text-primary);">Best passes:</strong> When the satellite is high overhead (&gt;30&deg; elevation). The countdown timer shows the next one.</li>
+                    <li><strong style="color: var(--text-primary);">Day vs night:</strong> Daytime passes produce visible-light imagery. Night passes still work but only produce infrared/thermal images.</li>
+                    <li><strong style="color: var(--text-primary);">Both satellites share 137.9 MHz</strong> so they won't transmit at the same time. You'll see separate pass predictions for each.</li>
+                    <li><strong style="color: var(--text-primary);">Pass direction:</strong> Meteor satellites travel roughly north&rarr;south or south&rarr;north. The pass cards show the exact rise/set direction.</li>
+                </ul>
+            </div>
+
+            <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 10px;">
+                <strong style="color: var(--accent-cyan); font-size: 12px;">What you need</strong>
+                <table style="width: 100%; margin-top: 6px; font-size: 10px; border-collapse: collapse;">
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 3px 4px; color: var(--text-dim);">SDR receiver</td>
+                        <td style="padding: 3px 4px; color: var(--text-primary); text-align: right;">RTL-SDR V3/V4 ($25-35)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 3px 4px; color: var(--text-dim);">Antenna</td>
+                        <td style="padding: 3px 4px; color: var(--text-primary); text-align: right;">137 MHz V-dipole ($5 DIY) or QFH ($20-30)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 3px 4px; color: var(--text-dim);">LNA (optional)</td>
+                        <td style="padding: 3px 4px; color: var(--text-primary); text-align: right;">137 MHz filtered, at antenna ($15-25)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 3px 4px; color: var(--text-dim);">Location</td>
+                        <td style="padding: 3px 4px; color: var(--text-primary); text-align: right;">Outdoors, clear sky view</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 3px 4px; color: var(--text-dim);">No hardware?</td>
+                        <td style="padding: 3px 4px; color: var(--text-primary); text-align: right;">Use <em>Load Demo Data</em> below to explore the UI</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div class="section">
         <h3>Satellite</h3>
         <div class="form-group">
             <label>Select Satellite</label>
             <select id="weatherSatSelect" class="mode-select">
-                <option value="METEOR-M2-3" selected>Meteor-M2-3 (137.900 MHz LRPT)</option>
+                <option value="" selected>All Meteor Satellites</option>
+                <option value="METEOR-M2-3">Meteor-M2-3 (137.900 MHz LRPT)</option>
                 <option value="METEOR-M2-4">Meteor-M2-4 (137.900 MHz LRPT)</option>
+                <option value="METEOR-M2-4-80K">Meteor-M2-4 80k baud (fallback)</option>
             </select>
         </div>
         <div class="form-group">
@@ -33,10 +103,13 @@
         </div>
     </div>
 
-    <!-- Antenna Guide - detailed -->
+    <!-- Antenna Guide - detailed (collapsed by default) -->
     <div class="section">
-        <h3>Antenna Guide</h3>
-        <div style="font-size: 11px; color: var(--text-dim); line-height: 1.5;">
+        <h3 onclick="this.parentElement.querySelector('.wxsat-antenna-body').classList.toggle('collapsed'); this.querySelector('.wxsat-collapse-icon').classList.toggle('collapsed')" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none;">
+            Antenna Guide
+            <span class="wxsat-collapse-icon collapsed" style="font-size: 10px; transition: transform 0.2s; display: inline-block;">&#9660;</span>
+        </h3>
+        <div class="wxsat-antenna-body wxsat-test-decode-body collapsed" style="font-size: 11px; color: var(--text-dim); line-height: 1.5;">
 
             <p style="margin-bottom: 10px; color: var(--accent-cyan); font-weight: 600;">
                 137 MHz band &mdash; your stock SDR antenna will NOT work.
@@ -174,24 +247,33 @@
 
     <div class="section">
         <h3 onclick="this.parentElement.querySelector('.wxsat-test-decode-body').classList.toggle('collapsed'); this.querySelector('.wxsat-collapse-icon').classList.toggle('collapsed')" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none;">
-            Test Decode (File)
+            Offline Decode (IQ File)
             <span class="wxsat-collapse-icon collapsed" style="font-size: 10px; transition: transform 0.2s; display: inline-block;">&#9660;</span>
         </h3>
         <div class="wxsat-test-decode-body collapsed" style="overflow: hidden;">
             <p class="info-text" style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">
-                Decode a pre-recorded Meteor IQ file without SDR hardware.
-                Shared ground-station recordings are also accepted by the backend.
+                Decode a pre-recorded Meteor IQ baseband file without SDR hardware.
+                You need an actual <code>.raw</code>, <code>.sigmf-data</code>, or <code>.wav</code> recording of a Meteor pass.
             </p>
+            <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px; margin-bottom: 10px; font-size: 10px; color: var(--text-dim); line-height: 1.5;">
+                <strong style="color: var(--text-secondary);">Where to get a test file:</strong>
+                <ul style="margin: 4px 0 0 14px; padding: 0;">
+                    <li>Record one yourself with <code>rtl_sdr -f 137900000 -s 2400000 meteor.raw</code> during a pass</li>
+                    <li>Download samples from <a href="https://www.sigidwiki.com/wiki/Meteor-M_LRPT" target="_blank" rel="noopener" style="color: var(--accent-cyan);">SigID Wiki</a> or <a href="https://www.sondehub.org/" target="_blank" rel="noopener" style="color: var(--accent-cyan);">community forums</a></li>
+                    <li>Place the file in <code>data/weather_sat/</code> on the server</li>
+                </ul>
+            </div>
             <div class="form-group">
                 <label>Satellite</label>
                 <select id="wxsatTestSatSelect" class="mode-select">
                     <option value="METEOR-M2-3" selected>Meteor-M2-3 (LRPT)</option>
                     <option value="METEOR-M2-4">Meteor-M2-4 (LRPT)</option>
+                    <option value="METEOR-M2-4-80K">Meteor-M2-4 80k baud</option>
                 </select>
             </div>
             <div class="form-group">
-                <label>File Path (server-side)</label>
-                <input type="text" id="wxsatTestFilePath" value="data/weather_sat/samples/meteor_lrpt.sigmf-data" style="font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif; font-size: 11px;">
+                <label>File Path (server-side, relative to app root)</label>
+                <input type="text" id="wxsatTestFilePath" placeholder="data/weather_sat/my_recording.raw" style="font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif; font-size: 11px;">
             </div>
             <div class="form-group">
                 <label>Sample Rate</label>
@@ -202,7 +284,7 @@
                 </select>
             </div>
             <button class="mode-btn" onclick="WeatherSat.testDecode()" style="width: 100%; margin-top: 4px;">
-                Test Decode
+                Decode File
             </button>
         </div>
     </div>
@@ -222,6 +304,16 @@
         <div id="wxsatSchedulerStatus" style="font-size: 11px; color: var(--text-dim); font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif; margin-top: 4px;">
             Disabled
         </div>
+    </div>
+
+    <div class="section">
+        <h3>Debug / Test</h3>
+        <p class="info-text" style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">
+            Load sample pass data and console output to test the UI without an SDR or live satellite pass.
+        </p>
+        <button class="mode-btn" onclick="WeatherSat.loadDemoData()" style="width: 100%;">
+            Load Demo Data
+        </button>
     </div>
 
     <div class="section">

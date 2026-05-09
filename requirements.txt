@@ -30,6 +30,7 @@ meshtastic>=2.0.0
 
 # Deauthentication attack detection (optional - for WiFi TSCM)
 scapy>=2.4.5
+opendroneid>=1.0
 
 # QR code generation for Meshtastic channels (optional)
 qrcode[pil]>=7.4

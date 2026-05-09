@@ -23,6 +23,7 @@
         window.INTERCEPT_DEFAULT_LAT = {{ default_latitude | tojson }};
         window.INTERCEPT_DEFAULT_LON = {{ default_longitude | tojson }};
     </script>
+    <script src="{{ url_for('static', filename='js/core/utils.js') }}"></script>
     <script defer src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
     <script defer src="{{ url_for('static', filename='js/core/observer-location.js') }}"></script>
 </head>
@@ -3493,15 +3494,17 @@ sudo make install</code>
             return '<span style="display:inline-block;padding:1px 5px;border-radius:3px;font-size:8px;font-weight:700;color:#000;background:' + color + ';">' + lbl + '</span>';
         }
 
-        // TODO: Similar to renderAcarsMainCard in partials/modes/acars.html — consider unifying
         function renderAcarsCard(msg) {
             const type = msg.message_type || 'other';
             const badge = getAcarsTypeBadge(type);
             const desc = escapeHtml(msg.label_description || ('Label ' + (msg.label || '?')));
             const text = msg.text || msg.msg || '';
-            const truncText = escapeHtml(text.length > 120 ? text.substring(0, 120) + '...' : text);
-            const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+            const truncText = escapeHtml(text.length > 200 ? text.substring(0, 200) + '...' : text);
+            const time = msg.timestamp && typeof InterceptTime !== 'undefined'
+                ? InterceptTime.shortTime(msg.timestamp) + InterceptTime.tzSuffix()
+                : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '');
             const flight = escapeHtml(msg.flight || '');
+            const tail = escapeHtml(msg.tail || msg.reg || '');
 
             let parsedHtml = '';
             if (msg.parsed) {
@@ -3509,23 +3512,35 @@ sudo make install</code>
                 if (type === 'position' && p.lat !== undefined) {
                     parsedHtml = '<div style="color:var(--accent-green);margin-top:2px;">' +
                         p.lat.toFixed(4) + ', ' + p.lon.toFixed(4) +
-                        (p.flight_level ? ' • ' + escapeHtml(String(p.flight_level)) : '') +
-                        (p.destination ? ' → ' + escapeHtml(String(p.destination)) : '') + '</div>';
+                        (p.flight_level ? ' &bull; FL' + escapeHtml(String(p.flight_level)) : '') +
+                        (p.destination ? ' &rarr; ' + escapeHtml(String(p.destination)) : '') + '</div>';
                 } else if (type === 'engine_data') {
                     const parts = [];
                     Object.keys(p).forEach(k => {
-                        parts.push(escapeHtml(k) + ': ' + escapeHtml(String(p[k].value)));
+                        const val = typeof p[k] === 'object' ? p[k].value : p[k];
+                        parts.push(escapeHtml(k) + ': ' + escapeHtml(String(val)));
                     });
                     if (parts.length) {
                         parsedHtml = '<div style="color:var(--accent-orange,#ff9500);margin-top:2px;">' + parts.slice(0, 4).join(' | ') + '</div>';
                     }
                 } else if (type === 'oooi' && p.origin) {
                     parsedHtml = '<div style="color:var(--accent-cyan);margin-top:2px;">' +
-                        escapeHtml(String(p.origin)) + ' → ' + escapeHtml(String(p.destination)) +
+                        escapeHtml(String(p.origin)) + ' &rarr; ' + escapeHtml(String(p.destination)) +
                         (p.out ? ' | OUT ' + escapeHtml(String(p.out)) : '') +
                         (p.off ? ' OFF ' + escapeHtml(String(p.off)) : '') +
                         (p.on ? ' ON ' + escapeHtml(String(p.on)) : '') +
                         (p['in'] ? ' IN ' + escapeHtml(String(p['in'])) : '') + '</div>';
+                } else if (type === 'weather' && (p.wind_speed || p.temperature)) {
+                    const wx = [];
+                    if (p.wind_speed) wx.push('Wind ' + escapeHtml(String(p.wind_speed)) + (p.wind_dir ? '/' + escapeHtml(String(p.wind_dir)) : ''));
+                    if (p.temperature) wx.push(escapeHtml(String(p.temperature)) + '°C');
+                    if (p.turbulence) wx.push('Turb: ' + escapeHtml(String(p.turbulence)));
+                    if (wx.length) parsedHtml = '<div style="color:#00d4ff;margin-top:2px;">' + wx.join(' | ') + '</div>';
+                } else if (type === 'cpdlc') {
+                    const cpdlcText = p.message || p.text || '';
+                    if (cpdlcText) parsedHtml = '<div style="color:#b388ff;margin-top:2px;font-weight:600;">' + escapeHtml(String(cpdlcText)) + '</div>';
+                } else if (type === 'squawk' && p.squawk) {
+                    parsedHtml = '<div style="color:#ff6b6b;margin-top:2px;font-weight:600;">Squawk: ' + escapeHtml(String(p.squawk)) + '</div>';
                 }
             }
 
@@ -3533,7 +3548,7 @@ sudo make install</code>
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
                 '<span>' + badge + ' <span style="color:var(--text-primary);">' + desc + '</span></span>' +
                 '<span style="color:var(--text-muted);font-size:9px;">' + time + '</span></div>' +
-                (flight ? '<div style="color:var(--accent-cyan);font-size:9px;">' + flight + '</div>' : '') +
+                (flight || tail ? '<div style="color:var(--accent-cyan);font-size:9px;">' + flight + (tail ? ' (' + tail + ')' : '') + '</div>' : '') +
                 parsedHtml +
                 (truncText && type !== 'link_test' && type !== 'handshake' ?
                     '<div style="color:var(--text-dim);font-family:var(--font-mono);font-size:9px;margin-top:2px;word-break:break-all;">' + truncText + '</div>' : '') +
@@ -3544,17 +3559,15 @@ sudo make install</code>
         const photoCache = {};
 
         async function fetchAircraftPhoto(registration) {
-            const container = document.getElementById('aircraftPhotoContainer');
-            const img = document.getElementById('aircraftPhoto');
-            const link = document.getElementById('aircraftPhotoLink');
-            const credit = document.getElementById('aircraftPhotoCredit');
-
-            if (!container || !img) return;
-
-            // Check cache first
+            // Check cache first (synchronous path — DOM refs are always current here)
             if (photoCache[registration]) {
                 const cached = photoCache[registration];
                 if (cached.thumbnail) {
+                    const container = document.getElementById('aircraftPhotoContainer');
+                    const img = document.getElementById('aircraftPhoto');
+                    const link = document.getElementById('aircraftPhotoLink');
+                    const credit = document.getElementById('aircraftPhotoCredit');
+                    if (!container || !img) return;
                     img.src = cached.thumbnail;
                     link.href = cached.link || '#';
                     credit.textContent = cached.photographer ? `Photo: ${cached.photographer}` : '';
@@ -3563,12 +3576,23 @@ sudo make install</code>
                 return;
             }
 
+            // Guard: bail early if the panel doesn't exist yet
+            if (!document.getElementById('aircraftPhotoContainer')) return;
+
             try {
                 const response = await fetch(`/adsb/aircraft-photo/${encodeURIComponent(registration)}`);
                 const data = await response.json();
 
-                // Cache the result
+                // Cache before touching DOM — subsequent synchronous calls will hit this
                 photoCache[registration] = data;
+
+                // Re-query after the await: showAircraftDetails rebuilds innerHTML on every
+                // RAF update, so refs captured before the await may point to detached nodes.
+                const container = document.getElementById('aircraftPhotoContainer');
+                const img = document.getElementById('aircraftPhoto');
+                const link = document.getElementById('aircraftPhotoLink');
+                const credit = document.getElementById('aircraftPhotoCredit');
+                if (!container || !img) return;
 
                 if (data.success && data.thumbnail) {
                     img.src = data.thumbnail;
@@ -3580,7 +3604,8 @@ sudo make install</code>
                 }
             } catch (err) {
                 console.debug('Failed to fetch aircraft photo:', err);
-                container.style.display = 'none';
+                const container = document.getElementById('aircraftPhotoContainer');
+                if (container) container.style.display = 'none';
             }
         }
 
@@ -4366,7 +4391,9 @@ sudo make install</code>
             const labelDesc = data.label_description || '';
             const msgType = data.message_type || 'other';
             const text = data.text || data.msg || '';
-            const time = new Date().toLocaleTimeString();
+            const time = typeof InterceptTime !== 'undefined'
+                ? InterceptTime.shortTime(new Date()) + InterceptTime.tzSuffix()
+                : new Date().toLocaleTimeString();
 
             // Escape user-controlled strings for safe innerHTML insertion
             const eFlight = escapeHtml(flight);
@@ -4882,7 +4909,9 @@ sudo make install</code>
             const acars = avlc.acars || {};
             const flight = acars.flight || '';
             const msgText = acars.msg_text || '';
-            const time = new Date().toLocaleTimeString();
+            const time = typeof InterceptTime !== 'undefined'
+                ? InterceptTime.shortTime(new Date()) + InterceptTime.tzSuffix()
+                : new Date().toLocaleTimeString();
             const freq = inner.freq ? (inner.freq / 1000000).toFixed(3) : '';
 
             // Store for CSV export
@@ -5680,6 +5709,16 @@ sudo make install</code>
 
     <!-- Settings Modal -->
     {% include 'partials/settings-modal.html' %}
+    <script>
+    // Initialize timezone/format dropdowns from saved preferences
+    (function() {
+        if (typeof InterceptTime === 'undefined') return;
+        var tzSel = document.getElementById('globalTimezoneSelect');
+        var fmtSel = document.getElementById('globalTimeFormatSelect');
+        if (tzSel) tzSel.value = InterceptTime.getTimezone();
+        if (fmtSel) fmtSel.value = InterceptTime.getHour12() ? '12' : '24';
+    })();
+    </script>
 
     <!-- Help Modal -->
     {% include 'partials/help-modal.html' %}

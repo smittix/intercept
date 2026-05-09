@@ -1,0 +1,49 @@
+<!-- DRONE INTELLIGENCE MODE -->
+<div id="droneMode" class="mode-content" style="display: none;">
+    <div class="section">
+        <h3>Drone Intelligence</h3>
+        <p class="info-text" style="margin-bottom: 12px;">
+            Multi-vector UAV detection: Remote ID (WiFi/BLE), 433/868&nbsp;MHz control links, 2.4/5.8&nbsp;GHz wideband.
+        </p>
+    </div>
+
+    <div class="section">
+        <h3>Detection Vectors</h3>
+        <div id="droneVectorStatus" class="drone-vector-pills">
+            <span class="drone-vector-pill" id="dronePillRemoteId">Remote ID</span>
+            <span class="drone-vector-pill" id="dronePill433">433 MHz</span>
+            <span class="drone-vector-pill" id="dronePillHackrf">2.4 / 5.8 GHz</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>WiFi Interface <span style="font-weight:400; font-size:11px; color:var(--text-dim)">(monitor mode)</span></h3>
+        <input type="text" id="droneWifiIface" placeholder="e.g. wlan0mon" style="width:100%;">
+    </div>
+
+    <div class="section">
+        <div style="display:flex; gap:8px;">
+            <button id="droneStartBtn" class="run-btn" style="flex:1;">Start</button>
+            <button id="droneStopBtn" class="stop-btn" style="flex:1;" disabled>Stop</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Status</h3>
+        <p class="info-text">
+            Status: <span id="droneStatusText" style="color:var(--accent-yellow);">Standby</span>
+        </p>
+        <p class="info-text">
+            Contacts: <span id="droneContactCount">0</span>
+            &nbsp;|&nbsp;
+            Non-compliant: <span id="droneNonCompliantCount" style="color:var(--accent-red);">0</span>
+        </p>
+    </div>
+
+    <div class="section">
+        <h3>Detected Contacts</h3>
+        <div id="droneContactList"></div>
+    </div>
+
+    <div id="droneMap" class="drone-map"></div>
+</div>

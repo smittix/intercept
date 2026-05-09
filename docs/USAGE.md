@@ -446,6 +446,35 @@ Digital Selective Calling monitoring runs alongside AIS:
 - Full functionality requires WiFi adapter, Bluetooth adapter, and SDR hardware
 - Threat detection uses a database of 47K+ known tracker fingerprints
 
+## Drone Intelligence
+
+1. **Open Mode** - Select "Drone Intel" from the Intel group in the navigation bar
+2. **Configure Interfaces** - Enter your WiFi interface name (must support monitor mode) for Remote ID detection
+3. **Set RTL-SDR Index** - If you have multiple RTL-SDR devices, enter the device index (default: 0)
+4. **Start** - Click "Start Scan" to activate all available detection vectors simultaneously
+5. **Monitor Contacts** - Detected drone contacts appear in the contact list with ID, vectors, risk level, and last seen time
+6. **View Map** - Contacts with GPS data from Remote ID are plotted on the live map
+
+### Detection Vectors
+
+- **Remote ID (WiFi/BLE)** — Passive sniff of 802.11 beacon frames and BLE advertisements. Decodes ASTM F3411 payloads: drone GPS, operator ID, drone type, speed, altitude, and emergency status
+- **433/868 MHz RF** — RTL-SDR scans ISM bands for drone control link and telemetry RF signatures
+- **2.4/5.8 GHz** — HackRF (if present) sweeps video downlink bands for active drone transmissions
+
+### Risk Levels
+
+- **High** — Drone operating without Remote ID (non-compliant) or malformed ASTM frame. Warrants immediate attention.
+- **Medium** — Contact detected on multiple RF vectors, or significant RSSI difference between vectors (>15 dB). May indicate evasion or multi-radio platform.
+- **Low** — Compliant Remote ID broadcast, single detection vector. Standard consumer drone.
+
+### Tips
+
+- Remote ID is mandatory for drones >250g in the US (FAA) and EU (EU 2019/945) — absence of Remote ID is itself a significant indicator
+- WiFi adapter must support monitor mode; run `airmon-ng check kill` if other processes interfere
+- The contact map only shows drones that broadcast GPS coordinates via Remote ID
+- Contacts expire after 120 seconds of inactivity — the list shows only currently active drones
+- HackRF detection is passive (receive-only); no transmission occurs
+
 ## Spy Stations
 
 1. **Browse Database** - View the full list of documented number stations and diplomatic networks

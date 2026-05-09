@@ -150,6 +150,7 @@
             {{ mode_item('tscm', 'TSCM', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') }}
             {{ mode_item('spystations', 'Spy Stations', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>') }}
             {{ mode_item('websdr', 'WebSDR', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>') }}
+            {{ mode_item('drone', 'Drone Intel', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><line x1="8" y1="8" x2="9" y2="9"/><line x1="16" y1="8" x2="15" y2="9"/><line x1="8" y1="16" x2="9" y2="15"/><line x1="16" y1="16" x2="15" y2="15"/></svg>') }}
         </div>
     </div>
 
@@ -540,12 +541,21 @@
             window._navClockStarted = true;
             function updateNavUtcClock() {
                 const now = new Date();
-                const utc = now.toISOString().slice(11, 19);
                 const el = document.getElementById('headerUtcTime');
-                if (el) el.textContent = utc;
+                const label = document.querySelector('.utc-label');
+                if (typeof InterceptTime !== 'undefined') {
+                    if (el) el.textContent = InterceptTime.fullTime(now);
+                    if (label) label.textContent = InterceptTime.getLabel() || 'LOCAL';
+                } else {
+                    if (el) el.textContent = now.toISOString().slice(11, 19);
+                }
             }
             setInterval(updateNavUtcClock, 1000);
             updateNavUtcClock();
+            // React immediately when timezone/format changes in Settings
+            if (typeof InterceptTime !== 'undefined' && InterceptTime.onChange) {
+                InterceptTime.onChange(updateNavUtcClock);
+            }
         }
     })();
 </script>

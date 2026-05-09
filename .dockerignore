@@ -42,7 +42,6 @@ tasks/
 instance/
 
 # data/ is a Python package — only exclude non-code files
-data/*.json
 data/*.csv
 data/*.db
 

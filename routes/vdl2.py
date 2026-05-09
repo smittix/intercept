@@ -83,11 +83,35 @@ def stream_vdl2_output(process: subprocess.Popen, is_text_mode: bool = False) ->
                 data['type'] = 'vdl2'
                 data['timestamp'] = datetime.utcnow().isoformat() + 'Z'
 
-                # Enrich with translated ACARS label at top level (consistent with ACARS route)
+                # Flatten nested VDL2 identifying fields to top level for correlator matching
+                # dumpvdl2 nests flight/reg inside vdl2.avlc.acars and ICAO in avlc.src.addr
                 try:
                     vdl2_inner = data.get('vdl2', data)
-                    acars_payload = (vdl2_inner.get('avlc') or {}).get('acars')
-                    if acars_payload and acars_payload.get('label'):
+                    avlc = vdl2_inner.get('avlc') or {}
+                    acars_payload = avlc.get('acars') or {}
+
+                    # Promote AVLC source address — this is the aircraft ICAO hex
+                    # Do this FIRST so even non-ACARS VDL2 frames can be correlated
+                    src = avlc.get('src') or {}
+                    src_addr = src.get('addr', '')
+                    src_type = src.get('type', '')
+                    if src_addr and src_type == 'Aircraft':
+                        data['icao'] = src_addr.upper()
+                        data['addr'] = src_addr.upper()
+
+                    # Promote ACARS fields to top level so FlightCorrelator can match them
+                    if acars_payload.get('flight'):
+                        data['flight'] = acars_payload['flight']
+                    if acars_payload.get('reg'):
+                        data['reg'] = acars_payload['reg']
+                        data['tail'] = acars_payload['reg']
+                    if acars_payload.get('label'):
+                        data['label'] = acars_payload['label']
+                    if acars_payload.get('msg_text'):
+                        data['text'] = acars_payload['msg_text']
+
+                    # Enrich with translated ACARS label (consistent with ACARS route)
+                    if acars_payload.get('label'):
                         translation = translate_message({
                             'label': acars_payload.get('label'),
                             'text': acars_payload.get('msg_text', ''),

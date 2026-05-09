@@ -6,17 +6,15 @@
 # Basic usage (build locally):
 #   docker compose --profile basic up -d --build
 #
-# Basic usage (pre-built image from registry):
-#   INTERCEPT_IMAGE=ghcr.io/user/intercept:latest docker compose --profile basic up -d
-#
 # With ADS-B history (Postgres):
 #   docker compose --profile history up -d
 
 services:
   intercept:
-    # When INTERCEPT_IMAGE is set, use that pre-built image; otherwise build locally
-    image: ${INTERCEPT_IMAGE:-intercept:latest}
+    # Always build and use the local image
+    image: intercept:latest
     build: .
+    pull_policy: never
     container_name: intercept
     ports:
       - "5050:5050"
@@ -72,9 +70,10 @@ services:
   # ADS-B history with Postgres persistence
   # Enable with: docker compose --profile history up -d
   intercept-history:
-    # Same image/build fallback pattern as above
-    image: ${INTERCEPT_IMAGE:-intercept:latest}
+    # Always build and use the local image
+    image: intercept:latest
     build: .
+    pull_policy: never
     container_name: intercept-history
     profiles:
       - history
@@ -112,6 +111,8 @@ services:
       - INTERCEPT_ADSB_AUTO_START=${INTERCEPT_ADSB_AUTO_START:-false}
       # Shared observer location across modules
       - INTERCEPT_SHARED_OBSERVER_LOCATION=${INTERCEPT_SHARED_OBSERVER_LOCATION:-true}
+      # Disable login auth (set to true for local/dev use)
+      - INTERCEPT_DISABLE_AUTH=${INTERCEPT_DISABLE_AUTH:-false}
       # Default observer coordinates (set to your location to skip the GPS prompt)
       # - INTERCEPT_DEFAULT_LAT=${INTERCEPT_DEFAULT_LAT:-0}
       # - INTERCEPT_DEFAULT_LON=${INTERCEPT_DEFAULT_LON:-0}
@@ -142,7 +143,3 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-# Optional: Add volume for persistent SQLite database
-# volumes:
-#   intercept-data:

@@ -86,6 +86,15 @@ WEATHER_SATELLITES = {
         'description': 'Meteor-M2-4 LRPT (digital color imagery)',
         'active': True,
     },
+    'METEOR-M2-4-80K': {
+        'name': 'Meteor-M2-4 (80k)',
+        'frequency': 137.900,
+        'mode': 'LRPT',
+        'pipeline': 'meteor_m2-x_lrpt_80k',
+        'tle_key': 'METEOR-M2-4',
+        'description': 'Meteor-M2-4 LRPT 80k baud (fallback symbol rate)',
+        'active': True,
+    },
 }
 
 # Default sample rate for weather satellite reception

@@ -102,7 +102,8 @@
             radiosonde: "{{ url_for('static', filename='css/modes/radiosonde.css') }}",
             meteor: "{{ url_for('static', filename='css/modes/meteor.css') }}",
             system: "{{ url_for('static', filename='css/modes/system.css') }}",
-            ook: "{{ url_for('static', filename='css/modes/ook.css') }}"
+            ook: "{{ url_for('static', filename='css/modes/ook.css') }}",
+            drone: "{{ url_for('static', filename='css/modes/drone.css') }}"
         };
         window.INTERCEPT_MODE_STYLE_LOADED = {};
         window.INTERCEPT_MODE_STYLE_PROMISES = {};
@@ -186,7 +187,8 @@
             spaceweather: "{{ url_for('static', filename='js/modes/space-weather.js') }}",
             system: "{{ url_for('static', filename='js/modes/system.js') }}",
             meteor: "{{ url_for('static', filename='js/modes/meteor.js') }}",
-            waterfall: "{{ url_for('static', filename='js/modes/waterfall.js') }}?v={{ version }}&r=wfdeck21"
+            waterfall: "{{ url_for('static', filename='js/modes/waterfall.js') }}?v={{ version }}&r=wfdeck21",
+            drone: "{{ url_for('static', filename='js/modes/drone.js') }}"
         };
         window.INTERCEPT_MODE_SCRIPT_LOADED = {};
         window.INTERCEPT_MODE_SCRIPT_PROMISES = {};
@@ -763,6 +765,8 @@
                 {% include 'partials/modes/tscm.html' %}
 
                 {% include 'partials/modes/ais.html' %}
+
+                {% include 'partials/modes/drone.html' %}
 
                 {% include 'partials/modes/radiosonde.html' %}
 
@@ -2546,6 +2550,25 @@
                         </div>
                         <div class="wxsat-strip-divider"></div>
                         <div class="wxsat-strip-group">
+                            <div class="wxsat-strip-stat">
+                                <span class="wxsat-strip-value" id="wxsatStripPassCount">0</span>
+                                <span class="wxsat-strip-label">PASSES</span>
+                            </div>
+                        </div>
+                        <div class="wxsat-strip-divider"></div>
+                        <div class="wxsat-strip-group">
+                            <span class="wxsat-strip-label" style="margin-right: 4px;">TZ</span>
+                            <select id="wxsatTimezone" class="wxsat-tz-select" onchange="WeatherSat.setTimezone(this.value)">
+                                <option value="UTC">UTC</option>
+                                <option value="local">Local</option>
+                                <option value="US/Eastern">Eastern</option>
+                                <option value="US/Central">Central</option>
+                                <option value="US/Mountain">Mountain</option>
+                                <option value="US/Pacific">Pacific</option>
+                            </select>
+                        </div>
+                        <div class="wxsat-strip-divider"></div>
+                        <div class="wxsat-strip-group">
                             <label class="wxsat-schedule-toggle" title="Auto-capture passes">
                                 <input type="checkbox" id="wxsatAutoSchedule" onchange="WeatherSat.toggleScheduler(this)">
                                 <span class="wxsat-toggle-label">AUTO</span>
@@ -2576,6 +2599,29 @@
                         </div>
                     </div>
 
+                    <!-- Pass Analysis Bar -->
+                    <div class="wxsat-analysis-bar" id="wxsatAnalysisBar">
+                        <div class="wxsat-analysis-stats">
+                            <div class="wxsat-analysis-stat">
+                                <span class="wxsat-analysis-value" id="wxsatAnalysisTotal">0</span>
+                                <span class="wxsat-analysis-label">24h passes</span>
+                            </div>
+                            <div class="wxsat-analysis-stat">
+                                <span class="wxsat-analysis-value excellent" id="wxsatAnalysisExcellent">0</span>
+                                <span class="wxsat-analysis-label">excellent</span>
+                            </div>
+                            <div class="wxsat-analysis-stat">
+                                <span class="wxsat-analysis-value good" id="wxsatAnalysisGood">0</span>
+                                <span class="wxsat-analysis-label">good</span>
+                            </div>
+                            <div class="wxsat-analysis-stat">
+                                <span class="wxsat-analysis-value fair" id="wxsatAnalysisFair">0</span>
+                                <span class="wxsat-analysis-label">fair</span>
+                            </div>
+                        </div>
+                        <div class="wxsat-analysis-best" id="wxsatAnalysisBest">--</div>
+                    </div>
+
                     <!-- Capture progress -->
                     <div class="wxsat-capture-status" id="wxsatCaptureStatus">
                         <div class="wxsat-capture-info">
@@ -2604,8 +2650,18 @@
                                     <span class="wxsat-phase-step" data-phase="complete">COMPLETE</span>
                                 </div>
                             </div>
-                            <button class="wxsat-strip-btn" id="wxsatConsoleToggle"
-                                    onclick="WeatherSat.toggleConsole()" title="Toggle console">&#x25BC;</button>
+                            <div class="wxsat-console-filters" id="wxsatConsoleFilters">
+                                <button class="wxsat-console-filter active" data-filter="all" onclick="WeatherSat.filterConsole('all')">ALL</button>
+                                <button class="wxsat-console-filter" data-filter="signal" onclick="WeatherSat.filterConsole('signal')">SIGNAL</button>
+                                <button class="wxsat-console-filter" data-filter="progress" onclick="WeatherSat.filterConsole('progress')">PROG</button>
+                                <button class="wxsat-console-filter" data-filter="error" onclick="WeatherSat.filterConsole('error')">ERR</button>
+                            </div>
+                            <div class="wxsat-console-actions">
+                                <button class="wxsat-strip-btn" onclick="WeatherSat.exportConsole()" title="Copy log to clipboard">COPY</button>
+                                <button class="wxsat-strip-btn" onclick="WeatherSat.clearConsole()" title="Clear console">CLR</button>
+                                <button class="wxsat-strip-btn" id="wxsatConsoleToggle"
+                                        onclick="WeatherSat.toggleConsole()" title="Toggle console">&#x25BC;</button>
+                            </div>
                         </div>
                         <div class="wxsat-console-body" id="wxsatConsoleBody">
                             <div class="wxsat-console-log" id="wxsatConsoleLog">
@@ -2621,10 +2677,36 @@
                             <div class="wxsat-passes-header">
                                 <span class="wxsat-passes-title">Upcoming Passes</span>
                                 <span class="wxsat-passes-count" id="wxsatPassesCount">0</span>
+                                <button class="wxsat-strip-btn" onclick="WeatherSat.loadPasses()" title="Refresh pass predictions" style="margin-left: auto; font-size: 9px; padding: 2px 6px;">REFRESH</button>
+                            </div>
+                            <!-- Pass geometry detail (shown when pass selected) -->
+                            <div class="wxsat-pass-geometry" id="wxsatPassGeometry" style="display: none;">
+                                <div class="wxsat-geom-event">
+                                    <span class="wxsat-geom-label">AOS</span>
+                                    <span class="wxsat-geom-time" id="wxsatGeomAosTime">--</span>
+                                    <span class="wxsat-geom-az" id="wxsatGeomAosAz">--</span>
+                                </div>
+                                <div class="wxsat-geom-arrow">&rarr;</div>
+                                <div class="wxsat-geom-event wxsat-geom-tca">
+                                    <span class="wxsat-geom-label">TCA</span>
+                                    <span class="wxsat-geom-time" id="wxsatGeomTcaEl">--</span>
+                                    <span class="wxsat-geom-az" id="wxsatGeomTcaAz">--</span>
+                                </div>
+                                <div class="wxsat-geom-arrow">&rarr;</div>
+                                <div class="wxsat-geom-event">
+                                    <span class="wxsat-geom-label">LOS</span>
+                                    <span class="wxsat-geom-time" id="wxsatGeomLosTime">--</span>
+                                    <span class="wxsat-geom-az" id="wxsatGeomLosAz">--</span>
+                                </div>
+                                <div class="wxsat-geom-meta" id="wxsatGeomMeta">--</div>
                             </div>
                             <div class="wxsat-passes-list" id="wxsatPassesList">
                                 <div class="wxsat-gallery-empty">
-                                    <p>Set location to see pass predictions</p>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.3;">
+                                        <circle cx="12" cy="12" r="10"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
+                                    </svg>
+                                    <p style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Set your location</p>
+                                    <p style="font-size: 11px; margin-top: 4px;">Enter lat/lon in the strip bar above or click the GPS button to load pass predictions</p>
                                 </div>
                             </div>
                         </div>
@@ -3689,6 +3771,7 @@
             wifi_locate: { label: 'WiFi Locate', indicator: 'WF LOCATE', outputTitle: 'WiFi Locate', group: 'wireless' },
             meshtastic: { label: 'Meshtastic', indicator: 'MESHTASTIC', outputTitle: 'Meshtastic Mesh Monitor', group: 'wireless' },
             tscm: { label: 'TSCM', indicator: 'TSCM', outputTitle: 'TSCM Counter-Surveillance', group: 'intel' },
+            drone: { label: 'Drone Intel', indicator: 'DRONE', outputTitle: 'Drone Intelligence', group: 'intel' },
             spystations: { label: 'Spy Stations', indicator: 'SPY STATIONS', outputTitle: 'Spy Stations', group: 'intel' },
             websdr: { label: 'WebSDR', indicator: 'WEBSDR', outputTitle: 'HF/Shortwave WebSDR', group: 'intel' },
             waterfall: { label: 'Waterfall', indicator: 'WATERFALL', outputTitle: 'Spectrum Waterfall', group: 'signals' },
@@ -3799,11 +3882,17 @@
             keywords: []
         };
 
-        // UTC Clock Update
+        // Clock Update (uses global InterceptTime for timezone/format)
         function updateHeaderClock() {
             const now = new Date();
-            const utc = now.toISOString().substring(11, 19);
-            document.getElementById('headerUtcTime').textContent = utc;
+            const el = document.getElementById('headerUtcTime');
+            const label = document.querySelector('.utc-label');
+            if (typeof InterceptTime !== 'undefined') {
+                if (el) el.textContent = InterceptTime.fullTime(now);
+                if (label) label.textContent = InterceptTime.getLabel() || 'LOCAL';
+            } else {
+                if (el) el.textContent = now.toISOString().substring(11, 19);
+            }
         }
 
         function setActiveModeIndicator(label) {
@@ -3838,8 +3927,12 @@
         }
 
         // Update clock every second
+        window._navClockStarted = true;
         setInterval(updateHeaderClock, 1000);
-        updateHeaderClock();  // Initial call
+        updateHeaderClock();
+        if (typeof InterceptTime !== 'undefined' && InterceptTime.onChange) {
+            InterceptTime.onChange(updateHeaderClock);
+        }
         applyKeyboardAccessibility();
 
         // Pager message filter functions
@@ -4315,6 +4408,7 @@
                 tscm: () => { if (tscmEventSource) { tscmEventSource.close(); tscmEventSource = null; } },
                 meteor: () => typeof MeteorScatter !== 'undefined' && MeteorScatter.destroy?.(),
                 ook: () => typeof OokMode !== 'undefined' && OokMode.destroy?.(),
+                drone: () => typeof DroneMode !== 'undefined' && DroneMode.destroy?.(),
             };
             return moduleDestroyMap[mode] || null;
         }
@@ -4625,6 +4719,7 @@
             document.getElementById('aprsMode')?.classList.toggle('active', mode === 'aprs');
             document.getElementById('tscmMode')?.classList.toggle('active', mode === 'tscm');
             document.getElementById('aisMode')?.classList.toggle('active', mode === 'ais');
+            document.getElementById('droneMode')?.classList.toggle('active', mode === 'drone');
             document.getElementById('radiosondeMode')?.classList.toggle('active', mode === 'radiosonde');
             document.getElementById('spystationsMode')?.classList.toggle('active', mode === 'spystations');
             document.getElementById('meshtasticMode')?.classList.toggle('active', mode === 'meshtastic');
@@ -4923,6 +5018,8 @@
                 SystemHealth.init();
             } else if (mode === 'ook') {
                 OokMode.init();
+            } else if (mode === 'drone') {
+                if (typeof DroneMode !== 'undefined') DroneMode.init();
             }
             if (requestId !== modeSwitchRequestId) return;
 

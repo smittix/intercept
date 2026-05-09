@@ -77,8 +77,23 @@ function declineDisclaimer() {
 
 function updateHeaderClock() {
     const now = new Date();
-    const utc = now.toISOString().substring(11, 19);
-    document.getElementById('headerUtcTime').textContent = utc;
+    const el = document.getElementById('headerUtcTime');
+    const label = document.querySelector('.utc-label');
+    if (typeof InterceptTime !== 'undefined') {
+        if (el) el.textContent = InterceptTime.fullTime(now);
+        if (label) label.textContent = InterceptTime.getLabel() || 'LOCAL';
+    } else {
+        if (el) el.textContent = now.toISOString().substring(11, 19);
+    }
+}
+
+function initTimeSettings() {
+    const tzSelect = document.getElementById('globalTimezoneSelect');
+    const fmtSelect = document.getElementById('globalTimeFormatSelect');
+    if (typeof InterceptTime !== 'undefined') {
+        if (tzSelect) tzSelect.value = InterceptTime.getTimezone();
+        if (fmtSelect) fmtSelect.value = InterceptTime.getHour12() ? '12' : '24';
+    }
 }
 
 // ============== MODE SWITCHING ==============
@@ -447,9 +462,14 @@ function initApp() {
     // Load theme
     loadTheme();
 
-    // Start clock
+    // Start clock and init time settings
+    initTimeSettings();
     updateHeaderClock();
+    window._navClockStarted = true;  // Prevent nav.html from starting a duplicate interval
     setInterval(updateHeaderClock, 1000);
+    if (typeof InterceptTime !== 'undefined' && InterceptTime.onChange) {
+        InterceptTime.onChange(updateHeaderClock);
+    }
 
     // Load bias-T setting
     loadBiasTSetting();
