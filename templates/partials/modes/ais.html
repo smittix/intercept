@@ -137,6 +137,7 @@
         const ppm = parseInt(document.getElementById('aisPpmInput')?.value || '0');
         const body = {
             device, gain, ppm,
+            sdr_type: typeof getSelectedSDRType === 'function' ? getSelectedSDRType() : 'rtlsdr',
             bias_t: typeof getBiasTEnabled === 'function' ? getBiasTEnabled() : false,
         };
         if (udpHost) {
