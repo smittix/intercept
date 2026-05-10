@@ -224,29 +224,35 @@ class RTLSDRCommandBuilder(CommandBuilder):
         gain: float | None = None,
         bias_t: bool = False,
         ppm: int | None = None,
+        decoder_path: str | None = None,
     ) -> list[str]:
-        """
-        Build dump1090 command for ADS-B decoding.
+        """Build ADS-B decoder command for RTL-SDR (local or via rtl_tcp).
 
-        Uses dump1090 with network output for SBS data streaming.
+        Prefers readsb when available — it supports rtl_tcp network input,
+        SoapySDR hardware, and improved ML decoding, while remaining
+        argument-compatible with dump1090.
 
-        Note: dump1090 does not support rtl_tcp. For remote SDR, connect to
-        a remote dump1090's SBS output (port 30003) instead.
+        For network devices (rtl_tcp), readsb is required; dump1090 does not
+        support rtl_tcp as an input source.
         """
-        if device.is_network:
+        import shutil as _shutil
+        binary = decoder_path or _shutil.which('readsb') or get_tool_path('dump1090') or 'dump1090'
+        using_readsb = 'readsb' in binary
+
+        if device.is_network and not using_readsb:
             raise ValueError(
-                "dump1090 does not support rtl_tcp. "
-                "For remote ADS-B, run dump1090 on the remote machine and "
-                "connect to its SBS output (port 30003)."
+                "rtl_tcp input requires readsb. "
+                "dump1090 does not support rtl_tcp as an input source. "
+                "Install readsb: https://github.com/wiedehopf/readsb"
             )
 
-        dump1090_path = get_tool_path('dump1090') or 'dump1090'
-        cmd = [
-            dump1090_path,
-            '--net',
-            '--device-index', str(device.index),
-            '--quiet'
-        ]
+        cmd = [binary, '--net', '--quiet']
+
+        if device.is_network:
+            # RTL-SDR library built-in rtl_tcp client: device index = "rtl_tcp=host:port"
+            cmd.extend(['--device-index', f'rtl_tcp={device.rtl_tcp_host}:{device.rtl_tcp_port}'])
+        else:
+            cmd.extend(['--device-index', str(device.index)])
 
         if gain is not None:
             cmd.extend(['--gain', str(int(gain))])
@@ -255,16 +261,14 @@ class RTLSDRCommandBuilder(CommandBuilder):
             cmd.extend(['--ppm', str(int(ppm))])
 
         if bias_t:
-            bias_t_flag = _get_dump1090_bias_t_flag(dump1090_path)
+            bias_t_flag = _get_dump1090_bias_t_flag(binary)
             if bias_t_flag:
                 cmd.append(bias_t_flag)
             else:
-                # Fallback: use rtl_biast to set bias-t before starting dump1090
                 if not enable_bias_t_via_rtl_biast(device.index):
                     logger.warning(
-                        f"Bias-t requested but {dump1090_path} does not support it "
-                        "and rtl_biast is not available. Install RTL-SDR Blog drivers "
-                        "or use dump1090-fa/readsb for bias-t support."
+                        f"Bias-t requested but {binary} does not support --enable-biast "
+                        "and rtl_biast is not available."
                     )
 
         return cmd

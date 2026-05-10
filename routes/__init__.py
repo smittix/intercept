@@ -48,6 +48,7 @@ def register_blueprints(app):
     from .weather_sat import weather_sat_bp
     from .websdr import websdr_bp
     from .wefax import wefax_bp
+    from .uat import uat_bp
     from .wifi import wifi_bp
     from .wifi_v2 import wifi_v2_bp
 
@@ -93,6 +94,7 @@ def register_blueprints(app):
     app.register_blueprint(ook_bp)  # Generic OOK signal decoder
     app.register_blueprint(ground_station_bp)  # Ground station automation
     app.register_blueprint(drone_bp)  # Drone intelligence / UAV detection
+    app.register_blueprint(uat_bp)  # UAT 978MHz ADS-B decoder
 
     # Exempt all API blueprints from CSRF (they use JSON, not form tokens)
     if _csrf:

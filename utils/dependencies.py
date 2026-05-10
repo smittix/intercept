@@ -424,6 +424,29 @@ TOOL_DEPENDENCIES = {
             },
         },
     },
+    "uat": {
+        "name": "UAT 978MHz",
+        "tools": {
+            "rtl_sdr": {
+                "required": True,
+                "description": "RTL-SDR raw capture (for UAT pipeline)",
+                "install": {
+                    "apt": "sudo apt install rtl-sdr",
+                    "brew": "brew install librtlsdr",
+                    "manual": "https://osmocom.org/projects/rtl-sdr",
+                },
+            },
+            "dump978": {
+                "required": True,
+                "description": "UAT 978MHz decoder",
+                "install": {
+                    "apt": "Build from source",
+                    "brew": "Build from source",
+                    "manual": "https://github.com/mutability/dump978",
+                },
+            },
+        },
+    },
     "subghz": {
         "name": "SubGHz Transceiver",
         "tools": {

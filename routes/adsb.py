@@ -99,6 +99,15 @@ DUMP1090_PATHS = [
     '/usr/bin/dump1090-mutability',
 ]
 
+# Preference order for ADS-B decoder binary selection.
+# readsb is preferred: SoapySDR support, better ML decoding, rtl_tcp input.
+_DECODER_PREFERENCE = [
+    'readsb',
+    'dump1090-fa',
+    'dump1090-mutability',
+    'dump1090',
+]
+
 
 def _get_part(parts: list[str], index: int) -> str | None:
     if len(parts) <= index:
@@ -473,18 +482,27 @@ def _record_session_stop(*, stop_source: str | None, stopped_by: str | None) -> 
         logger.warning("ADS-B session stop record failed: %s", exc)
         return None
 
-def find_dump1090():
-    """Find dump1090 binary, checking PATH and common locations."""
-    # First try PATH
-    for name in ['dump1090', 'dump1090-mutability', 'dump1090-fa']:
+def find_adsb_decoder() -> str | None:
+    """Find the best available ADS-B decoder binary.
+
+    Preference: readsb > dump1090-fa > dump1090-mutability > dump1090.
+    readsb is preferred because it supports SoapySDR (HackRF/LimeSDR),
+    rtl_tcp network input, and has improved ML decoding.
+    """
+    for name in _DECODER_PREFERENCE:
         path = shutil.which(name)
         if path:
             return path
-    # Check common installation paths directly
+    # Fall back to checking known install paths for dump1090 variants
     for path in DUMP1090_PATHS:
         if os.path.isfile(path) and os.access(path, os.X_OK):
             return path
     return None
+
+
+def find_dump1090() -> str | None:
+    """Find dump1090 binary. Prefer readsb as a drop-in replacement."""
+    return find_adsb_decoder()
 
 
 def check_dump1090_service():
@@ -928,16 +946,22 @@ def start_adsb():
         sdr_type = SDRType.RTL_SDR
         sdr_type_str = sdr_type.value
 
-    # For RTL-SDR, use dump1090. For other hardware, need readsb with SoapySDR
-    if sdr_type == SDRType.RTL_SDR:
-        dump1090_path = find_dump1090()
-        if not dump1090_path:
-            return api_error('dump1090 not found. Install dump1090/dump1090-fa or ensure it is in /usr/local/bin/')
-    else:
-        # For LimeSDR/HackRF, check for readsb (dump1090 with SoapySDR support)
-        dump1090_path = shutil.which('readsb') or find_dump1090()
-        if not dump1090_path:
-            return api_error(f'readsb or dump1090 not found for {sdr_type.value}. Install readsb with SoapySDR support.')
+    # Find best available decoder — readsb preferred for all hardware.
+    # For HackRF/LimeSDR, readsb (with SoapySDR) is required; for RTL-SDR
+    # any dump1090 variant works but readsb gives better decoding + rtl_tcp.
+    decoder_path = find_adsb_decoder()
+    if not decoder_path:
+        return api_error(
+            'No ADS-B decoder found. Install readsb (recommended) or dump1090-fa. '
+            'See: https://github.com/wiedehopf/readsb'
+        )
+    if sdr_type != SDRType.RTL_SDR and 'readsb' not in decoder_path:
+        return api_error(
+            f'{sdr_type.value} requires readsb with SoapySDR support. '
+            f'Found {decoder_path} which does not support SoapySDR. '
+            'Build readsb with SOAPYSDR=yes.'
+        )
+    dump1090_path = decoder_path
 
     # Kill any stale app-started process (use process group to ensure full cleanup)
     if app_module.adsb_process:
@@ -1772,3 +1796,106 @@ def get_aircraft_messages(icao: str):
         pass
 
     return api_success(data={'icao': icao.upper(), **messages})
+
+
+# ── rtl_tcp server management ────────────────────────────────────────────────
+# Manages a local rtl_tcp instance so the dongle can be shared over the
+# network — multiple decoders (readsb, dump978, etc.) can consume the same
+# hardware simultaneously.
+
+_rtl_tcp_process: subprocess.Popen | None = None
+_rtl_tcp_lock = threading.Lock()
+
+
+def _rtl_tcp_running() -> bool:
+    return _rtl_tcp_process is not None and _rtl_tcp_process.poll() is None
+
+
+@adsb_bp.route('/rtl_tcp/start', methods=['POST'])
+def rtl_tcp_start():
+    """Start a local rtl_tcp server to share the RTL-SDR over the network."""
+    global _rtl_tcp_process
+
+    rtl_tcp_path = shutil.which('rtl_tcp')
+    if not rtl_tcp_path:
+        return api_error('rtl_tcp not found. Install rtl-sdr package.', 404)
+
+    with _rtl_tcp_lock:
+        if _rtl_tcp_running():
+            return jsonify({'status': 'already_running', 'port': _rtl_tcp_port()})
+
+        data = request.get_json(silent=True) or {}
+        try:
+            device = validate_device_index(data.get('device', '0'))
+            gain = int(validate_gain(data.get('gain', '0')))  # 0 = auto
+        except ValueError as e:
+            return api_error(str(e), 400)
+
+        host = data.get('host', '127.0.0.1')
+        port = int(data.get('port', 1234))
+
+        cmd = [rtl_tcp_path, '-a', host, '-p', str(port), '-d', str(device)]
+        if gain:
+            cmd.extend(['-g', str(gain)])
+
+        logger.info(f'Starting rtl_tcp: {" ".join(cmd)}')
+        _rtl_tcp_process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            start_new_session=True,
+        )
+        # Brief wait to catch immediate failures
+        time.sleep(0.5)
+        if _rtl_tcp_process.poll() is not None:
+            stderr = _rtl_tcp_process.stderr.read().decode(errors='replace').strip()
+            _rtl_tcp_process = None
+            return api_error(f'rtl_tcp failed to start: {stderr}', 500)
+
+    return jsonify({'status': 'started', 'host': host, 'port': port, 'device': device})
+
+
+@adsb_bp.route('/rtl_tcp/stop', methods=['POST'])
+def rtl_tcp_stop():
+    """Stop the local rtl_tcp server."""
+    global _rtl_tcp_process
+    with _rtl_tcp_lock:
+        if not _rtl_tcp_running():
+            return jsonify({'status': 'not_running'})
+        try:
+            pgid = os.getpgid(_rtl_tcp_process.pid)
+            os.killpg(pgid, 15)
+            _rtl_tcp_process.wait(timeout=5)
+        except (subprocess.TimeoutExpired, ProcessLookupError, OSError):
+            with contextlib.suppress(ProcessLookupError, OSError):
+                os.killpg(os.getpgid(_rtl_tcp_process.pid), 9)
+        _rtl_tcp_process = None
+    return jsonify({'status': 'stopped'})
+
+
+@adsb_bp.route('/rtl_tcp/status')
+def rtl_tcp_status():
+    """Return rtl_tcp server status."""
+    running = _rtl_tcp_running()
+    result = {
+        'running': running,
+        'pid': _rtl_tcp_process.pid if running else None,
+        'path': shutil.which('rtl_tcp'),
+    }
+    return jsonify(result)
+
+
+def _rtl_tcp_port() -> int:
+    """Return the port the current rtl_tcp process is bound to (best-effort)."""
+    if not _rtl_tcp_running():
+        return 0
+    try:
+        import psutil
+        proc = psutil.Process(_rtl_tcp_process.pid)
+        conns = proc.net_connections(kind='tcp')
+        for c in conns:
+            if c.status == 'LISTEN':
+                return c.laddr.port
+    except Exception:
+        pass
+    return 1234  # default
