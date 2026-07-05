@@ -2,6 +2,16 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.28.0] - 2026-07-05
+
+### Added
+- **Signal ID** — Offline signal identification against a bundled 594-signal database (seeded from SigID Wiki via Artemis-DB). Match an unknown signal by frequency, bandwidth, and modulation; results are ranked 0–100 with match reasons and SigID Wiki links.
+- **Signal ID modal** — Standalone overlay (`SignalIdModal`) accessible from a new "Signal ID" button in the global nav Intel group, and from a dedicated "Identify Signal" button in the waterfall sidebar. Pre-populates from the current waterfall frequency when opened from there; accepts manual entry from the nav.
+- **`POST /signalid/match` route** — Scored matching API with 60-second in-process cache. Scores frequency centrality (40 pts), bandwidth match (30 pts), modulation match (20 pts), and region match (10 pts). Returns ranked matches with `match_reasons` annotations.
+- **`bin/import_artemis.py`** — One-command database refresh script. Downloads the latest Artemis-DB tar (~300 MB), extracts it, and merges new signals into `data/signals.json`. Run with `python3 bin/import_artemis.py --download`.
+
+---
+
 ## [2.27.0] - 2026-05-20
 
 ### Fixed

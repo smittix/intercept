@@ -7,10 +7,20 @@ import os
 import sys
 
 # Application version
-VERSION = "2.27.0"
+VERSION = "2.28.0"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.28.0",
+        "date": "July 2026",
+        "highlights": [
+            "Feat: Signal ID — offline signal identification against a bundled 594-signal database",
+            "Feat: Signal ID modal accessible from the global nav and waterfall sidebar",
+            "Feat: scored matching by frequency, bandwidth, modulation, and region (0–100)",
+            "Feat: import script (bin/import_artemis.py) to refresh database from Artemis-DB",
+        ],
+    },
     {
         "version": "2.27.0",
         "date": "May 2026",
