@@ -13,11 +13,22 @@ from .constants import (
     MID_COUNTRY_MAP,
     TELECOMMAND_CODES,
 )
+from .decoder import (
+    bits_to_symbol,
+    decode_mmsi,
+    decode_position,
+    encode_symbol,
+    is_valid_mmsi,
+    pair_digits,
+)
 from .parser import (
+    classify_mmsi,
+    format_dsc_for_display,
     get_country_from_mmsi,
     get_distress_nature_text,
     get_format_text,
     parse_dsc_message,
+    validate_mmsi,
 )
 
 __all__ = [
@@ -30,4 +41,13 @@ __all__ = [
     "get_country_from_mmsi",
     "get_distress_nature_text",
     "get_format_text",
+    "format_dsc_for_display",
+    "validate_mmsi",
+    "classify_mmsi",
+    "encode_symbol",
+    "bits_to_symbol",
+    "decode_mmsi",
+    "decode_position",
+    "pair_digits",
+    "is_valid_mmsi",
 ]

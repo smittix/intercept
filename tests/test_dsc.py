@@ -65,13 +65,13 @@ class TestDSCParser:
         """Test distress nature code to text conversion."""
         from utils.dsc.parser import get_distress_nature_text
 
-        assert get_distress_nature_text(100) == "UNDESIGNATED"
-        assert get_distress_nature_text(101) == "FIRE"
-        assert get_distress_nature_text(102) == "FLOODING"
-        assert get_distress_nature_text(103) == "COLLISION"
-        assert get_distress_nature_text(106) == "SINKING"
-        assert get_distress_nature_text(109) == "PIRACY"
-        assert get_distress_nature_text(110) == "MOB"  # Man overboard
+        assert get_distress_nature_text(7) == "UNDESIGNATED_DISTRESS"
+        assert get_distress_nature_text(0) == "FIRE_EXPLOSION"
+        assert get_distress_nature_text(1) == "FLOODING"
+        assert get_distress_nature_text(2) == "COLLISION"
+        assert get_distress_nature_text(5) == "SINKING"
+        assert get_distress_nature_text(9) == "PIRACY_ARMED_ROBBERY"
+        assert get_distress_nature_text(10) == "MAN_OVERBOARD"
 
     def test_get_distress_nature_text_unknown(self):
         """Test distress nature returns formatted unknown for invalid codes."""
@@ -91,12 +91,13 @@ class TestDSCParser:
         """Test format code to text conversion per ITU-R M.493."""
         from utils.dsc.parser import get_format_text
 
-        assert get_format_text(102) == "ALL_SHIPS"
-        assert get_format_text(112) == "INDIVIDUAL"
-        assert get_format_text(114) == "INDIVIDUAL_ACK"
-        assert get_format_text(116) == "GROUP"
-        assert get_format_text(120) == "DISTRESS"
-        assert get_format_text(123) == "ALL_SHIPS_URGENCY_SAFETY"
+        # Per ITU-R M.493-16
+        assert get_format_text(102) == "GEOGRAPHICAL_AREA"
+        assert get_format_text(112) == "DISTRESS"
+        assert get_format_text(114) == "GROUP"
+        assert get_format_text(116) == "ALL_SHIPS"
+        assert get_format_text(120) == "INDIVIDUAL"
+        assert get_format_text(123) == "AUTOMATIC_SERVICE"
 
     def test_get_format_text_unknown(self):
         """Test format code returns unknown for invalid codes."""
@@ -188,21 +189,21 @@ class TestDSCParser:
         assert classify_mmsi("812345678") == "unknown"
 
     def test_parse_dsc_message_distress(self):
-        """Test parsing a distress message with ITU format 120."""
+        """Test parsing a distress message with ITU format 112."""
         from utils.dsc.parser import parse_dsc_message
 
         raw = json.dumps(
             {
                 "type": "dsc",
-                "format": 120,
+                "format": 112,
                 "source_mmsi": "232123456",
                 "dest_mmsi": "002320001",
                 "category": "DISTRESS",
-                "nature": 101,
-                "position": {"lat": 51.5, "lon": -0.1},
+                "nature": 7,
+                "position": {"latitude": 51.5, "longitude": -0.1},
                 "telecommand1": 100,
                 "timestamp": "2025-01-15T12:00:00Z",
-                "raw": "120002032123456101100127",
+                "raw": "112002032123456007100127",
             }
         )
 
@@ -213,7 +214,7 @@ class TestDSCParser:
         assert msg["source_mmsi"] == "232123456"
         assert msg["category"] == "DISTRESS"
         assert msg["source_country"] == "United Kingdom"
-        assert msg["nature_of_distress"] == "FIRE"
+        assert msg["nature_of_distress"] == "UNDESIGNATED_DISTRESS"
         assert msg["latitude"] == 51.5
         assert msg["longitude"] == -0.1
         assert msg["is_critical"] is True
@@ -241,7 +242,7 @@ class TestDSCParser:
         assert msg["category"] == "GROUP"
         assert msg["source_country"] == "USA"
         assert msg["is_critical"] is False
-        assert msg["priority"] == 5
+        assert msg["priority"] == 6
 
     def test_parse_dsc_message_individual(self):
         """Test parsing an individual call message."""
@@ -302,7 +303,7 @@ class TestDSCParser:
         """Test parser rejects records with non-ITU format specifier."""
         from utils.dsc.parser import parse_dsc_message
 
-        for bad_format in [100, 104, 106, 108, 110, 118, 999]:
+        for bad_format in [104, 106, 108, 110, 999]:
             raw = json.dumps(
                 {
                     "type": "dsc",
@@ -557,36 +558,46 @@ class TestDSCDecoder:
 
     def test_decode_position_northeast(self, decoder):
         """Test position decoding for NE quadrant."""
-        # Quadrant 10 = NE (lat+, lon+)
-        # Position: 51°30'N, 0°10'E
-        # lon_deg = symbols[3]*100 + symbols[4] = 0, lon_min = symbols[5] = 10
-        symbols = [10, 51, 30, 0, 0, 10, 0, 0, 0, 0]
+        # Quadrant 0 = NE (lat+, lon+)
+        # Position: 51°30'N 0°10'E
+        # Each symbol is a single digit (0-9)
+        # [quadrant=0, lat_deg_t=5, lat_deg_u=1, lat_min_t=3, lat_min_u=0,
+        #  lon_deg_h=0, lon_deg_t=0, lon_deg_u=0, lon_min_t=1, lon_min_u=0]
+        symbols = [0, 5, 1, 3, 0, 0, 0, 0, 1, 0]
         result = decoder._decode_position(symbols)
 
         assert result is not None
-        assert result["lat"] == pytest.approx(51.5, rel=0.01)
-        assert result["lon"] == pytest.approx(0.1667, rel=0.01)
+        assert result["valid"] is True
+        assert result["latitude"] == pytest.approx(51.5, rel=0.01)
+        assert result["longitude"] == pytest.approx(0.1667, rel=0.01)
 
     def test_decode_position_northwest(self, decoder):
         """Test position decoding for NW quadrant."""
-        # Quadrant 11 = NW (lat+, lon-)
-        # Position: 40°42'N, 74°00'W (NYC area)
-        symbols = [11, 40, 42, 0, 74, 0, 0, 0, 0, 0]
+        # Quadrant 1 = NW (lat+, lon-)
+        # Position: 40°42'N 74°00'W (NYC area)
+        # lon_deg_h=0, lon_deg_t=7, lon_deg_u=4 -> 74 degrees
+        # lon_min_t=0, lon_min_u=0 -> 0 minutes
+        symbols = [1, 4, 0, 4, 2, 0, 7, 4, 0, 0]
         result = decoder._decode_position(symbols)
 
         assert result is not None
-        assert result["lat"] > 0  # North
-        assert result["lon"] < 0  # West
+        assert result["valid"] is True
+        assert result["latitude"] > 0  # North
+        assert result["longitude"] < 0  # West
 
     def test_decode_position_southeast(self, decoder):
         """Test position decoding for SE quadrant."""
-        # Quadrant 0 = SE (lat-, lon+)
-        symbols = [0, 33, 51, 1, 51, 12, 0, 0, 0, 0]
+        # Quadrant 2 = SE (lat-, lon+)
+        # Position: 33°51'S 151°12'E (Sydney area)
+        # lat_deg=33 (3,3), lat_min=51 (5,1)
+        # lon_deg=151 (1,5,1), lon_min=12 (1,2)
+        symbols = [2, 3, 3, 5, 1, 1, 5, 1, 1, 2]
         result = decoder._decode_position(symbols)
 
         assert result is not None
-        assert result["lat"] < 0  # South
-        assert result["lon"] > 0  # East
+        assert result["valid"] is True
+        assert result["latitude"] < 0  # South
+        assert result["longitude"] > 0  # East
 
     def test_decode_position_short_symbols(self, decoder):
         """Test position decoding handles short symbol list."""
@@ -595,11 +606,11 @@ class TestDSCDecoder:
 
     def test_decode_position_invalid_values(self, decoder):
         """Test position decoding handles invalid values gracefully."""
-        # Latitude > 90 should be treated as 0
-        symbols = [10, 95, 30, 0, 10, 0, 0, 0, 0, 0]
+        # Latitude > 90 should be invalid
+        symbols = [0, 9, 5, 3, 0, 0, 0, 0, 1, 0]
         result = decoder._decode_position(symbols)
         assert result is not None
-        assert result["lat"] == pytest.approx(0.5, rel=0.01)  # 0 deg + 30 min
+        assert result["valid"] is False
 
     def test_bits_to_symbol(self, decoder):
         """Test bit to symbol conversion."""
@@ -682,14 +693,16 @@ class TestDSCDecoder:
 
     def test_bits_to_symbol_check_bit_validation(self, decoder):
         """Test that _bits_to_symbol rejects symbols with invalid check bits."""
-        # Symbol 100 = 0b1100100 LSB-first: 0,0,1,0,0,1,1
-        # ones in data = 3, need total even -> check bits need 1 one
-        # Valid: [0,0,1,0,0,1,1, 1,0,0] -> total ones = 4 (even) -> valid
+        # Per ITU-R M.493-16: 3 check bits encode count of B-elements (binary 0)
+        # among the 7 info bits as a 3-bit number (MSB first).
+        # Symbol 100 = 0b1100100 LSB-first: [0,0,1,0,0,1,1]
+        # Info has 3 ones, 4 zeros -> b_count=4 -> check=[1,0,0]
         valid_bits = [0, 0, 1, 0, 0, 1, 1, 1, 0, 0]
         assert decoder._bits_to_symbol(valid_bits) == 100
 
-        # Invalid: flip one check bit -> total ones = 5 (odd) -> invalid
-        invalid_bits = [0, 0, 1, 0, 0, 1, 1, 0, 0, 0]
+        # 2+ bit errors: wrong check bits [0,1,1] vs expected [1,0,0]
+        # Not correctable with 1-bit tolerance
+        invalid_bits = [0, 0, 1, 0, 0, 1, 1, 0, 1, 1]
         assert decoder._bits_to_symbol(invalid_bits) == -1
 
     def test_safety_is_critical(self):
@@ -720,8 +733,8 @@ class TestDSCConstants:
         """Test that all ITU-R M.493 format specifiers are defined."""
         from utils.dsc.constants import FORMAT_CODES
 
-        # ITU-R M.493 format specifiers (and only these)
-        expected_keys = {102, 112, 114, 116, 120, 123}
+        # ITU-R M.493 format specifiers (expanded set)
+        expected_keys = {100, 102, 112, 113, 114, 115, 116, 118, 120, 121, 123}
         assert set(FORMAT_CODES.keys()) == expected_keys
 
     def test_valid_format_specifiers_set(self):
@@ -740,14 +753,14 @@ class TestDSCConstants:
         """Test that all distress nature codes are defined."""
         from utils.dsc.constants import DISTRESS_NATURE_CODES
 
-        # ITU-R M.493 distress nature codes
-        assert 100 in DISTRESS_NATURE_CODES  # UNDESIGNATED
-        assert 101 in DISTRESS_NATURE_CODES  # FIRE
-        assert 102 in DISTRESS_NATURE_CODES  # FLOODING
-        assert 103 in DISTRESS_NATURE_CODES  # COLLISION
-        assert 106 in DISTRESS_NATURE_CODES  # SINKING
-        assert 109 in DISTRESS_NATURE_CODES  # PIRACY
-        assert 110 in DISTRESS_NATURE_CODES  # MOB
+        # ITU-R M.493 distress nature codes (0-31)
+        assert 0 in DISTRESS_NATURE_CODES   # FIRE_EXPLOSION
+        assert 1 in DISTRESS_NATURE_CODES   # FLOODING
+        assert 2 in DISTRESS_NATURE_CODES   # COLLISION
+        assert 5 in DISTRESS_NATURE_CODES   # SINKING
+        assert 7 in DISTRESS_NATURE_CODES   # UNDESIGNATED_DISTRESS
+        assert 9 in DISTRESS_NATURE_CODES   # PIRACY
+        assert 10 in DISTRESS_NATURE_CODES  # MAN_OVERBOARD
 
     def test_mid_country_map_completeness(self):
         """Test that common MID codes are defined."""

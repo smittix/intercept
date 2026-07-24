@@ -9,21 +9,26 @@ Identification Digits) country mappings.
 from __future__ import annotations
 
 # =============================================================================
-# DSC Format Codes (Category)
-# Per ITU-R M.493-15 Table 1
+# DSC Format Specifier Codes
+# Per ITU-R M.493-16 Table 1
 # =============================================================================
 
 FORMAT_CODES = {
-    102: "ALL_SHIPS",  # All ships call
-    112: "INDIVIDUAL",  # Individual call
-    114: "INDIVIDUAL_ACK",  # Individual acknowledgement
-    116: "GROUP",  # Group call (including geographic area)
-    120: "DISTRESS",  # Distress alert
-    123: "ALL_SHIPS_URGENCY_SAFETY",  # All ships urgency/safety
+    100: "SELECTIVE_CALL",          # Selective call (to individual station)
+    102: "GEOGRAPHICAL_AREA",       # Geographical area call
+    112: "DISTRESS",                # Distress alert
+    113: "INDIVIDUAL_ACK",          # Individual acknowledgement
+    114: "GROUP",                   # Group call
+    115: "SHIP_POSITION",           # Ship position request / response
+    116: "ALL_SHIPS",               # All ships call
+    118: "DISTRESS_RELAY",          # Distress relay
+    120: "INDIVIDUAL",              # Individual call
+    121: "MEDICAL_TRANSPORT",       # Medical transport
+    123: "AUTOMATIC_SERVICE",       # Automatic / selective service
 }
 
 # Valid ITU-R M.493 format specifiers
-VALID_FORMAT_SPECIFIERS = {102, 112, 114, 116, 120, 123}
+VALID_FORMAT_SPECIFIERS = {100, 102, 112, 113, 114, 115, 116, 118, 120, 121, 123}
 
 # Valid EOS (End of Sequence) symbols per ITU-R M.493
 VALID_EOS = {117, 122, 127}
@@ -31,95 +36,120 @@ VALID_EOS = {117, 122, 127}
 # Category priority (lower = higher priority)
 CATEGORY_PRIORITY = {
     "DISTRESS": 0,
-    "ALL_SHIPS_URGENCY_SAFETY": 2,
-    "ALL_SHIPS": 5,
-    "GROUP": 5,
-    "INDIVIDUAL": 5,
-    "INDIVIDUAL_ACK": 5,
+    "URGENCY": 2,
+    "SAFETY": 3,
+    "ALL_SHIPS": 4,
+    "SHIPS_BUSINESS": 5,
+    "ROUTINE": 6,
+    "GEOGRAPHICAL_AREA": 6,
+    "GROUP": 6,
+    "INDIVIDUAL": 6,
+    "INDIVIDUAL_ACK": 6,
+    "SELECTIVE_CALL": 6,
+    "AUTOMATIC_SERVICE": 6,
+    "DISTRESS_RELAY": 1,
+    "MEDICAL_TRANSPORT": 2,
+    "SHIP_POSITION": 6,
 }
-
 
 # =============================================================================
 # Nature of Distress Codes
-# Per ITU-R M.493-15 Table 3
+# Per ITU-R M.493-16 Table 3
+# Symbol value encodes nature in the lower 5 bits (0-31)
 # =============================================================================
 
 DISTRESS_NATURE_CODES = {
-    100: "UNDESIGNATED",  # Undesignated distress
-    101: "FIRE",  # Fire, explosion
-    102: "FLOODING",  # Flooding
-    103: "COLLISION",  # Collision
-    104: "GROUNDING",  # Grounding
-    105: "LISTING",  # Listing, in danger of capsizing
-    106: "SINKING",  # Sinking
-    107: "DISABLED",  # Disabled and adrift
-    108: "ABANDONING",  # Abandoning ship
-    109: "PIRACY",  # Piracy/armed robbery attack
-    110: "MOB",  # Man overboard
-    112: "EPIRB",  # EPIRB emission
+    0: "FIRE_EXPLOSION",
+    1: "FLOODING",
+    2: "COLLISION",
+    3: "GROUNDING",
+    4: "LISTING_DANGER_CAPSIZING",
+    5: "SINKING",
+    6: "DISABLED_ADRIFT",
+    7: "UNDESIGNATED_DISTRESS",
+    8: "ABANDONING_SHIP",
+    9: "PIRACY_ARMED_ROBBERY",
+    10: "MAN_OVERBOARD",
+    11: "EPIRB_EMISSION",
+    12: "UNALLOCATED_12",
+    13: "UNALLOCATED_13",
+    14: "UNALLOCATED_14",
+    15: "UNALLOCATED_15",
+    16: "UNALLOCATED_16",
+    17: "UNALLOCATED_17",
+    18: "UNALLOCATED_18",
+    19: "UNALLOCATED_19",
+    20: "UNALLOCATED_20",
+    21: "UNALLOCATED_21",
+    22: "UNALLOCATED_22",
+    23: "UNALLOCATED_23",
+    24: "UNALLOCATED_24",
+    25: "UNALLOCATED_25",
+    26: "TEST_TRAINING",
+    27: "UNALLOCATED_27",
+    28: "UNALLOCATED_28",
+    29: "UNALLOCATED_29",
+    30: "UNALLOCATED_30",
+    31: "NO_INFORMATION",
 }
-
 
 # =============================================================================
 # Telecommand Codes (First and Second)
-# Per ITU-R M.493-15 Tables 4-5
+# Per ITU-R M.493-16 Tables 4-5
 # =============================================================================
 
 TELECOMMAND_CODES = {
     # First telecommand (type of subsequent communication)
-    100: "F3E_G3E_ALL",  # F3E/G3E all modes (VHF telephony)
-    101: "F3E_G3E_DUPLEX",  # F3E/G3E duplex
-    102: "POLLING",  # Polling
-    103: "UNABLE_TO_COMPLY",  # Unable to comply
-    104: "END_OF_CALL",  # End of call
-    105: "DATA",  # Data
-    106: "J3E_TELEPHONY",  # J3E telephony (SSB)
-    107: "DISTRESS_ACK",  # Distress acknowledgement
-    108: "DISTRESS_RELAY",  # Distress relay
-    109: "F1B_J2B_FEC",  # F1B/J2B FEC NBDP telegraphy
-    110: "F1B_J2B_ARQ",  # F1B/J2B ARQ NBDP telegraphy
-    111: "TEST",  # Test
-    112: "SHIP_POSITION",  # Ship position request
-    113: "NO_INFO",  # No information
-    118: "FREQ_ANNOUNCEMENT",  # Frequency announcement
-    126: "NO_REASON",  # No reason given
-    # Second telecommand (additional info)
-    200: "F3E_G3E_SIMPLEX",  # Simplex VHF telephony requested
-    201: "POLL_RESPONSE",  # Poll response
+    100: "F3E_G3E_ALL",
+    101: "F3E_G3E_DUPLEX",
+    102: "POLLING",
+    103: "UNABLE_TO_COMPLY",
+    104: "END_OF_CALL",
+    105: "DATA",
+    106: "J3E_TELEPHONY",
+    107: "DISTRESS_ACK",
+    108: "DISTRESS_RELAY",
+    109: "F1B_J2B_FEC",
+    110: "F1B_J2B_ARQ",
+    111: "TEST",
+    112: "SHIP_POSITION",
+    113: "NO_INFO",
+    118: "FREQ_ANNOUNCEMENT",
+    126: "NO_REASON",
+    200: "F3E_G3E_SIMPLEX",
+    201: "POLL_RESPONSE",
 }
 
-# Full 0-127 telecommand lookup (maps unknown codes to "UNKNOWN")
-TELECOMMAND_CODES_FULL = {i: TELECOMMAND_CODES.get(i, "UNKNOWN") for i in range(128)}
+# Full 0-127 telecommand lookup
+TELECOMMAND_CODES_FULL = {i: TELECOMMAND_CODES.get(i, f"UNKNOWN_{i}") for i in range(128)}
 
 # Format codes that carry telecommand fields
-TELECOMMAND_FORMATS = {112, 114, 116, 120, 123}
+TELECOMMAND_FORMATS = {102, 112, 114, 116, 120, 123, 113, 115, 118, 121}
 
 # Minimum symbols (after phasing strip) before an EOS can be accepted
 MIN_SYMBOLS_FOR_FORMAT = 12
 
-
 # =============================================================================
 # DSC Symbol Definitions
-# Per ITU-R M.493-15
+# Per ITU-R M.493-16
 # =============================================================================
 
-# Special symbols
+# Phasing symbols
 DSC_SYMBOLS = {
-    120: "DX",  # Dot pattern (synchronization)
-    121: "RX",  # Phasing sequence RX
-    122: "SX",  # Phasing sequence SX
-    123: "S0",  # Phasing sequence S0
-    124: "S1",  # Phasing sequence S1
-    125: "S2",  # Phasing sequence S2
-    126: "S3",  # Phasing sequence S3
-    127: "EOS",  # End of sequence
+    120: "DX",  # Dot pattern / phasing
+    121: "RX",
+    122: "SX",
+    123: "S0",
+    124: "S1",
+    125: "S2",
+    126: "S3",
+    127: "EOS",
 }
-
 
 # =============================================================================
 # MID (Maritime Identification Digits) Country Mapping
 # First 3 digits of MMSI identify the country
-# Per ITU MID table (partial list of common codes)
+# Per ITU MID table
 # =============================================================================
 
 MID_COUNTRY_MAP = {
@@ -423,45 +453,43 @@ MID_COUNTRY_MAP = {
     "775": "Venezuela",
 }
 
-
 # =============================================================================
 # VHF Channel Frequencies (MHz) for DSC follow-up
 # =============================================================================
 
 VHF_CHANNELS = {
-    6: 156.300,  # Intership safety
-    8: 156.400,  # Commercial working
-    9: 156.450,  # Calling
-    10: 156.500,  # Commercial working
-    12: 156.600,  # Port operations
-    13: 156.650,  # Bridge-to-bridge navigation safety
-    14: 156.700,  # Port operations
-    16: 156.800,  # Distress, safety and calling (VHF voice)
-    67: 156.375,  # UK small craft safety
-    68: 156.425,  # Marina/yacht club
-    70: 156.525,  # DSC distress, safety and calling
-    71: 156.575,  # Port operations
-    72: 156.625,  # Intership
-    73: 156.675,  # Port operations
-    74: 156.725,  # Port operations
-    77: 156.875,  # Intership
+    6: 156.300,
+    8: 156.400,
+    9: 156.450,
+    10: 156.500,
+    12: 156.600,
+    13: 156.650,
+    14: 156.700,
+    16: 156.800,
+    67: 156.375,
+    68: 156.425,
+    70: 156.525,
+    71: 156.575,
+    72: 156.625,
+    73: 156.675,
+    74: 156.725,
+    77: 156.875,
 }
-
 
 # =============================================================================
 # DSC Modulation Parameters
 # =============================================================================
 
-DSC_BAUD_RATE = 1200  # 1200 bps per ITU-R M.493
+DSC_BAUD_RATE = 1200
 
 # FSK tone frequencies (Hz) on 1700 Hz subcarrier
-DSC_MARK_FREQ = 2100  # B (mark) - binary 1
-DSC_SPACE_FREQ = 1300  # Y (space) - binary 0
+DSC_MARK_FREQ = 2100  # B (mark) - binary 0
+DSC_SPACE_FREQ = 1300  # Y (space) - binary 1
 
 # Audio sample rate for decoding
 DSC_AUDIO_SAMPLE_RATE = 48000
 
 # Frame structure
-DSC_DOT_PATTERN_LENGTH = 200  # 200 bits of alternating pattern
-DSC_PHASING_LENGTH = 7  # 7 symbols phasing sequence
-DSC_MESSAGE_MAX_SYMBOLS = 180  # Maximum message length in symbols
+DSC_DOT_PATTERN_LENGTH = 200
+DSC_PHASING_LENGTH = 7
+DSC_MESSAGE_MAX_SYMBOLS = 180

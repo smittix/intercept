@@ -106,15 +106,15 @@ def parse_dsc_message(raw_line: str) -> dict[str, Any] | None:
     The decoder outputs JSON lines with fields like:
     {
         "type": "dsc",
-        "format": 100,
-        "source_mmsi": "123456789",
-        "dest_mmsi": "000000000",
+        "format": 112,
+        "source_mmsi": "002320310",
+        "dest_mmsi": "123456789",
         "category": "DISTRESS",
-        "nature": 101,
-        "position": {"lat": 51.5, "lon": -0.1},
+        "nature": 7,
+        "nature_text": "UNDESIGNATED_DISTRESS",
+        "position": {"latitude": 51.5, "longitude": -0.1},
         "telecommand1": 100,
         "telecommand2": null,
-        "channel": 16,
         "timestamp": "2025-01-15T12:00:00Z",
         "raw": "..."
     }
@@ -191,7 +191,7 @@ def parse_dsc_message(raw_line: str) -> dict[str, Any] | None:
                 return None
 
     # Build parsed message
-    msg = {
+    msg: dict[str, Any] = {
         "type": "dsc_message",
         "source_mmsi": source_mmsi,
         "dest_mmsi": str(data.get("dest_mmsi", "")) if data.get("dest_mmsi") is not None else None,
@@ -214,8 +214,8 @@ def parse_dsc_message(raw_line: str) -> dict[str, Any] | None:
     # Add position if present
     position = data.get("position")
     if position and isinstance(position, dict):
-        lat = position.get("lat")
-        lon = position.get("lon")
+        lat = position.get("latitude")
+        lon = position.get("longitude")
         if lat is not None and lon is not None:
             try:
                 msg["latitude"] = float(lat)
@@ -232,13 +232,11 @@ def parse_dsc_message(raw_line: str) -> dict[str, Any] | None:
         msg["telecommand2"] = data["telecommand2"]
         msg["telecommand2_text"] = get_telecommand_text(data["telecommand2"])
 
-    # Add channel if present
-    if data.get("channel") is not None:
-        msg["channel"] = data["channel"]
-
     # Add EOS (End of Sequence) info
     if "eos" in data:
         msg["eos"] = data["eos"]
+    if "eos_text" in data:
+        msg["eos_text"] = data["eos_text"]
 
     # Add raw message for debugging
     if "raw" in data:
@@ -250,11 +248,10 @@ def parse_dsc_message(raw_line: str) -> dict[str, Any] | None:
     # Mark if this is a critical alert
     msg["is_critical"] = msg["category"] in (
         "DISTRESS",
-        "DISTRESS_ACK",
         "DISTRESS_RELAY",
         "URGENCY",
         "SAFETY",
-        "ALL_SHIPS_URGENCY_SAFETY",
+        "ALL_SHIPS",
     )
 
     return msg
@@ -282,13 +279,18 @@ def format_dsc_for_display(msg: dict) -> str:
         header += f" ({country})"
     lines.append(header)
 
+    # Format type
+    fmt = msg.get("format_text", "")
+    if fmt:
+        lines.append(f" Format: {fmt}")
+
     # Destination if present
     if msg.get("dest_mmsi"):
-        lines.append(f"  To: {msg['dest_mmsi']}")
+        lines.append(f" To: {msg['dest_mmsi']}")
 
     # Distress nature
     if msg.get("nature_of_distress"):
-        lines.append(f"  Nature: {msg['nature_of_distress']}")
+        lines.append(f" Nature: {msg['nature_of_distress']}")
 
     # Position
     if msg.get("latitude") is not None and msg.get("longitude") is not None:
@@ -296,19 +298,19 @@ def format_dsc_for_display(msg: dict) -> str:
         lon = msg["longitude"]
         lat_dir = "N" if lat >= 0 else "S"
         lon_dir = "E" if lon >= 0 else "W"
-        lines.append(f"  Position: {abs(lat):.4f}{lat_dir} {abs(lon):.4f}{lon_dir}")
+        lines.append(f" Position: {abs(lat):.4f}{lat_dir} {abs(lon):.4f}{lon_dir}")
 
     # Telecommand
     if msg.get("telecommand1_text"):
-        lines.append(f"  Request: {msg['telecommand1_text']}")
+        lines.append(f" Request: {msg['telecommand1_text']}")
 
-    # Channel
-    if msg.get("channel"):
-        lines.append(f"  Channel: {msg['channel']}")
+    # EOS
+    if msg.get("eos_text"):
+        lines.append(f" EOS: {msg['eos_text']}")
 
     # Timestamp
     if msg.get("timestamp"):
-        lines.append(f"  Time: {msg['timestamp']}")
+        lines.append(f" Time: {msg['timestamp']}")
 
     return "\n".join(lines)
 
@@ -333,8 +335,11 @@ def validate_mmsi(mmsi: str) -> bool:
     if not re.match(r"^\d{9}$", mmsi):
         return False
 
-    # All zeros is invalid
-    return mmsi != "000000000"
+    # All zeros is invalid, all same digit is invalid
+    if mmsi == "000000000" or all(c == mmsi[0] for c in mmsi):
+        return False
+
+    return True
 
 
 def classify_mmsi(mmsi: str) -> str:
