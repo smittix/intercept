@@ -43,6 +43,32 @@
     }
 }
 
+/* ============== HANDHELD (uConsole-class) BREAKPOINT ============== */
+/* Every breakpoint above this point gates on min-width only, so a
+   desktop-width-but-short screen like the ClockworkPi uConsole (1280x720)
+   clears them and renders full desktop chrome despite having a fraction of
+   a monitor's vertical space. This breakpoint targets that case instead.
+   It combines a narrow width band around 1280px (which excludes the very
+   common 1366px-wide laptop class entirely) with a height cap, rather than
+   height alone, because typical browser chrome can push a 1366x768 laptop's
+   viewport height close to a uConsole's — width is the more reliable
+   discriminator here. The exact thresholds are a reasoned starting point,
+   not a lab measurement; recalibrate against a real uConsole browser
+   viewport during manual verification (tasks.md T008/T020) and adjust if
+   the actual viewport falls outside this range.
+   NOTE: static/js/core/idle-throttle.js is UI throttling, not this
+   breakpoint — but templates/partials/nav.html and the dashboard
+   tier-bootstrap scripts mirror this exact condition via matchMedia() and
+   MUST be kept in sync with these numbers. */
+@media (min-width: 1152px) and (max-width: 1310px) and (max-height: 760px) {
+    :root {
+        /* Trackball pointing is less precise than a mouse — slightly larger
+           minimum target than the base 44px/48px touch defaults. */
+        --touch-min: 48px;
+        --touch-comfortable: 52px;
+    }
+}
+
 /* ============== VIEWPORT HEIGHT FIX ============== */
 /* Handles iOS Safari address bar and dynamic viewport */
 .full-height {
@@ -191,6 +217,28 @@
         min-height: var(--touch-min);
         padding: 10px 12px;
         font-size: 16px; /* Prevents iOS zoom on focus */
+    }
+
+    .checkbox-group label,
+    .radio-group label {
+        min-height: var(--touch-min);
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* Handheld (uConsole-class) breakpoint: same touch-target guarantee as the
+   ≤1023px rule above, for trackball reliability (FR-008/US3) — the
+   uConsole is ≥1024px wide so it doesn't get the mobile rule above. */
+@media (min-width: 1152px) and (max-width: 1310px) and (max-height: 760px) {
+    button,
+    .btn,
+    .preset-btn,
+    .control-btn,
+    .icon-btn {
+        min-height: var(--touch-min);
+        min-width: var(--touch-min);
     }
 
     .checkbox-group label,

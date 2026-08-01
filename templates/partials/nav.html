@@ -545,12 +545,18 @@
         localStorage.removeItem('intercept-animations');
         localStorage.removeItem('animations');
 
-        // Apply tier (default to enhanced if none saved)
-        const savedTier = localStorage.getItem('intercept-ui-tier') || 'enhanced';
+        // Apply tier: an explicit user choice (Settings) always wins.
+        // Otherwise default to 'lean' on the uConsole-class (short-viewport)
+        // breakpoint for battery life, 'enhanced' elsewhere. Deliberately
+        // NOT persisted to localStorage when auto-derived, so the default
+        // keeps tracking the viewport across sessions/devices instead of
+        // permanently locking in the first screen size ever seen.
+        const storedTier = localStorage.getItem('intercept-ui-tier');
+        const isHandheldViewport = window.matchMedia(
+            '(min-width: 1152px) and (max-width: 1310px) and (max-height: 760px)'
+        ).matches;
+        const savedTier = storedTier || (isHandheldViewport ? 'lean' : 'enhanced');
         document.documentElement.setAttribute('data-ui-tier', savedTier);
-        if (!localStorage.getItem('intercept-ui-tier')) {
-            localStorage.setItem('intercept-ui-tier', 'enhanced');
-        }
 
         // UTC Clock update (if not already defined by parent page)
         if (typeof window._navClockStarted === 'undefined') {

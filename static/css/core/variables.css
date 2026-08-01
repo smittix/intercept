@@ -182,6 +182,19 @@
 }
 
 /* ============================================
+   HANDHELD (uConsole-class) BREAKPOINT — compact layout tokens
+   Condition MUST stay in sync with static/css/responsive.css and the
+   matchMedia() check in templates/partials/nav.html / dashboard templates.
+   ============================================ */
+@media (min-width: 1152px) and (max-width: 1310px) and (max-height: 760px) {
+    :root {
+        --header-height: 40px;
+        --nav-height: 0px;
+        --sidebar-width: 220px;
+    }
+}
+
+/* ============================================
    REDUCED MOTION
    ============================================ */
 @media (prefers-reduced-motion: reduce) {

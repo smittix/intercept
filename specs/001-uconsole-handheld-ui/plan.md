@@ -48,8 +48,10 @@ the same uConsole hardware under equivalent workload (SC-008)
 spec Assumptions); zero desktop regression (FR-006); zero functionality loss
 vs. desktop (FR-005)
 **Scale/Scope**: All ~29 SPA modes registered in `static/js/mode-registry.js`
-plus the 3 map-based dashboard pages (ADS-B, AIS, Satellite) sharing
-`templates/layout/base_dashboard.html`
+plus the 3 map-based dashboard pages (ADS-B, AIS, Satellite) — each a
+standalone template (see implementation note in research.md Decision 4:
+`templates/layout/base_dashboard.html` turned out to be dead code, not
+actually shared by these pages)
 
 ## Constitution Check
 

@@ -81,26 +81,39 @@ battery-runtime target.
   `lean` tier with no added benefit, and would violate Principle III
   (one enforced standard) and Principle IV (minimal footprint).
 
-## Decision 4: Extend the existing dashboard sidebar-overlay pattern
+## Decision 4: Fix the shared nav overflow; no dashboard-specific layout change needed
 
-**Decision**: For the map-based dashboards (FR-010/US4), extend
-`templates/layout/base_dashboard.html`'s existing width-based sidebar-overlay
-behavior (`@media (max-width: 768px)`, which turns the always-visible 320px
-`.dashboard-sidebar` into a slide-in drawer) with the same height-aware
-breakpoint from Decision 1, and let the `lean` tier (Decision 3) disable the
-continuous `scanline`/`radar-bg` CSS animations at that breakpoint.
+**Original decision (superseded during implementation)**: This section
+originally proposed extending `templates/layout/base_dashboard.html`'s
+sidebar-overlay pattern to the new breakpoint. That assumption was wrong —
+recorded here rather than silently rewritten, since the correction is
+itself a useful finding.
 
-**Rationale**: The dashboards already have a working overlay-sidebar
-mechanism for constrained screens; extending its trigger condition is
-surgical (Principle IV) versus building a new sidebar mechanism. The
-`scanline` element runs a continuous 8s CSS animation
-(`animation: scanline 8s linear infinite`) purely for visual flavor — a real,
-avoidable, continuous paint cost directly opposed to the power-efficiency
-goal, and one the `lean` tier is already designed to suppress.
+**What implementation found**: `templates/layout/base_dashboard.html` is
+dead code (`grep -rl "extends 'layout/base_dashboard.html'" templates/`
+returns nothing). `adsb_dashboard.html`, `ais_dashboard.html`, and
+`satellite_dashboard.html` are each fully standalone templates with their
+own `.sidebar` CSS in `adsb_dashboard.css`/`ais_dashboard.css`/
+`satellite_dashboard.css`. Live-testing at 1280×720 showed each dashboard's
+existing `@media (min-width: 1024px)` grid already allocates the map ~72%
+of width vs. the sidebar's ~23%, non-overlapping, with no sidebar-collapse
+needed. The actual horizontal-overflow blocker was the *shared* `#mainNav`
+bar (same root cause as Decision 1/research for the SPA) — dashboards
+include `templates/partials/nav.html` and load `static/css/core/layout.css`
+but **not** `static/css/index.css`, so the nav-width-budget fix had to be
+duplicated into `layout.css` (kept in sync with `index.css` via a
+cross-referencing comment) rather than living in one place.
+
+Separately, the `scanline`/`radar-bg` suppression this decision also
+proposed turned out to already exist: each dashboard CSS file already has
+its own `html[data-ui-tier="lean"] .scanline, .radar-bg { display: none; }`
+rule, so defaulting to `lean` at the breakpoint (Decision 3) was sufficient
+on its own — no new CSS needed for that part.
 
 **Alternatives considered**:
-- *A separate compact dashboard template* — rejected as unnecessary
-  duplication for what is a CSS-breakpoint-scoped adjustment.
+- *A separate compact dashboard template* — moot once the dead-code
+  assumption was corrected; the existing per-dashboard grid layouts already
+  handle the breakpoint once the shared nav fix is in place.
 
 ## Decision 5: Manual browser verification, no new test tooling
 

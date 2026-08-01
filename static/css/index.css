@@ -953,6 +953,43 @@ header h1 {
     color: var(--bg-primary);
 }
 
+/* Handheld (uConsole-class) breakpoint: larger, more legible mode-nav
+   targets for trackball pointing (base sizes are 38-42px tall / 11px font,
+   below the --touch-min compact target from responsive.css). Horizontal
+   padding is trimmed (not grown) alongside this, and several nav-utilities
+   items are tightened/hidden, because #mainNav's content (~1469px) is
+   otherwise wider than the available ~1254px at this breakpoint and would
+   force page-wide horizontal scrolling (violates FR-001) — see also the
+   dashboard sidebar-collapse default in index.html. */
+@media (min-width: 1152px) and (max-width: 1310px) and (max-height: 760px) {
+    .mode-nav-dropdown-btn,
+    .mode-nav-btn {
+        min-height: var(--touch-min);
+        padding: 10px 10px;
+        font-size: 12px;
+    }
+
+    .mode-nav-dropdown-menu .mode-nav-btn {
+        min-height: var(--touch-min);
+        padding: 12px;
+    }
+
+    #mainNav {
+        gap: 4px;
+    }
+
+    .nav-utilities {
+        gap: 6px;
+    }
+
+    /* Icon-only: the "Return to Main Dashboard" label is redundant with
+       the always-present logo-click-to-home affordance; the title=
+       tooltip and click behavior are unchanged. */
+    .nav-dashboard-btn .nav-label {
+        display: none;
+    }
+}
+
 /* Nav Bar Utilities (clock, theme, tools) */
 .nav-utilities {
     display: none;
@@ -1026,6 +1063,27 @@ header h1 {
     background: var(--bg-elevated);
     border-color: var(--border-color);
     color: var(--accent-cyan);
+}
+
+/* Handheld (uConsole-class) breakpoint: tighten the utility icon row so
+   #mainNav fits within the available width without page-wide horizontal
+   scroll (see the earlier handheld breakpoint block above for the rest of
+   this fix — this one must come after the base .nav-tool-btn/.nav-tools
+   rules above so it wins the cascade at equal specificity). */
+@media (min-width: 1152px) and (max-width: 1310px) and (max-height: 760px) {
+    .nav-tools {
+        gap: 3px;
+    }
+
+    .nav-tool-btn {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        /* Defeats the generic button{min-height:var(--touch-min)} touch-
+           target rule in responsive.css for this deliberately-compact,
+           low-frequency utility icon row (see width-budget note above). */
+        min-height: 24px;
+    }
 }
 
 /* Donate button - warm amber accent */
@@ -1489,6 +1547,20 @@ header h1 .tagline {
         padding: 0;
         border-right: 0;
         overflow: hidden;
+    }
+}
+
+/* Handheld (uConsole-class) breakpoint: reclaim vertical space. Sidebar
+   starts collapsed by default (see applySidebarCollapsePreference() in
+   index.html) so this mostly needs a trimmed header, not a narrower grid. */
+@media (min-width: 1152px) and (max-width: 1310px) and (max-height: 760px) {
+    header {
+        height: 40px;
+    }
+
+    .main-content {
+        height: calc(100dvh - 88px);
+        height: calc(100vh - 88px); /* Fallback */
     }
 }
 

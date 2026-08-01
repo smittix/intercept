@@ -14,7 +14,10 @@ window.INTERCEPT_MODES = {
         label: 'Pager', indicator: 'PAGER', outputTitle: 'Pager Decoder', group: 'signals',
         elementId: 'pagerMode',
         visuals: false,
-        destroy: () => { if (eventSource) { eventSource.close(); eventSource = null; } },
+        destroy: () => {
+            if (eventSource) { eventSource.close(); eventSource = null; }
+            if (liveDataThrottle) { liveDataThrottle.dispose(); liveDataThrottle = null; }
+        },
     },
     sensor: {
         label: '433MHz', indicator: '433MHZ', outputTitle: '433MHz Sensor Monitor', group: 'signals',

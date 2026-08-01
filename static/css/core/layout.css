@@ -1084,6 +1084,51 @@ a.nav-dashboard-btn:hover {
     letter-spacing: 0.5px;
 }
 
+/* Handheld (uConsole-class) breakpoint: same #mainNav width-budget fix as
+   static/css/index.css (dashboards load layout.css but NOT index.css, so
+   this must be duplicated here — see the comment there for the full
+   rationale: #mainNav's content is ~1469px vs ~1254px available at this
+   breakpoint, which forces page-wide horizontal scroll (FR-001) if left
+   alone). Also raises mode-nav-dropdown-btn/mode-nav-btn to the --touch-min
+   target for trackball reliability (FR-008), without growing their
+   horizontal padding. Keep in sync with static/css/index.css. */
+@media (min-width: 1152px) and (max-width: 1310px) and (max-height: 760px) {
+    .mode-nav-dropdown-btn,
+    .mode-nav-btn {
+        min-height: var(--touch-min);
+        padding: 10px 10px;
+        font-size: 12px;
+    }
+
+    .mode-nav-dropdown-menu .mode-nav-btn {
+        min-height: var(--touch-min);
+        padding: 12px;
+    }
+
+    #mainNav {
+        gap: 4px;
+    }
+
+    .nav-utilities {
+        gap: 6px;
+    }
+
+    .nav-dashboard-btn .nav-label {
+        display: none;
+    }
+
+    .nav-tools {
+        gap: 3px;
+    }
+
+    .nav-tool-btn {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        min-height: 24px;
+    }
+}
+
 /* ---- Light theme nav overrides ---- */
 [data-theme="light"] .mode-nav {
     background: linear-gradient(180deg, rgba(240, 244, 250, 0.97) 0%, rgba(232, 238, 247, 0.95) 100%);

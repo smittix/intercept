@@ -3917,6 +3917,11 @@
         });
 
         let eventSource = null;
+        // Shared idle-throttle for the currently active stream's DOM-write
+        // step (FR-011/FR-012) — reused across pager/sensor/rtlamr the same
+        // way `eventSource` itself is, since only one mode's stream is ever
+        // active at a time. See static/js/core/idle-throttle.js.
+        let liveDataThrottle = null;
         let isRunning = false;
         let isSensorRunning = false;
         let isWifiRunning = false;
@@ -4252,7 +4257,16 @@
                 mainContent.classList.remove('sidebar-collapsed');
                 return;
             }
-            const savedCollapsed = localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === 'true';
+            const storedCollapsed = localStorage.getItem(SIDEBAR_COLLAPSE_KEY);
+            // On the uConsole-class (short-viewport) breakpoint, default to
+            // collapsed so the full-height mode list doesn't crowd out the
+            // content area — unless the user has an explicit saved choice.
+            const isHandheldViewport = window.matchMedia(
+                '(min-width: 1152px) and (max-width: 1310px) and (max-height: 760px)'
+            ).matches;
+            const savedCollapsed = storedCollapsed !== null
+                ? storedCollapsed === 'true'
+                : isHandheldViewport;
             setMainSidebarCollapsed(savedCollapsed);
         }
 
@@ -7013,6 +7027,11 @@
             const streamUrl = isAgentMode ? '/controller/stream/all' : '/stream';
             eventSource = new EventSource(streamUrl);
 
+            if (liveDataThrottle) liveDataThrottle.dispose();
+            liveDataThrottle = IdleThrottle.register(function (batch) {
+                batch.forEach(function (payload) { addMessage(payload); });
+            });
+
             eventSource.onopen = function () {
                 showInfo('Stream connected...');
             };
@@ -7028,7 +7047,7 @@
                         if (payload.type === 'message') {
                             // Add agent info to the message
                             payload.agent_name = data.agent_name;
-                            addMessage(payload);
+                            liveDataThrottle.call(payload);
                         } else if (payload.type === 'status') {
                             if (payload.text === 'stopped') {
                                 setRunning(false);
@@ -7046,7 +7065,7 @@
                 } else {
                     // Local stream format
                     if (data.type === 'message') {
-                        addMessage(data);
+                        liveDataThrottle.call(data);
                     } else if (data.type === 'status') {
                         if (data.text === 'stopped') {
                             setRunning(false);
@@ -16701,6 +16720,8 @@
 
     <!-- Updater -->
     <script src="{{ url_for('static', filename='js/core/updater.js') }}"></script>
+    <!-- Idle Throttle (power-conscious live-data rendering) -->
+    <script src="{{ url_for('static', filename='js/core/idle-throttle.js') }}"></script>
     <!-- Settings Manager -->
     <script src="{{ url_for('static', filename='js/core/settings-manager.js') }}?v={{ version }}&r=maptheme17"></script>
     <script src="{{ url_for('static', filename='js/map-utils.js') }}"></script>
