@@ -5,6 +5,14 @@
 **Status**: Draft
 **Input**: User description: "I want to make a UI that is adapted for the small screen of the ClockworkPi uConsole handheld computer. The current build is focused on regular monitors and it is hard to read and navigate."
 
+## Clarifications
+
+### Session 2026-07-31
+
+- Q: What kind of metric defines "power efficient" for this feature? → A: Battery runtime extension target, measured against today's desktop-oriented UI running on the same uConsole hardware.
+- Q: What's the target battery-runtime extension? → A: 25%, vs. the current desktop-oriented UI running on the same uConsole hardware under an equivalent workload.
+- Q: What's the primary mechanism for hitting that target? → A: Automatically throttle UI re-renders/live-update frequency when a mode is idle or not the actively viewed mode; background data capture continues unaffected.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Navigate and orient on the small screen (Priority: P1)
@@ -168,6 +176,14 @@ panel using only the built-in keyboard and trackball.
   usable on the target uConsole screen: the map view, its essential
   controls, and a selected item's detail data MUST be reachable and legible
   using only the uConsole's integrated keyboard and trackball/trackpad.
+- **FR-011**: The uConsole-adapted layout MUST automatically reduce how
+  often the display refreshes with live updates for a mode that is idle or
+  not the actively viewed mode. Background data capture (decoders and other
+  processing) MUST continue unaffected by this throttling — no data is
+  dropped or skipped, only how often the display refreshes.
+- **FR-012**: When a throttled mode becomes the actively viewed mode again,
+  the UI MUST resume full-frequency updates and display the
+  currently-available data without requiring a manual refresh.
 
 ## Success Criteria *(mandatory)*
 
@@ -194,6 +210,10 @@ panel using only the built-in keyboard and trackball.
   individual track/vessel/pass to view its details, using only the
   uConsole's built-in keyboard and trackball, without controls obscuring
   the majority of the map view.
+- **SC-008**: Running the uConsole-adapted layout on uConsole hardware
+  extends battery runtime by at least 25% compared to running the current
+  desktop-oriented layout on the same hardware under an equivalent
+  workload.
 
 ## Assumptions
 

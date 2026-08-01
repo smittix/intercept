@@ -32,8 +32,13 @@
 ## Notes
 
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
-- All 3 clarification questions (target display resolution, primary input
-  method, treatment of map-heavy dashboards) were answered by the user and
-  incorporated into the spec: 1280×720 CM4/CM5 display, keyboard/trackball
-  as the only input, and dashboards in scope (User Story 4, FR-010,
-  SC-007). All checklist items pass.
+- Initial 3 clarification questions (target display resolution, primary
+  input method, treatment of map-heavy dashboards) were answered by the
+  user and incorporated into the spec: 1280×720 CM4/CM5 display,
+  keyboard/trackball as the only input, and dashboards in scope (User
+  Story 4, FR-010, SC-007).
+- A second clarification session (2026-07-31) resolved a power-efficiency
+  gap: battery-runtime is the metric (25% extension target vs. today's
+  desktop UI), achieved via automatic refresh throttling for idle/
+  background modes (FR-011, FR-012, SC-008), with data capture unaffected.
+  All checklist items pass.
