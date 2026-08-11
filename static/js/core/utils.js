@@ -63,6 +63,7 @@ const InterceptTime = (function() {
     const TZ_MAP = {
         'UTC': 'UTC',
         'local': undefined,
+        'Africa/Johannesburg': 'Africa/Johannesburg',
         'US/Eastern': 'America/New_York',
         'US/Central': 'America/Chicago',
         'US/Mountain': 'America/Denver',
@@ -72,13 +73,14 @@ const InterceptTime = (function() {
     const TZ_LABELS = {
         'UTC': 'UTC',
         'local': '',
+        'Africa/Johannesburg': 'SAST',
         'US/Eastern': 'ET',
         'US/Central': 'CT',
         'US/Mountain': 'MT',
         'US/Pacific': 'PT',
     };
 
-    let _timezone = localStorage.getItem('interceptTimezone') || 'US/Eastern';
+    let _timezone = localStorage.getItem('interceptTimezone') || 'Africa/Johannesburg';
     let _hour12 = (localStorage.getItem('interceptHour12') || 'true') === 'true';
     const _listeners = [];
 
