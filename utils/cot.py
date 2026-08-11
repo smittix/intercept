@@ -35,6 +35,7 @@ _MODE_MAP = {
     "adsb": ("a-f-A", "icao", "ICAO", "callsign"),
     "ais": ("a-f-S", "mmsi", "MMSI", "callsign"),
     "aprs": ("a-f-G-U-C", "callsign", "APRS", "callsign"),
+    "meshtastic": ("a-f-G-U-C", "id", "MESH", "callsign"),
 }
 
 

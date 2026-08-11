@@ -67,6 +67,18 @@ def test_event_to_cot_xml_aprs():
     assert 'uid="APRS-ZS1ABC-9"' in xml
 
 
+def test_event_to_cot_xml_meshtastic():
+    _reset_module_state()
+    with patch.object(cot, "_get_config", return_value=FakeConfig):
+        event = {"id": "!55890aeb", "callsign": "Whskybadger47", "lat": -33.9, "lon": 18.4, "altitude": 15}
+        xml = cot.event_to_cot_xml("meshtastic", event)
+
+    assert xml is not None
+    assert 'type="a-f-G-U-C"' in xml
+    assert 'uid="MESH-!55890aeb"' in xml
+    assert 'callsign="Whskybadger47"' in xml
+
+
 def test_event_to_cot_xml_missing_position_returns_none():
     _reset_module_state()
     with patch.object(cot, "_get_config", return_value=FakeConfig):

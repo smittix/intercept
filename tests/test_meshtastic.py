@@ -450,4 +450,56 @@ class TestMeshtasticClientMocked:
         client.disconnect()
         client.disconnect()
 
+
+class TestMeshtasticPositionEventPipeline:
+    """Tests for POSITION_APP packets feeding the shared event pipeline (alerts/recording/MQTT/CoT)."""
+
+    def test_position_packet_publishes_to_event_pipeline(self):
+        """A POSITION_APP packet with valid lat/lon should call process_event with mode='meshtastic'."""
+        from utils.meshtastic import MeshtasticClient
+
+        client = MeshtasticClient()
+        packet = {"from": 0x55890AEB}
+        decoded = {"position": {"latitude": -33.9, "longitude": 18.4, "altitude": 15}}
+
+        with patch("utils.event_pipeline.process_event") as mock_process_event:
+            client._track_node_from_packet(packet, decoded, "POSITION_APP")
+
+        mock_process_event.assert_called_once()
+        mode, event, event_type = mock_process_event.call_args[0]
+        assert mode == "meshtastic"
+        assert event_type == "position"
+        assert event["lat"] == -33.9
+        assert event["lon"] == 18.4
+        assert event["altitude"] == 15
+        assert event["id"] == "!55890aeb"
+
+    def test_position_packet_without_coordinates_does_not_publish(self):
+        """A POSITION_APP packet lacking lat/lon should not touch the event pipeline."""
+        from utils.meshtastic import MeshtasticClient
+
+        client = MeshtasticClient()
+        packet = {"from": 0x55890AEB}
+        decoded = {"position": {}}
+
+        with patch("utils.event_pipeline.process_event") as mock_process_event:
+            client._track_node_from_packet(packet, decoded, "POSITION_APP")
+
+        mock_process_event.assert_not_called()
+
+    def test_position_pipeline_failure_does_not_break_tracking(self):
+        """If the event pipeline raises, node tracking should still succeed."""
+        from utils.meshtastic import MeshtasticClient
+
+        client = MeshtasticClient()
+        packet = {"from": 0x55890AEB}
+        decoded = {"position": {"latitude": -33.9, "longitude": 18.4}}
+
+        with patch("utils.event_pipeline.process_event", side_effect=RuntimeError("boom")):
+            client._track_node_from_packet(packet, decoded, "POSITION_APP")
+
+        node = client._nodes[0x55890AEB]
+        assert node.latitude == -33.9
+        assert node.longitude == 18.4
+
         assert client.is_running is False
