@@ -503,3 +503,79 @@ class TestMeshtasticPositionEventPipeline:
         assert node.longitude == 18.4
 
         assert client.is_running is False
+
+
+class TestMeshtasticOwnNodeGpsFeedsObserverLocation:
+    """Tests that only OUR OWN node's position feeds utils.gps, never a mesh peer's."""
+
+    def test_is_local_node_true_when_matches_my_info(self):
+        from utils.meshtastic import MeshtasticClient
+
+        client = MeshtasticClient()
+        client._interface = Mock()
+        client._interface.myInfo = Mock(my_node_num=0x55890AEB)
+
+        assert client._is_local_node(0x55890AEB) is True
+        assert client._is_local_node(0x1234) is False
+
+    def test_is_local_node_false_when_no_interface(self):
+        from utils.meshtastic import MeshtasticClient
+
+        client = MeshtasticClient()
+        client._interface = None
+
+        assert client._is_local_node(0x55890AEB) is False
+
+    def test_own_node_position_registers_external_gps_position(self):
+        """Our own node's GPS fix should be pushed into utils.gps as an external position."""
+        from utils.meshtastic import MeshtasticClient
+
+        client = MeshtasticClient()
+        client._interface = Mock()
+        client._interface.myInfo = Mock(my_node_num=0x55890AEB)
+
+        packet = {"from": 0x55890AEB}
+        decoded = {"position": {"latitude": -33.9, "longitude": 18.4, "altitude": 15}}
+
+        with patch("utils.gps.set_external_position") as mock_set_pos:
+            client._track_node_from_packet(packet, decoded, "POSITION_APP")
+
+        mock_set_pos.assert_called_once()
+        (pos,), _ = mock_set_pos.call_args
+        assert pos.latitude == -33.9
+        assert pos.longitude == 18.4
+        assert pos.altitude == 15
+        assert pos.device == "meshtastic:!55890aeb"
+
+    def test_peer_node_position_does_not_register_external_gps_position(self):
+        """A remote mesh node's position must never overwrite our observer location."""
+        from utils.meshtastic import MeshtasticClient
+
+        client = MeshtasticClient()
+        client._interface = Mock()
+        client._interface.myInfo = Mock(my_node_num=0x55890AEB)  # our own node
+
+        packet = {"from": 0x336437CC}  # a different, remote node
+        decoded = {"position": {"latitude": -34.15, "longitude": 18.32}}
+
+        with patch("utils.gps.set_external_position") as mock_set_pos:
+            client._track_node_from_packet(packet, decoded, "POSITION_APP")
+
+        mock_set_pos.assert_not_called()
+
+    def test_gps_registration_failure_does_not_break_tracking(self):
+        from utils.meshtastic import MeshtasticClient
+
+        client = MeshtasticClient()
+        client._interface = Mock()
+        client._interface.myInfo = Mock(my_node_num=0x55890AEB)
+
+        packet = {"from": 0x55890AEB}
+        decoded = {"position": {"latitude": -33.9, "longitude": 18.4}}
+
+        with patch("utils.gps.set_external_position", side_effect=RuntimeError("boom")):
+            client._track_node_from_packet(packet, decoded, "POSITION_APP")
+
+        node = client._nodes[0x55890AEB]
+        assert node.latitude == -33.9
+        assert node.longitude == 18.4
