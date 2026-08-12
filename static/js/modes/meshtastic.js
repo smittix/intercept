@@ -401,6 +401,8 @@ const Meshtastic = (function() {
         const stripNodeName = document.getElementById('meshStripNodeName');
         const stripNodeId = document.getElementById('meshStripNodeId');
         const stripModel = document.getElementById('meshStripModel');
+        const stripSatsRow = document.getElementById('meshStripSatsRow');
+        const stripSats = document.getElementById('meshStripSats');
 
         const nodeName = info.long_name || info.short_name || '--';
         const nodeId = info.user_id || formatNodeId(info.num) || '--';
@@ -423,6 +425,14 @@ const Meshtastic = (function() {
             if (posEl) posEl.textContent = `${pos.latitude.toFixed(5)}, ${pos.longitude.toFixed(5)}`;
         } else {
             if (posRow) posRow.style.display = 'none';
+        }
+
+        const sats = pos && pos.sats_in_view;
+        if (sats !== undefined && sats !== null) {
+            if (stripSatsRow) stripSatsRow.style.display = '';
+            if (stripSats) stripSats.textContent = String(sats);
+        } else if (stripSatsRow) {
+            stripSatsRow.style.display = 'none';
         }
     }
 
@@ -761,6 +771,7 @@ const Meshtastic = (function() {
                 <span style="color: var(--text-dim);">Model:</span> ${node.hw_model || 'Unknown'}<br>
                 <span style="color: var(--text-dim);">Position:</span> ${node.latitude.toFixed(5)}, ${node.longitude.toFixed(5)}<br>
                 ${node.altitude ? `<span style="color: var(--text-dim);">Altitude:</span> ${node.altitude}m<br>` : ''}
+                ${node.sats_in_view !== null && node.sats_in_view !== undefined ? `<span style="color: var(--text-dim);">Sats:</span> ${node.sats_in_view}<br>` : ''}
                 ${node.battery_level !== null ? `<span style="color: var(--text-dim);">Battery:</span> ${node.battery_level}%<br>` : ''}
                 ${node.snr !== null ? `<span style="color: var(--text-dim);">SNR:</span> ${node.snr.toFixed(1)} dB<br>` : ''}
                 ${node.last_heard ? `<span style="color: var(--text-dim);">Last heard:</span> ${new Date(node.last_heard).toLocaleTimeString()}<br>` : ''}
