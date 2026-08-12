@@ -127,6 +127,7 @@ class MeshNode:
     latitude: float | None = None
     longitude: float | None = None
     altitude: int | None = None
+    sats_in_view: int | None = None
     battery_level: int | None = None
     snr: float | None = None
     last_heard: datetime | None = None
@@ -149,6 +150,7 @@ class MeshNode:
             "latitude": self.latitude,
             "longitude": self.longitude,
             "altitude": self.altitude,
+            "sats_in_view": self.sats_in_view,
             "battery_level": self.battery_level,
             "snr": self.snr,
             "last_heard": self.last_heard.isoformat() if self.last_heard else None,
@@ -176,6 +178,7 @@ class NodeInfo:
     latitude: float | None
     longitude: float | None
     altitude: int | None
+    sats_in_view: int | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -188,6 +191,7 @@ class NodeInfo:
                 "latitude": self.latitude,
                 "longitude": self.longitude,
                 "altitude": self.altitude,
+                "sats_in_view": self.sats_in_view,
             }
             if self.latitude is not None
             else None,
@@ -652,6 +656,7 @@ class MeshtasticClient:
                     node.latitude = lat
                     node.longitude = lon
                     node.altitude = position.get("altitude", node.altitude)
+                    node.sats_in_view = position.get("satsInView", node.sats_in_view)
 
                     try:
                         from utils.event_pipeline import process_event
@@ -809,6 +814,7 @@ class MeshtasticClient:
                 latitude=position.get("latitude"),
                 longitude=position.get("longitude"),
                 altitude=position.get("altitude"),
+                sats_in_view=position.get("satsInView"),
             )
         except Exception as e:
             logger.error(f"Error getting node info: {e}")
@@ -870,6 +876,7 @@ class MeshtasticClient:
                         node.latitude = lat
                         node.longitude = lon
                         node.altitude = position.get("altitude", node.altitude)
+                        node.sats_in_view = position.get("satsInView", node.sats_in_view)
 
                 # Update last heard from SDK
                 last_heard = node_data.get("lastHeard")
