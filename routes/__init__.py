@@ -36,6 +36,7 @@ def register_blueprints(app):
     from .satellite import satellite_bp
     from .sensor import sensor_bp
     from .settings import settings_bp
+    from .setup import setup_bp
     from .signalid import signalid_bp
     from .space_weather import space_weather_bp
     from .spy_stations import spy_stations_bp
@@ -68,6 +69,7 @@ def register_blueprints(app):
     app.register_blueprint(satellite_bp)
     app.register_blueprint(gps_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(setup_bp)
     app.register_blueprint(correlation_bp)
     app.register_blueprint(receiver_bp)
     app.register_blueprint(meshtastic_bp)

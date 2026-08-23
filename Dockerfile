@@ -292,7 +292,7 @@ COPY . .
 RUN find . -name '*.sh' -exec sed -i 's/\r$//' {} +
 
 # Create data directory for persistence
-RUN mkdir -p /app/data /app/data/weather_sat /app/data/radiosonde/logs
+RUN mkdir -p /app/data /app/data/weather_sat /app/data/radiosonde/logs /app/instance /config
 
 # Expose web interface port
 EXPOSE 5050
@@ -302,6 +302,7 @@ EXPOSE 5443
 ENV INTERCEPT_HOST=0.0.0.0 \
     INTERCEPT_PORT=5050 \
     INTERCEPT_LOG_LEVEL=INFO \
+    INTERCEPT_INSTANCE_DIR=/app/instance \
     PYTHONUNBUFFERED=1
 
 # Health check using the new endpoint

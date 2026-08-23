@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>INTERCEPT</Name>
+  <Repository>ghcr.io/smittix/intercept:latest</Repository>
+  <Registry>https://github.com/smittix/intercept/pkgs/container/intercept</Registry>
+  <TemplateURL>https://raw.githubusercontent.com/smittix/intercept/main/unraid/intercept.xml</TemplateURL>
+  <Network>bridge</Network>
+  <Privileged>true</Privileged>
+  <Shell>bash</Shell>
+  <Support>https://github.com/smittix/intercept/issues</Support>
+  <Project>https://github.com/smittix/intercept</Project>
+  <Overview>INTERCEPT is a web-based Signal Intelligence platform for software-defined radio. After first start, sign in and complete the on-screen setup wizard (observer location, USB SDR check, default mode). Privileged mode and USB passthrough are required for RTL-SDR, HackRF, and similar dongles. Do not expose this container to the Internet.</Overview>
+  <Category>Tools: Network:Other Productivity:Other</Category>
+  <WebUI>http://[IP]:[PORT:5050]/</WebUI>
+  <Icon>https://raw.githubusercontent.com/smittix/intercept/main/static/images/globe/satellite-icon.svg</Icon>
+  <ExtraParams>--restart unless-stopped</ExtraParams>
+  <Requires>Unraid with Docker enabled, a USB controller for SDR dongles, and enough RAM for decoder processes. Map instance storage to a cache/pool disk when possible — Unraid user shares (/mnt/user) are FUSE and are a poor fit for SQLite WAL.</Requires>
+  <Config Name="WebUI" Target="5050" Default="5050" Mode="tcp" Description="INTERCEPT web interface. Do not port-forward this to the Internet." Type="Port" Display="always" Required="true" Mask="false"/>
+  <Config Name="USB devices" Target="" Default="/dev/bus/usb" Mode="" Description="Host USB bus so RTL-SDR, HackRF, and similar dongles appear inside the container." Type="Device" Display="always" Required="true" Mask="false">/dev/bus/usb</Config>
+  <Config Name="Application database" Target="/app/instance" Default="/mnt/cache/appdata/intercept/instance" Mode="rw" Description="SQLite settings, users, and TLE cache. Prefer a cache/pool path, not /mnt/user." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="Capture data" Target="/app/data" Default="/mnt/user/appdata/intercept/data" Mode="rw" Description="Weather-sat, radiosonde, Sub-GHz, and ADS-B capture files." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="Environment file" Target="/config" Default="/mnt/user/appdata/intercept/config" Mode="rw" Description="Persisted .env written by the setup wizard (observer location and other INTERCEPT_* keys)." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="Timezone" Target="TZ" Default="UTC" Mode="" Description="IANA timezone, for example America/Chicago." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Admin username" Target="INTERCEPT_ADMIN_USERNAME" Default="admin" Mode="" Description="Web UI login name. Change the password below before first start." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Admin password" Target="INTERCEPT_ADMIN_PASSWORD" Default="" Mode="" Description="Web UI password. Required. Do not leave this as admin." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="Observer latitude" Target="INTERCEPT_DEFAULT_LAT" Default="0" Mode="" Description="Optional. Decimal degrees. The in-app wizard can also set this." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Observer longitude" Target="INTERCEPT_DEFAULT_LON" Default="0" Mode="" Description="Optional. Decimal degrees. The in-app wizard can also set this." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Log level" Target="INTERCEPT_LOG_LEVEL" Default="INFO" Mode="" Description="Python log level: DEBUG, INFO, WARNING, ERROR." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Bind address" Target="INTERCEPT_HOST" Default="0.0.0.0" Mode="" Description="Container listen address." Type="Variable" Display="advanced-hide" Required="true" Mask="false"/>
+  <Config Name="Listen port" Target="INTERCEPT_PORT" Default="5050" Mode="" Description="Container listen port. Keep in sync with the WebUI port mapping." Type="Variable" Display="advanced-hide" Required="true" Mask="false"/>
+  <Config Name="Instance directory" Target="INTERCEPT_INSTANCE_DIR" Default="/app/instance" Mode="" Description="SQLite directory inside the container." Type="Variable" Display="advanced-hide" Required="true" Mask="false"/>
+  <Config Name="Env file path" Target="INTERCEPT_ENV_FILE" Default="/config/.env" Mode="" Description="Wizard-managed environment file inside the config volume." Type="Variable" Display="advanced-hide" Required="true" Mask="false"/>
+  <Config Name="Unraid install" Target="INTERCEPT_UNRAID" Default="true" Mode="" Description="Marks this container as an Unraid Community Applications install so the setup wizard shows USB and storage guidance." Type="Variable" Display="advanced-hide" Required="true" Mask="false"/>
+  <Config Name="Docker install" Target="INTERCEPT_DOCKER" Default="true" Mode="" Description="Marks this process as containerized." Type="Variable" Display="advanced-hide" Required="true" Mask="false"/>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Unraid nobody user ID. INTERCEPT still needs privileged USB access for SDR tools." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Unraid users group ID." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+</Container>

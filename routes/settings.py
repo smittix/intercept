@@ -30,7 +30,10 @@ _env_lock = threading.Lock()
 
 
 def _get_env_file_path() -> Path:
-    """Return the project .env path."""
+    """Return the project .env path (INTERCEPT_ENV_FILE on Unraid)."""
+    override = os.environ.get("INTERCEPT_ENV_FILE", "").strip()
+    if override:
+        return Path(override)
     return Path(__file__).resolve().parent.parent / ".env"
 
 
