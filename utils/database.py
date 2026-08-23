@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sqlite3
 import threading
 from contextlib import contextmanager
@@ -33,10 +34,37 @@ except ImportError:
 _local = _LocalClass()
 
 
+def get_instance_dir() -> Path:
+    """Return the SQLite directory, honoring INTERCEPT_INSTANCE_DIR."""
+    override = os.environ.get("INTERCEPT_INSTANCE_DIR", "").strip()
+    if override:
+        return Path(override)
+    return DB_DIR
+
+
 def get_db_path() -> Path:
     """Get the database file path, creating directory if needed."""
-    DB_DIR.mkdir(parents=True, exist_ok=True)
-    return DB_PATH
+    instance_dir = get_instance_dir()
+    instance_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        if instance_dir.resolve() == Path(DB_DIR).resolve():
+            return DB_PATH
+    except OSError:
+        if instance_dir == DB_DIR:
+            return DB_PATH
+    return instance_dir / "intercept.db"
+
+
+def _journal_mode_for(db_path: Path) -> str:
+    """WAL locally; DELETE on Unraid user shares and other FUSE/network mounts."""
+    allowed = {"DELETE", "WAL", "TRUNCATE", "MEMORY"}
+    try:
+        from utils.unraid import recommended_sqlite_journal_mode
+
+        mode = recommended_sqlite_journal_mode(db_path)
+    except Exception:
+        return "WAL"
+    return mode if mode in allowed else "WAL"
 
 
 def get_connection() -> sqlite3.Connection:
@@ -48,13 +76,13 @@ def get_connection() -> sqlite3.Connection:
             _local.connection.row_factory = sqlite3.Row
             # Enable foreign keys
             _local.connection.execute("PRAGMA foreign_keys = ON")
-            # Use WAL mode for better concurrent read/write performance
-            _local.connection.execute("PRAGMA journal_mode = WAL")
+            journal_mode = _journal_mode_for(db_path)
+            _local.connection.execute(f"PRAGMA journal_mode = {journal_mode}")
         except sqlite3.OperationalError as e:
             logger.error(
                 f"Cannot open database at {db_path}: {e}. "
                 f"If the file is owned by root, fix with: "
-                f"sudo chown -R $(whoami) {DB_DIR}"
+                f"sudo chown -R $(whoami) {get_instance_dir()}"
             )
             raise
     return _local.connection

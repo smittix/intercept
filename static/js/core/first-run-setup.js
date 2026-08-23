@@ -11,16 +11,34 @@ const FirstRunSetup = (function() {
     let modeStatusEl = null;
     let modeSelectEl = null;
     let uiTierStatusEl = null;
+    let hardwareStatusEl = null;
+    let hardwareStepEl = null;
 
     let dependencyReady = null;
+    let serverStatus = null;
 
     function init() {
         buildDOM();
         maybeShow();
     }
 
-    function maybeShow() {
+    async function maybeShow() {
         if (localStorage.getItem(COMPLETE_KEY) === 'true') return;
+
+        try {
+            const response = await fetch('/setup/status');
+            if (response.ok) {
+                const payload = await response.json();
+                serverStatus = payload;
+                if (payload.complete) {
+                    localStorage.setItem(COMPLETE_KEY, 'true');
+                    return;
+                }
+                applyServerHints(payload);
+            }
+        } catch (_err) {
+            serverStatus = null;
+        }
 
         if (localStorage.getItem('disclaimerAccepted') === 'true') {
             open();
@@ -96,6 +114,16 @@ const FirstRunSetup = (function() {
                 actionsEl.appendChild(openToolsBtn);
             }
         );
+
+        hardwareStepEl = createStep(
+            'Unraid / USB SDR',
+            'Confirm USB passthrough so RTL-SDR and HackRF dongles appear in this container.',
+            (statusEl, actionsEl) => {
+                hardwareStatusEl = statusEl;
+                actionsEl.appendChild(buildButton('Recheck USB', refreshHardwareStatus));
+            }
+        );
+        hardwareStepEl.hidden = true;
 
         const locationStep = createStep(
             'Observer Location',
@@ -228,6 +256,7 @@ const FirstRunSetup = (function() {
         );
 
         content.appendChild(depsStep);
+        content.appendChild(hardwareStepEl);
         content.appendChild(locationStep);
         content.appendChild(notifyStep);
         content.appendChild(modeStep);
@@ -260,6 +289,56 @@ const FirstRunSetup = (function() {
 
         overlayEl.appendChild(modal);
         document.body.appendChild(overlayEl);
+    }
+
+    function applyServerHints(payload) {
+        if (!payload || typeof payload !== 'object') return;
+        const platform = payload.platform || {};
+        if (hardwareStepEl) {
+            hardwareStepEl.hidden = !(platform.unraid || platform.docker);
+        }
+        const observer = payload.observer || {};
+        if (observer.configured && observer.lat != null && observer.lon != null) {
+            if (!localStorage.getItem('observerLat')) {
+                localStorage.setItem('observerLat', String(observer.lat));
+            }
+            if (!localStorage.getItem('observerLon')) {
+                localStorage.setItem('observerLon', String(observer.lon));
+            }
+        }
+        refreshHardwareStatus();
+    }
+
+    async function refreshHardwareStatus() {
+        if (!hardwareStatusEl) return;
+        hardwareStatusEl.textContent = 'Checking...';
+        let status = serverStatus;
+        try {
+            const response = await fetch('/setup/status');
+            if (response.ok) {
+                status = await response.json();
+                serverStatus = status;
+            }
+        } catch (_err) {
+            /* keep last known status */
+        }
+        const platform = (status && status.platform) || {};
+        const usb = Boolean(platform.usb_passthrough);
+        const devices = (status && status.sdr_devices) || [];
+        const fuse = Boolean(status && status.storage && status.storage.fuse_or_network);
+        let label = usb ? 'USB bus mapped' : 'USB bus not visible';
+        if (usb && devices.length) {
+            label = `${devices.length} SDR device(s) cached`;
+        } else if (usb) {
+            label = 'USB mapped — plug in a dongle and open Devices';
+        }
+        if (fuse) {
+            label += ' · use cache disk for instance/';
+        }
+        setStatus(hardwareStatusEl, usb, label);
+        if (hardwareStepEl) {
+            hardwareStepEl.hidden = !(platform.unraid || platform.docker);
+        }
     }
 
     function createStep(title, description, initActions) {
@@ -338,6 +417,15 @@ const FirstRunSetup = (function() {
         setStatus(modeStatusEl, hasDefaultMode, hasDefaultMode ? localStorage.getItem(DEFAULT_MODE_KEY) : 'Not set');
         const hasTier = Boolean(localStorage.getItem('intercept-ui-tier'));
         setStatus(uiTierStatusEl, hasTier, hasTier ? localStorage.getItem('intercept-ui-tier') : 'Not set');
+        if (hardwareStatusEl && hardwareStepEl && !hardwareStepEl.hidden) {
+            const platform = (serverStatus && serverStatus.platform) || {};
+            const usb = Boolean(platform.usb_passthrough);
+            setStatus(
+                hardwareStatusEl,
+                usb,
+                usb ? 'USB bus mapped' : 'USB bus not visible'
+            );
+        }
 
         if (dependencyReady === null) {
             checkDependencies();
@@ -405,8 +493,17 @@ const FirstRunSetup = (function() {
         refreshStatuses();
     }
 
-    function completeSetup() {
+    async function completeSetup() {
         localStorage.setItem(COMPLETE_KEY, 'true');
+        try {
+            await fetch('/setup/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}',
+            });
+        } catch (_err) {
+            /* local completion still stands */
+        }
         close();
 
         if (typeof showAppToast === 'function') {

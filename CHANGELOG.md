@@ -2,6 +2,13 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Unraid app + setup wizard** — Community Applications template in `unraid/intercept.xml`, persistent `instance/` and `/config` volumes, FUSE-safe SQLite journal mode on Unraid user shares, and a first-run wizard that reports USB passthrough via `GET /setup/status`.
+
+---
+
 ## [2.32.0] - 2026-07-07
 
 ### Added

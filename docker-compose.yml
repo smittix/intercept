@@ -28,6 +28,7 @@ services:
     volumes:
       # Persist runtime output directories across container rebuilds.
       # Mount subdirectories individually so Python modules in /app/data are not shadowed.
+      - ./instance:/app/instance
       - ./data/weather_sat:/app/data/weather_sat
       - ./data/radiosonde:/app/data/radiosonde
       - ./data/subghz:/app/data/subghz
@@ -39,6 +40,7 @@ services:
       - INTERCEPT_HOST=0.0.0.0
       - INTERCEPT_PORT=5050
       - INTERCEPT_LOG_LEVEL=INFO
+      - INTERCEPT_INSTANCE_DIR=/app/instance
       # HTTPS support (auto-generates self-signed cert)
       # - INTERCEPT_HTTPS=true
       # - INTERCEPT_PORT=5443
@@ -89,6 +91,7 @@ services:
     devices:
       - /dev/bus/usb:/dev/bus/usb
     volumes:
+      - ./instance:/app/instance
       - ./data/weather_sat:/app/data/weather_sat
       - ./data/radiosonde:/app/data/radiosonde
       - ./data/subghz:/app/data/subghz
@@ -98,6 +101,7 @@ services:
       - INTERCEPT_HOST=0.0.0.0
       - INTERCEPT_PORT=5050
       - INTERCEPT_LOG_LEVEL=INFO
+      - INTERCEPT_INSTANCE_DIR=/app/instance
       # HTTPS support (auto-generates self-signed cert)
       # - INTERCEPT_HTTPS=true
       # - INTERCEPT_PORT=5443

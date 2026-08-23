@@ -9,6 +9,7 @@ persisted by rewriting data/satellites.py at runtime),
 utils/weather_sat_predict._tle_cache, and the agent's own download.
 """
 
+import os
 import sqlite3
 import threading
 from pathlib import Path
@@ -17,15 +18,32 @@ from utils.logging import get_logger
 
 logger = get_logger("intercept.tle_store")
 
-_DB_PATH = Path(__file__).resolve().parent.parent / "instance" / "tle.db"
+_DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "instance" / "tle.db"
+_DB_PATH = _DEFAULT_DB_PATH
 _lock = threading.Lock()
 _cache: dict[str, tuple[str, str, str]] | None = None
 
 
+def _tle_db_path() -> Path:
+    override = os.environ.get("INTERCEPT_INSTANCE_DIR", "").strip()
+    if override:
+        return Path(override) / "tle.db"
+    return _DB_PATH
+
+
 def _connect() -> sqlite3.Connection:
-    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False, timeout=5)
-    conn.execute("PRAGMA journal_mode = WAL")
+    db_path = _tle_db_path()
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(db_path), check_same_thread=False, timeout=5)
+    try:
+        from utils.unraid import recommended_sqlite_journal_mode
+
+        journal = recommended_sqlite_journal_mode(db_path)
+    except Exception:
+        journal = "WAL"
+    if journal not in {"DELETE", "WAL", "TRUNCATE", "MEMORY"}:
+        journal = "WAL"
+    conn.execute(f"PRAGMA journal_mode = {journal}")
     conn.execute("PRAGMA busy_timeout = 5000")
     conn.execute(
         """

@@ -21,7 +21,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ── Load .env if present ──────────────────────────────────────────────────────
 if [[ -f "$SCRIPT_DIR/.env" ]]; then
     set -a
+    # shellcheck disable=SC1091
     source "$SCRIPT_DIR/.env"
+    set +a
+fi
+if [[ -n "${INTERCEPT_ENV_FILE:-}" && -f "$INTERCEPT_ENV_FILE" && "$INTERCEPT_ENV_FILE" != "$SCRIPT_DIR/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$INTERCEPT_ENV_FILE"
     set +a
 fi
 

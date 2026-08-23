@@ -124,6 +124,17 @@ docker compose --profile basic up -d --build
 
 > **Note:** Docker requires privileged mode for USB SDR access. SDR devices are passed through via `/dev/bus/usb`.
 
+### Unraid
+
+Install INTERCEPT as a Community Applications Docker app, then finish setup in the browser wizard.
+
+1. Load `unraid/intercept.xml` (Docker → Add Container → Advanced View), or add the raw template URL from that file.
+2. Set a real admin password. Keep privileged mode and `/dev/bus/usb`.
+3. Map the SQLite directory to a **cache/pool** path (`/mnt/cache/appdata/intercept/instance`). Unraid user shares (`/mnt/user`) are FUSE; INTERCEPT falls back to DELETE journal mode there.
+4. Open `http://TOWER:5050/`, sign in, and complete Quick Setup. After login, `GET /setup/status` reports USB passthrough, storage journal mode, and whether setup is complete.
+
+Full steps: [unraid/README.md](unraid/README.md).
+
 For multi-architecture builds (amd64 + arm64 for Raspberry Pi), see `build-multiarch.sh` — it handles cross-compilation and registry push in one step.
 
 ### Environment Configuration
