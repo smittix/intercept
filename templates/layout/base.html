@@ -64,7 +64,7 @@
             <div class="app-header-right">
                 {% block header_right %}
                 <div class="header-clock">
-                    <span class="header-clock-label">UTC</span>
+                    <span class="header-clock-label utc-label">UTC</span>
                     <span id="headerUtcTime">--:--:--</span>
                 </div>
                 {% endblock %}
@@ -97,15 +97,23 @@
 
     {# Core JavaScript #}
     <script>
-        // UTC Clock
+        // Header clock — uses InterceptTime prefs (default SAST), falls back to UTC
         function updateUtcClock() {
             const now = new Date();
-            const utc = now.toISOString().slice(11, 19);
             const clockEl = document.getElementById('headerUtcTime');
-            if (clockEl) clockEl.textContent = utc;
+            const labelEl = document.querySelector('.header-clock-label');
+            if (typeof InterceptTime !== 'undefined') {
+                if (clockEl) clockEl.textContent = InterceptTime.fullTime(now);
+                if (labelEl) labelEl.textContent = InterceptTime.getLabel() || 'LOCAL';
+            } else if (clockEl) {
+                clockEl.textContent = now.toISOString().slice(11, 19);
+            }
         }
         setInterval(updateUtcClock, 1000);
         updateUtcClock();
+        if (typeof InterceptTime !== 'undefined') {
+            InterceptTime.onChange(updateUtcClock);
+        }
 
         // Mobile menu toggle
         const hamburgerBtn = document.getElementById('hamburgerBtn');
