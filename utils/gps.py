@@ -456,6 +456,25 @@ class GPSDClient:
 _gps_client: GPSDClient | None = None
 _gps_lock = threading.Lock()
 
+# Fallback position from a non-gpsd source (e.g. a Meshtastic node's onboard
+# GPS) — used only when gpsd isn't connected or has no position at all, so it
+# never overrides a real gpsd fix.
+_external_position: GPSPosition | None = None
+_external_lock = threading.Lock()
+
+
+def set_external_position(position: GPSPosition) -> None:
+    """Register a GPS position from a non-gpsd source."""
+    global _external_position
+    with _external_lock:
+        _external_position = position
+
+
+def get_external_position() -> GPSPosition | None:
+    """Return the most recently registered non-gpsd position, if any."""
+    with _external_lock:
+        return _external_position
+
 
 def get_gps_reader() -> GPSDClient | None:
     """Get the global GPS client instance."""
@@ -510,11 +529,12 @@ def stop_gps() -> None:
 
 
 def get_current_position() -> GPSPosition | None:
-    """Get the current GPS position from the global client."""
+    """Get the current GPS position from the global client, falling back to
+    an externally-registered position (e.g. Meshtastic) when gpsd has none."""
     client = get_gps_reader()
-    if client:
+    if client and client.position:
         return client.position
-    return None
+    return get_external_position()
 
 
 # ============================================

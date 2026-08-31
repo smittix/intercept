@@ -660,10 +660,10 @@ const GPS = (function() {
         setText('gpsEpv', pos.epv != null ? pos.epv.toFixed(1) + ' m' : '---');
         setText('gpsEps', pos.eps != null ? pos.eps.toFixed(2) + ' m/s' : '---');
 
-        // GPS time
+        // GPS time (local per InterceptTime prefs, default SAST; falls back to UTC)
         if (pos.timestamp) {
             const t = new Date(pos.timestamp);
-            setText('gpsTime', t.toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC'));
+            setText('gpsTime', formatGpsTime(t));
         }
 
         // Visuals: position panel
@@ -686,8 +686,17 @@ const GPS = (function() {
         // Visuals: GPS time
         if (pos.timestamp) {
             const t = new Date(pos.timestamp);
-            setText('gpsVisTime', t.toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC'));
+            setText('gpsVisTime', formatGpsTime(t));
         }
+    }
+
+    /** GPS fix timestamp per InterceptTime prefs (default SAST), UTC appended for reference. */
+    function formatGpsTime(t) {
+        const utc = t.toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
+        if (typeof InterceptTime !== 'undefined' && InterceptTime.getIANA()) {
+            return InterceptTime.dateTime(t) + InterceptTime.tzSuffix() + '  (' + utc + ')';
+        }
+        return utc;
     }
 
     function updateSkyUI(sky) {
