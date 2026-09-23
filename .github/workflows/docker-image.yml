@@ -7,6 +7,13 @@ on:
   pull_request:
     branches: [main]
 
+# Multi-arch image builds are the most expensive jobs in this repo. Without
+# this, every push to a PR branch left the previous build running, and enough
+# of them in flight starved the test jobs of runners.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 # Set permissions for GITHUB_TOKEN
 permissions:
   contents: read
