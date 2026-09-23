@@ -648,6 +648,24 @@ class MeshtasticClient:
                     node.longitude = lon
                     node.altitude = position.get("altitude", node.altitude)
 
+                    try:
+                        from utils.event_pipeline import process_event
+
+                        process_event(
+                            "meshtastic",
+                            {
+                                "id": node.user_id,
+                                "callsign": node.long_name or node.short_name,
+                                "lat": node.latitude,
+                                "lon": node.longitude,
+                                "altitude": node.altitude,
+                            },
+                            "position",
+                        )
+                    except Exception:
+                        # Event pipeline failures should never break mesh packet handling
+                        pass
+
         # Parse TELEMETRY_APP for battery and other metrics
         elif portnum == "TELEMETRY_APP":
             telemetry = decoded.get("telemetry", {})
