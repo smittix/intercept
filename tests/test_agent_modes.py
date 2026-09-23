@@ -460,6 +460,60 @@ class TestGPSIntegration:
 
 
 # =============================================================================
+# ADS-B Aircraft Expiry
+# =============================================================================
+
+
+class TestAdsbAircraftExpiry:
+    """Aircraft must age out of the agent's snapshot while a scan runs.
+
+    The agent serves its whole aircraft dict on every poll and the dashboard
+    stamps each arrival as freshly seen, so anything the agent keeps is
+    pinned on the map until the mode stops (#263).
+    """
+
+    @staticmethod
+    def _seen(minutes_ago):
+        from datetime import datetime, timedelta, timezone
+
+        return (datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)).isoformat()
+
+    def test_stale_aircraft_dropped_from_snapshot(self, mode_manager):
+        """An aircraft not heard for over the TTL leaves the poll payload."""
+        mode_manager.adsb_aircraft = {
+            "ABC123": {"icao": "ABC123", "last_seen": self._seen(10)},
+            "DEF456": {"icao": "DEF456", "last_seen": self._seen(0)},
+        }
+
+        mode_manager._prune_stale_aircraft()
+
+        assert "ABC123" not in mode_manager.adsb_aircraft
+        assert "DEF456" in mode_manager.adsb_aircraft
+
+    def test_fresh_aircraft_retained(self, mode_manager):
+        """Everything heard inside the TTL survives."""
+        mode_manager.adsb_aircraft = {
+            f"AC{i:04X}": {"icao": f"AC{i:04X}", "last_seen": self._seen(i)} for i in range(5)
+        }
+
+        mode_manager._prune_stale_aircraft()
+
+        assert len(mode_manager.adsb_aircraft) == 5
+
+    def test_missing_or_malformed_timestamp_kept(self, mode_manager):
+        """Records we cannot date are kept rather than silently dropped."""
+        mode_manager.adsb_aircraft = {
+            "NOSTAMP": {"icao": "NOSTAMP"},
+            "BADSTAMP": {"icao": "BADSTAMP", "last_seen": "not-a-timestamp"},
+            "NULLSTAMP": {"icao": "NULLSTAMP", "last_seen": None},
+        }
+
+        mode_manager._prune_stale_aircraft()
+
+        assert len(mode_manager.adsb_aircraft) == 3
+
+
+# =============================================================================
 # Run Tests
 # =============================================================================
 
