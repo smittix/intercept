@@ -58,6 +58,7 @@ def app(setup_db):
 
     app = Flask(__name__)
     app.config["TESTING"] = True
+    app.secret_key = "test-secret-for-session-auth"
     app.register_blueprint(controller_bp)
 
     return app
@@ -65,7 +66,21 @@ def app(setup_db):
 
 @pytest.fixture
 def client(app):
-    """Create test client."""
+    """Create an AUTHENTICATED test client.
+
+    Controller routes require a session (or an agent API key). These tests
+    exercise the behaviour of the routes, not the auth gate, so they log in.
+    Anonymous access is covered separately in TestControllerAuth.
+    """
+    c = app.test_client()
+    with c.session_transaction() as sess:
+        sess["logged_in"] = True
+    return c
+
+
+@pytest.fixture
+def anon_client(app):
+    """An unauthenticated client, for testing the auth gate itself."""
     return app.test_client()
 
 
@@ -612,3 +627,96 @@ class TestGenericProxy:
             resp = client.get("/controller/agents/1/proxy/wifi/v2/%2e%2e/%2e%2e/settings/secrets")
         assert resp.status_code in (403, 404)
         mock_create.return_value.get.assert_not_called()
+
+
+# =============================================================================
+# Authentication and secret handling
+# =============================================================================
+
+
+class TestControllerAuth:
+    """The controller blueprint must authenticate every route.
+
+    app.py's global gate deliberately skips /controller/* so that remote
+    agents can authenticate with an API key instead of a session. That left
+    every route here reachable anonymously, including agent registration and
+    the proxy that starts and stops SDR modes on remote nodes.
+    """
+
+    def test_anonymous_cannot_list_agents(self, anon_client, sample_agent):
+        assert anon_client.get("/controller/agents").status_code == 401
+
+    def test_anonymous_cannot_register_agent(self, anon_client):
+        resp = anon_client.post(
+            "/controller/agents",
+            json={"name": "rogue", "base_url": "http://attacker.example"},
+        )
+        assert resp.status_code == 401
+
+    def test_anonymous_cannot_delete_agent(self, anon_client, sample_agent):
+        assert anon_client.delete(f"/controller/agents/{sample_agent}").status_code == 401
+
+    def test_anonymous_cannot_proxy_mode_start(self, anon_client, sample_agent):
+        """The most serious case: starting SDR hardware on a remote node."""
+        resp = anon_client.post(f"/controller/agents/{sample_agent}/adsb/start", json={})
+        assert resp.status_code == 401
+
+    def test_anonymous_cannot_proxy_mode_stop(self, anon_client, sample_agent):
+        resp = anon_client.post(f"/controller/agents/{sample_agent}/adsb/stop", json={})
+        assert resp.status_code == 401
+
+    def test_anonymous_cannot_read_payloads(self, anon_client):
+        assert anon_client.get("/controller/api/payloads").status_code == 401
+
+    def test_authenticated_session_is_allowed(self, client, sample_agent):
+        assert client.get("/controller/agents").status_code == 200
+
+
+class TestAgentApiKeyNotDisclosed:
+    """Agent records are returned to browsers; the API key must not be."""
+
+    def test_api_key_absent_from_agent_list(self, client, sample_agent):
+        resp = client.get("/controller/agents")
+        assert resp.status_code == 200
+        body = resp.get_data(as_text=True)
+        assert "test-key" not in body, "agent API key leaked in list response"
+        for agent in resp.get_json()["agents"]:
+            assert "api_key" not in agent
+            assert agent["has_api_key"] is True
+
+    def test_api_key_absent_from_agent_detail(self, client, sample_agent):
+        resp = client.get(f"/controller/agents/{sample_agent}")
+        assert "test-key" not in resp.get_data(as_text=True)
+
+    def test_key_is_still_retrievable_internally(self, sample_agent):
+        """Internal callers must still be able to reach the real key."""
+        from utils.database import get_agent_api_key
+
+        assert get_agent_api_key(sample_agent) == "test-key"
+
+
+class TestAgentPushAuth:
+    """The ingest endpoint is session-exempt, so its API key is the only auth."""
+
+    def test_push_without_key_is_refused(self, anon_client, sample_agent):
+        resp = anon_client.post(
+            "/controller/api/ingest",
+            json={"agent_name": "test-sensor", "scan_type": "adsb", "payload": {}},
+        )
+        assert resp.status_code == 401
+
+    def test_push_with_wrong_key_is_refused(self, anon_client, sample_agent):
+        resp = anon_client.post(
+            "/controller/api/ingest",
+            json={"agent_name": "test-sensor", "scan_type": "adsb", "payload": {}},
+            headers={"X-API-Key": "wrong-key"},
+        )
+        assert resp.status_code == 401
+
+    def test_push_with_correct_key_is_accepted(self, anon_client, sample_agent):
+        resp = anon_client.post(
+            "/controller/api/ingest",
+            json={"agent_name": "test-sensor", "scan_type": "adsb", "payload": {"a": 1}},
+            headers={"X-API-Key": "test-key"},
+        )
+        assert resp.status_code in (200, 202)

@@ -19,6 +19,16 @@ CHANGELOG = [
         ],
     },
     {
+        "version": "2.33.6",
+        "date": "September 2026",
+        "highlights": [
+            "Security: the /controller/* API required no authentication at all \u2014 anyone who could reach the port could list remote agents, read their API keys, register or delete agents, and start or stop SDR hardware on remote nodes. It now requires a session, or an API key for agent push.",
+            "Security: agent API keys are no longer included in API responses.",
+            "Security: WebSocket endpoints now verify the session; a stale auth exemption for audio streaming was removed; the default admin password has been removed; session cookies set SameSite and HttpOnly explicitly.",
+            "Action required: if you run remote agents, each must now have an API key configured to push data.",
+        ],
+    },
+    {
         "version": "2.33.5",
         "date": "September 2026",
         "highlights": [
@@ -616,9 +626,13 @@ MQTT_PASSWORD = _get_env("MQTT_PASSWORD", "")
 MQTT_TOPIC_PREFIX = _get_env("MQTT_TOPIC_PREFIX", "intercept")
 MQTT_RETAIN = _get_env_bool("MQTT_RETAIN", False)
 
-# Admin credentials
+# Admin credentials.
+# ADMIN_PASSWORD has no default on purpose. When it is unset, first-run
+# database init generates a random password, logs it, and writes it to
+# instance/.initial_password. A shipped default of "admin" meant every
+# install that never set the env var shared the same known credentials.
 ADMIN_USERNAME = _get_env("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = _get_env("ADMIN_PASSWORD", "admin")
+ADMIN_PASSWORD = _get_env("ADMIN_PASSWORD", "")
 
 # Signal identification region (affects match ranking; does not filter results)
 # Valid values: GLOBAL, EU, US, UK, AU
