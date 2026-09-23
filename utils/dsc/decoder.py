@@ -35,15 +35,10 @@ import numpy as np
 from scipy import signal as scipy_signal
 
 from .constants import (
-    DISTRESS_NATURE_CODES,
     DSC_AUDIO_SAMPLE_RATE,
     DSC_BAUD_RATE,
     DSC_MARK_FREQ,
     DSC_SPACE_FREQ,
-    FORMAT_CODES,
-    MIN_SYMBOLS_FOR_FORMAT,
-    TELECOMMAND_FORMATS,
-    VALID_EOS,
 )
 
 # Configure logging
