@@ -531,7 +531,6 @@ def change_password() -> Response | str:
             set_user_password(username, new)
             session.pop("must_change_password", None)
             logger.info(f"Password changed for user '{username}'.")
-            flash("Password updated", "success")
             return redirect(url_for("index"))
 
     return render_template("change_password.html", version=VERSION, forced=forced, username=username)

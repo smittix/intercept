@@ -144,6 +144,22 @@ class TestSuccessfulChange:
         )
         assert db.verify_user_password("admin", "seeded-initial-pw") is False
 
+    def test_no_stale_message_after_success(self, seeded_app):
+        """The dashboard renders no flashes, so one queued on success would
+        surface later on /login or here, styled as an error."""
+        app, _ = seeded_app
+        client = _login(app)
+        client.post(
+            "/change-password",
+            data={
+                "current_password": "seeded-initial-pw",
+                "new_password": "a-long-enough-pw",
+                "confirm_password": "a-long-enough-pw",
+            },
+        )
+        client.get("/")
+        assert "SIGNAL_" not in client.get("/change-password").get_data(as_text=True)
+
 
 class TestSeeding:
     def test_generated_password_requires_a_change(self, monkeypatch):
