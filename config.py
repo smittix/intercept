@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.4"
+VERSION = "2.33.5"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.5",
+        "date": "September 2026",
+        "highlights": [
+            "Fix: Meshtastic nodes first heard via telemetry, text or routing packets did not appear until the page was reloaded \u2014 the node list only refreshed on position/nodeinfo packets.",
+        ],
+    },
     {
         "version": "2.33.4",
         "date": "September 2026",
