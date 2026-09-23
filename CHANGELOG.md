@@ -2,6 +2,13 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.7] - 2026-09-23
+
+### Added
+- **Kill All Processes from any page** — the control previously lived only in the main dashboard's System panel, so it was unavailable from the ADS-B, AIS and satellite dashboards, history, network monitor and agents pages — exactly where you end up when troubleshooting. It is now in the global nav (and the mobile nav) on every page that carries it, styled as a destructive action and confirming before it fires. On the main dashboard it delegates to the existing handler so SDR reservations, run flags and SSE connections are still reset. Requested by @bob1234uk (#274).
+
+---
+
 ## [2.33.6] - 2026-09-23
 
 ### Security
