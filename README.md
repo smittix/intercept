@@ -193,7 +193,9 @@ Checks installed tools, SDR devices, port availability, permissions, Python venv
 
 After starting, open **http://localhost:5050** in your browser.
 
-Default credentials: **admin / admin** — change these in `config.py` (`ADMIN_USERNAME` / `ADMIN_PASSWORD`) before exposing the app on a network.
+**There is no default password.** On first start, INTERCEPT generates one for the `admin` account, logs it, and writes it to `instance/.initial_password`. Log in with that, and you will be asked to set your own before the interface unlocks.
+
+To choose your own up front, set `INTERCEPT_ADMIN_PASSWORD` before first start. See [Security](docs/SECURITY.md#authentication) for details and for why this replaced the previous `admin`/`admin` default.
 
 ---
 

@@ -23,11 +23,45 @@ By default, INTERCEPT binds to `0.0.0.0:5050`, making it accessible from any net
    sudo ./start.sh -H 127.0.0.1
    ```
 
-3. **Trusted Networks Only**: Only run INTERCEPT on networks you trust. Default credentials are admin / admin — change them before network exposure.
+3. **Trusted Networks Only**: Only run INTERCEPT on networks you trust. There is no longer a shipped default password — see [Authentication](#authentication) for how the first-run credentials work.
 
 ## Authentication
 
-INTERCEPT includes basic username/password authentication (default credentials: **admin / admin**). **Change these before exposing the application on any network** — update `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `config.py`.
+INTERCEPT uses username/password authentication. **There is no default password.**
+
+### First run
+
+On first start, if `INTERCEPT_ADMIN_PASSWORD` is not set, INTERCEPT generates a random password for the `admin` account and:
+
+- logs it at startup, and
+- writes it to `instance/.initial_password`
+
+Log in with that password. You will be required to set your own before the interface becomes usable — every other page and API route is blocked until you do. Delete `instance/.initial_password` once you have changed it.
+
+If you set `INTERCEPT_ADMIN_PASSWORD` yourself, that is treated as your own choice and no change is forced.
+
+### Changing your password
+
+`/change-password`, reachable at any time from the interface. It requires your current password and a minimum of 12 characters.
+
+### Why this changed
+
+Until v2.33.6, `ADMIN_PASSWORD` defaulted to `admin`. Any installation that never set the environment variable therefore shipped with **publicly known credentials**, and the documentation told you so.
+
+That mattered more than it might appear, because of what else was reachable. Until the same release, the `/controller/*` API required no authentication at all: the global login gate skipped it on the assumption that those routes authenticated callers themselves, which they did not. Anyone able to reach the port could list remote agents, read their API keys, register or delete agents, and start or stop SDR hardware on remote nodes.
+
+The two together meant that an INTERCEPT instance reachable on a network could be taken over with credentials printed in its own README. Both are fixed:
+
+| Release | Change |
+| --- | --- |
+| 2.33.6 | `/controller/*` authenticates every route; agent API keys removed from API responses; WebSocket endpoints verify the session; the `admin` default removed |
+| 2.33.8 | A password you did not choose must be changed before the interface is usable |
+
+**If you are upgrading** and your instance still uses `admin`/`admin`, you will be prompted to change it at your next login. This is deliberate and cannot be skipped.
+
+**If you run remote agents**, note that 2.33.6 also made an API key mandatory for agent push. An agent registered without one will be refused by `/controller/api/ingest`. Set a key on each agent, and the matching `controller_api_key` in the agent's own configuration.
+
+### Further protection
 
 For additional protection when exposing INTERCEPT beyond your local machine:
 
