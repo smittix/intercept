@@ -40,7 +40,7 @@ jobs:
       - name: Run tests (${{ matrix.group }})
         run: |
           if [ "${{ matrix.group }}" = "a-l" ]; then
-            pytest tests/test_[a-l]*.py --tb=short -q
+            pytest tests/test_[a-l]*.py --tb=short -q --timeout=120 --timeout-method=thread
           else
-            pytest tests/test_[m-z]*.py --tb=short -q
+            pytest tests/test_[m-z]*.py --tb=short -q --timeout=120 --timeout-method=thread
           fi
