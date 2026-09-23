@@ -551,17 +551,33 @@ class TestDecode:
             assert "rtl_433" in result["message"]
 
     def test_start_decode_success(self, manager):
+        import threading as _threading
+
+        # The reader threads park in stdout.readline() until the process
+        # writes or exits, and their finally block clears _decode_process --
+        # which is what active_mode reports on. A MagicMock readline returns
+        # instantly, so the readers tear that state down while the assertions
+        # below are still running. Block like a real pipe, then release at the
+        # end of the test.
+        release_readers = _threading.Event()
+
+        def blocking_readline():
+            release_readers.wait(timeout=10)
+            return b""
+
         mock_hackrf_proc = MagicMock()
         mock_hackrf_proc.poll.return_value = None
         mock_hackrf_proc.stdout = MagicMock()
+        mock_hackrf_proc.stdout.readline = blocking_readline
         mock_hackrf_proc.stderr = MagicMock()
-        mock_hackrf_proc.stderr.readline = MagicMock(return_value=b"")
+        mock_hackrf_proc.stderr.readline = blocking_readline
 
         mock_rtl433_proc = MagicMock()
         mock_rtl433_proc.poll.return_value = None
         mock_rtl433_proc.stdout = MagicMock()
+        mock_rtl433_proc.stdout.readline = blocking_readline
         mock_rtl433_proc.stderr = MagicMock()
-        mock_rtl433_proc.stderr.readline = MagicMock(return_value=b"")
+        mock_rtl433_proc.stderr.readline = blocking_readline
 
         call_count = [0]
 
@@ -613,6 +629,7 @@ class TestDecode:
 
             # Signal daemon threads to stop so they don't outlive the test
             manager._decode_stop = True
+            release_readers.set()
 
     def test_stop_decode_not_running(self, manager):
         result = manager.stop_decode()
