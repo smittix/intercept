@@ -407,11 +407,13 @@ class TestWeatherSatDecoder:
     @patch("pathlib.Path.stat")
     def test_get_images_scans_directory(self, mock_stat, mock_glob):
         """get_images() should scan output directory."""
-        # Hand back a real os.stat_result: pathlib internals unrelated to this
-        # test still call Path.stat() and mask the mode with S_ISDIR, which
-        # raises "TypeError: an integer is required" against a bare MagicMock
-        # on Python 3.11.
-        mock_stat.return_value = os.stat(__file__)
+        # Hand back a real directory os.stat_result. Pathlib internals
+        # unrelated to this test still call Path.stat(): a bare MagicMock
+        # raises "TypeError: an integer is required" when the mode is masked
+        # with S_ISDIR, and a regular file's stat makes mkdir(exist_ok=True)
+        # re-raise FileExistsError because is_dir() comes back False. Both
+        # bite on Python 3.11.
+        mock_stat.return_value = os.stat(os.path.dirname(os.path.abspath(__file__)))
         with patch("shutil.which", return_value="/usr/bin/satdump"):
             decoder = WeatherSatDecoder()
 
