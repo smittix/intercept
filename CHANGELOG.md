@@ -2,6 +2,13 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.5] - 2026-09-23
+
+### Fixed
+- **Meshtastic nodes did not always appear without a page reload** — the map and node list were only refreshed when an incoming packet's portnum contained `POSITION` or `NODEINFO`. A node first heard via any other packet type (telemetry, text message, routing) was recorded in the stats but never fetched into the node list, so it stayed off the map until the page was reloaded. The list now also refreshes the first time a previously unseen node is heard, whatever the packet type, still debounced to avoid repeated fetches. MeshCore was unaffected — it pushes each node over SSE straight to the sidebar and map. Reported by @bob1234uk (#261).
+
+---
+
 ## [2.33.4] - 2026-09-23
 
 ### Fixed

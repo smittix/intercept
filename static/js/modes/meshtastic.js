@@ -843,6 +843,9 @@ const Meshtastic = (function() {
         console.log('Received message:', msg);
         console.log('from_name:', msg.from_name, 'timestamp:', msg.timestamp, 'type:', typeof msg.timestamp);
         messages.push(msg);
+        // Capture this before the add below, so we can tell a first sighting
+        // from a node we already know about.
+        const isNewNode = Boolean(msg.from) && !uniqueNodes.has(msg.from);
         if (msg.from) uniqueNodes.add(msg.from);
 
         // Keep messages limited
@@ -857,9 +860,13 @@ const Meshtastic = (function() {
             prependMessage(msg);
         }
 
-        // Refresh nodes if we got position or nodeinfo data
+        // Refresh the node list when a node we have never heard before shows
+        // up, or when a packet carries fresh position/identity data. Keying
+        // only off POSITION/NODEINFO meant a node first heard via any other
+        // packet type (telemetry, text, routing) stayed invisible until the
+        // page was reloaded.
         const portnum = msg.portnum || msg.app_type || '';
-        if (portnum.includes('POSITION') || portnum.includes('NODEINFO')) {
+        if (isNewNode || portnum.includes('POSITION') || portnum.includes('NODEINFO')) {
             // Debounce node refresh to avoid too many requests
             clearTimeout(handleMessage._nodeRefreshTimeout);
             handleMessage._nodeRefreshTimeout = setTimeout(() => {
