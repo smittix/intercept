@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.0"
+VERSION = "2.33.1"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.1",
+        "date": "September 2026",
+        "highlights": [
+            "Fix: ACARS crashed with SIGILL in the amd64 Docker image — acarsdec was compiled with the build host's instruction set (AVX-512) and would not run on older CPUs. Pull the latest image to pick up the fix.",
+        ],
+    },
     {
         "version": "2.33.0",
         "date": "August 2026",

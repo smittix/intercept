@@ -85,9 +85,14 @@ RUN cd /tmp \
     && rm -rf /tmp/rx_tools
 
 # Build acarsdec
+# Upstream hardcodes -march=native, which bakes the build host's ISA (AVX-512 on
+# the CI runners) into the binary and SIGILLs on older CPUs. Keep -Ofast, which
+# upstream reports matters for decoding, and drop the arch flag.
 RUN cd /tmp \
     && git clone --depth 1 https://github.com/TLeconte/acarsdec.git \
     && cd acarsdec \
+    && sed -i 's/ -march=native//' CMakeLists.txt \
+    && ! grep -q 'march=native' CMakeLists.txt \
     && mkdir build && cd build \
     && cmake .. -Drtl=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     && make \
