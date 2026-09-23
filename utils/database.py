@@ -255,9 +255,18 @@ def init_db() -> None:
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 role TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                must_change_password INTEGER NOT NULL DEFAULT 0
             )
         """)
+
+        # Older databases predate the forced-change flag.
+        try:
+            user_columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
+            if "must_change_password" not in user_columns:
+                conn.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0")
+        except Exception as e:
+            logger.debug(f"Schema update skipped for users: {e}")
 
         from config import ADMIN_PASSWORD, ADMIN_USERNAME
 
@@ -281,12 +290,16 @@ def init_db() -> None:
             logger.info(f"Creating default admin user: {ADMIN_USERNAME}")
             hashed_pw = generate_password_hash(admin_password)
 
+            # A password the operator did not choose has to be changed before
+            # the UI is usable. An explicitly configured INTERCEPT_ADMIN_PASSWORD
+            # is the operator's own choice, so it does not force a change.
+            must_change = 1 if not ADMIN_PASSWORD else 0
             conn.execute(
                 """
-                INSERT INTO users (username, password_hash, role)
-                VALUES (?, ?, ?)
+                INSERT INTO users (username, password_hash, role, must_change_password)
+                VALUES (?, ?, ?, ?)
             """,
-                (ADMIN_USERNAME, hashed_pw, "admin"),
+                (ADMIN_USERNAME, hashed_pw, "admin", must_change),
             )
         else:
             # Existing install: flag the historical admin/admin default, which
@@ -298,8 +311,12 @@ def init_db() -> None:
             if row and check_password_hash(row["password_hash"], "admin"):
                 logger.warning(
                     "SECURITY: the '%s' account still uses the default password 'admin'. "
-                    "Change it now - anyone who can reach this instance can log in.",
+                    "A change is now required before the interface can be used.",
                     ADMIN_USERNAME,
+                )
+                conn.execute(
+                    "UPDATE users SET must_change_password = 1 WHERE username = ? AND role = ?",
+                    (ADMIN_USERNAME, "admin"),
                 )
 
         if ADMIN_PASSWORD:
@@ -2309,6 +2326,35 @@ def get_agent_by_name(name: str) -> dict | None:
         if not row:
             return None
         return _row_to_agent(row)
+
+
+def user_must_change_password(username: str) -> bool:
+    """Whether this account is required to set a new password before use."""
+    with get_db() as conn:
+        cursor = conn.execute("SELECT must_change_password FROM users WHERE username = ?", (username,))
+        row = cursor.fetchone()
+        return bool(row["must_change_password"]) if row else False
+
+
+def set_user_password(username: str, new_password: str) -> bool:
+    """Set a user's password and clear the forced-change flag.
+
+    Returns False when the user does not exist.
+    """
+    with get_db() as conn:
+        cursor = conn.execute(
+            "UPDATE users SET password_hash = ?, must_change_password = 0 WHERE username = ?",
+            (generate_password_hash(new_password), username),
+        )
+        return cursor.rowcount > 0
+
+
+def verify_user_password(username: str, password: str) -> bool:
+    """Check a password against the stored hash."""
+    with get_db() as conn:
+        cursor = conn.execute("SELECT password_hash FROM users WHERE username = ?", (username,))
+        row = cursor.fetchone()
+        return bool(row) and check_password_hash(row["password_hash"], password)
 
 
 def get_agent_api_key(agent_id: int) -> str | None:
