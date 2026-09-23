@@ -1,5 +1,6 @@
 """API endpoint tests for Bluetooth v2 routes."""
 
+import queue
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
@@ -30,6 +31,13 @@ def mock_scanner():
     """Create mock BluetoothScanner."""
     with patch("routes.bluetooth_v2.get_bluetooth_scanner") as mock_get:
         scanner = MagicMock()
+        # A real queue, not the auto-created MagicMock attribute. The SSE
+        # fanout distributor thread calls source_queue.get(timeout=...) in a
+        # loop and relies on it blocking and raising queue.Empty. A MagicMock
+        # returns instantly, so the thread spins at full speed and every call
+        # is recorded in the mock -- an unbounded allocation that outlives the
+        # test, because the thread is a daemon held in a module-level registry.
+        scanner._event_queue = queue.Queue()
         scanner.is_scanning = False
         scanner.scan_mode = None
         scanner.scan_start_time = None
