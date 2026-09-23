@@ -10,6 +10,7 @@ This blueprint provides:
 
 from __future__ import annotations
 
+import hmac
 import logging
 import posixpath
 import queue
@@ -19,13 +20,14 @@ from collections.abc import Generator
 from datetime import datetime, timezone
 
 import requests
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, jsonify, redirect, request, session, url_for
 
 from utils.agent_client import AgentClient, AgentConnectionError, AgentHTTPError, create_client_from_agent
 from utils.database import (
     create_agent,
     delete_agent,
     get_agent,
+    get_agent_api_key,
     get_agent_by_name,
     get_recent_payloads,
     list_agents,
@@ -51,6 +53,43 @@ AGENT_STATUS_TIMEOUT_SECONDS = 2.5
 _agent_stream_subscribers: set[queue.Queue] = set()
 _agent_stream_subscribers_lock = threading.Lock()
 _AGENT_STREAM_CLIENT_QUEUE_SIZE = 500
+
+# Endpoints remote agents call inbound. These carry their own X-API-Key
+# check rather than a session, so the session gate below lets them through
+# to the handler that validates the key against the named agent.
+_AGENT_PUSH_ENDPOINTS = frozenset({"controller.ingest_push_data"})
+
+# Browser pages in this blueprint. An unauthenticated request for these gets
+# the same redirect the rest of the app gives, rather than a bare 401.
+_BROWSER_PAGE_ENDPOINTS = frozenset({"controller.agent_management_page", "controller.network_monitor_page"})
+
+
+@controller_bp.before_request
+def require_controller_auth():
+    """Authenticate every controller route.
+
+    app.py's global gate deliberately skips /controller/* because remote
+    agents authenticate with an API key rather than a session. That left
+    every route here open, including agent registration and the proxy that
+    starts and stops SDR modes on remote nodes. This is that gate.
+    """
+    if session.get("logged_in"):
+        return None
+
+    if request.endpoint in _AGENT_PUSH_ENDPOINTS:
+        # The handler validates X-API-Key against the named agent.
+        return None
+
+    if request.endpoint in _BROWSER_PAGE_ENDPOINTS:
+        # Match the rest of the app: send a browser to the login page rather
+        # than a bare 401. Falls back to 401 when this blueprint is mounted
+        # without the main app (no login endpoint to build a URL for).
+        try:
+            return redirect(url_for("login"))
+        except Exception:
+            return api_error("Authentication required", 401)
+
+    return api_error("Authentication required", 401)
 
 
 def _broadcast_agent_data(payload: dict) -> None:
@@ -87,7 +126,7 @@ def get_agents():
             try:
                 client = AgentClient(
                     agent["base_url"],
-                    api_key=agent.get("api_key"),
+                    api_key=get_agent_api_key(agent["id"]),
                     timeout=AGENT_HEALTH_TIMEOUT_SECONDS,
                 )
                 agent["healthy"] = client.health_check()
@@ -315,7 +354,7 @@ def check_all_agents_health():
         try:
             client = AgentClient(
                 agent["base_url"],
-                api_key=agent.get("api_key"),
+                api_key=get_agent_api_key(agent["id"]),
                 timeout=AGENT_HEALTH_TIMEOUT_SECONDS,
             )
 
@@ -335,7 +374,7 @@ def check_all_agents_health():
                 try:
                     status_client = AgentClient(
                         agent["base_url"],
-                        api_key=agent.get("api_key"),
+                        api_key=get_agent_api_key(agent["id"]),
                         timeout=AGENT_STATUS_TIMEOUT_SECONDS,
                     )
                     status = status_client.get_status()
@@ -468,8 +507,9 @@ def proxy_mode_stream(agent_id: int, mode: str):
         url = f"{url}?{query}"
 
     headers = {"Accept": "text/event-stream"}
-    if agent.get("api_key"):
-        headers["X-API-Key"] = agent["api_key"]
+    _stream_key = get_agent_api_key(agent["id"])
+    if _stream_key:
+        headers["X-API-Key"] = _stream_key
 
     def generate() -> Generator[str, None, None]:
         try:
@@ -615,12 +655,18 @@ def ingest_push_data():
     if not agent:
         return api_error("Unknown agent", 401)
 
-    # Validate API key if configured
-    if agent.get("api_key"):
-        provided_key = request.headers.get("X-API-Key", "")
-        if provided_key != agent["api_key"]:
-            logger.warning(f"Invalid API key from agent {agent_name}")
-            return api_error("Invalid API key", 401)
+    # Validate API key. This endpoint is reachable without a session so that
+    # agents can push, so the key is the only thing authenticating the caller.
+    # An agent registered without one previously accepted a push from anybody.
+    expected_key = get_agent_api_key(agent["id"])
+    if not expected_key:
+        logger.warning(f"Rejected push from agent {agent_name}: no API key configured")
+        return api_error("Agent has no API key configured; set one to enable push", 401)
+
+    provided_key = request.headers.get("X-API-Key", "")
+    if not hmac.compare_digest(provided_key, expected_key):
+        logger.warning(f"Invalid API key from agent {agent_name}")
+        return api_error("Invalid API key", 401)
 
     # Store payload
     try:

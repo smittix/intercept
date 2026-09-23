@@ -40,7 +40,15 @@ from flask import (
 )
 from werkzeug.security import check_password_hash
 
-from config import CHANGELOG, DEFAULT_LATITUDE, DEFAULT_LONGITUDE, SHARED_OBSERVER_LOCATION_ENABLED, VERSION
+from config import (
+    CHANGELOG,
+    DEFAULT_LATITUDE,
+    DEFAULT_LONGITUDE,
+    SHARED_OBSERVER_LOCATION_ENABLED,
+    SSL_CERT,
+    SSL_KEY,
+    VERSION,
+)
 from utils.cleanup import DataStore, cleanup_manager
 from utils.constants import (
     MAX_AIRCRAFT_AGE_SECONDS,
@@ -96,10 +104,21 @@ def _load_or_generate_secret_key():
     key_path.parent.mkdir(exist_ok=True)
     key = os.urandom(32).hex()
     key_path.write_text(key)
+    # Session-signing secret: readable only by the owner.
+    with contextlib.suppress(OSError):
+        key_path.chmod(0o600)
     return key
 
 
 app.secret_key = _load_or_generate_secret_key()
+
+# Session cookie hardening. SameSite=Lax is what browsers already default to,
+# but stating it means the protection is deliberate rather than inherited.
+# Secure is set only when TLS is configured, since it would otherwise stop
+# the cookie being sent at all over plain HTTP.
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = bool(SSL_CERT and SSL_KEY)
 
 # Set up HTTP compression (gzip/brotli for HTML, CSS, JS, JSON)
 if _has_compress:
@@ -447,13 +466,15 @@ def require_login():
     # Routes that don't require login (to avoid infinite redirect loop)
     allowed_routes = ["login", "static", "favicon", "health", "health_check"]
 
-    # Allow audio streaming endpoints without session auth
-    if request.path.startswith("/listening/audio/"):
-        return None
-
-    # Allow WebSocket upgrade requests (page load already required auth)
+    # A WebSocket upgrade is an ordinary HTTP request until the handshake
+    # completes, so the session is checkable here. It used to be allowed
+    # through on the assumption that a page load had already authenticated
+    # the client, but a WebSocket client need not load a page, and these
+    # endpoints carry live RF data.
     if request.path.startswith("/ws/"):
-        return None
+        if "logged_in" in session:
+            return None
+        return Response("Authentication required", status=401)
 
     # Controller API endpoints use API key auth, not session auth
     # Allow agent push/pull endpoints without session login

@@ -2,6 +2,25 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.6] - 2026-09-23
+
+### Security
+
+- **The `/controller/*` API required no authentication.** `app.py`'s global login gate deliberately skipped every path under `/controller/`, on the basis that those routes authenticated callers themselves. They did not: `routes/controller.py` contained no session or credential check of any kind. Anyone able to reach the port could list registered agents (including their API keys), register an agent pointing at any URL, delete agents, and use the command proxy to start or stop SDR modes on remote nodes. The blueprint now authenticates every route, accepting a session or — for agent push only — a valid API key.
+- **Agent API keys were returned to clients.** `_row_to_agent()` serialised `api_key`, so every `GET /controller/agents` response carried the shared secret of every configured agent. Responses now carry `has_api_key` instead, and internal callers fetch the secret explicitly via `get_agent_api_key()`.
+- **Agent push accepted unauthenticated data for keyless agents.** `/controller/api/ingest` only checked `X-API-Key` when the agent had one configured, so an agent registered without a key accepted a push from anybody. A key is now required, and compared in constant time.
+- **WebSocket endpoints skipped authentication.** `/ws/*` was allowed through on the assumption that a page load had already authenticated the client, but a WebSocket client need not load a page, and these endpoints carry live RF and audio data. The session is now verified on the upgrade request.
+- **The default admin password `admin` has been removed.** With no `INTERCEPT_ADMIN_PASSWORD` set, first-run now generates a random password, logs it and writes it to `instance/.initial_password` — behaviour that already existed but was unreachable because of the default. Existing installs still using `admin` now log a prominent warning at startup.
+- **Path traversal in `/offline/check-asset`.** The handler checked that a path began with `/static/vendor/` but never normalised it, so `/static/vendor/../../../etc/passwd` passed and its existence was reported. It leaked existence only, not contents. The path is now resolved and containment asserted, matching the pattern already used in `routes/recordings.py`.
+- **A stale authentication exemption for audio streaming.** `app.py` exempted every path under `/listening/audio/` from the login gate. The blueprint was later renamed to `/receiver`, so the rule matched no route and the audio endpoints were in fact protected — but the exemption remained, ready to reopen a hole the moment a `/listening` route was added back. Removed, with a test asserting no route sits under an exempted prefix.
+- **Session cookie and secret key hardening.** `SESSION_COOKIE_HTTPONLY` and `SESSION_COOKIE_SAMESITE=Lax` are now set explicitly rather than inherited from browser defaults, and `SESSION_COOKIE_SECURE` is set when TLS is configured. `instance/secret.key` is created with mode 0600.
+
+### Changed
+
+- **Remote agents must now have an API key to push data.** An agent registered without one will be refused by `/controller/api/ingest`. Set a key on each agent in Settings, and in the agent's own `controller_api_key` configuration.
+
+---
+
 ## [2.33.5] - 2026-09-23
 
 ### Fixed

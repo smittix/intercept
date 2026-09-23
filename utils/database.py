@@ -288,7 +288,21 @@ def init_db() -> None:
             """,
                 (ADMIN_USERNAME, hashed_pw, "admin"),
             )
-        elif ADMIN_PASSWORD:
+        else:
+            # Existing install: flag the historical admin/admin default, which
+            # shipped as the fallback before this was removed.
+            row = conn.execute(
+                "SELECT password_hash FROM users WHERE username = ? AND role = ?",
+                (ADMIN_USERNAME, "admin"),
+            ).fetchone()
+            if row and check_password_hash(row["password_hash"], "admin"):
+                logger.warning(
+                    "SECURITY: the '%s' account still uses the default password 'admin'. "
+                    "Change it now - anyone who can reach this instance can log in.",
+                    ADMIN_USERNAME,
+                )
+
+        if ADMIN_PASSWORD:
             # Sync admin credentials from config on every startup so that
             # changes to config.py / env vars take effect without wiping the DB.
             row = conn.execute(
@@ -2297,6 +2311,14 @@ def get_agent_by_name(name: str) -> dict | None:
         return _row_to_agent(row)
 
 
+def get_agent_api_key(agent_id: int) -> str | None:
+    """Return an agent's API key. Never put the result in an API response."""
+    with get_db() as conn:
+        cursor = conn.execute("SELECT api_key FROM agents WHERE id = ?", (agent_id,))
+        row = cursor.fetchone()
+        return row["api_key"] if row else None
+
+
 def _row_to_agent(row) -> dict:
     """Convert database row to agent dict."""
     return {
@@ -2304,7 +2326,10 @@ def _row_to_agent(row) -> dict:
         "name": row["name"],
         "base_url": row["base_url"],
         "description": row["description"],
-        "api_key": row["api_key"],
+        # The key itself is deliberately NOT serialised: agent dicts are
+        # returned to browsers by the controller API. Internal callers that
+        # need the secret fetch it with get_agent_api_key().
+        "has_api_key": bool(row["api_key"]),
         "capabilities": json.loads(row["capabilities"]) if row["capabilities"] else None,
         "interfaces": json.loads(row["interfaces"]) if row["interfaces"] else None,
         "gps_coords": json.loads(row["gps_coords"]) if row["gps_coords"] else None,
