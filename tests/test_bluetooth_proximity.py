@@ -356,7 +356,11 @@ class TestRingBuffer:
 
     def test_downsampling_bucket_average(self, buffer):
         """Downsampling should average RSSI in each bucket."""
-        now = datetime.now()
+        # Anchor to a bucket boundary. _downsample() buckets on the wall-clock
+        # second, so starting at an arbitrary now means now+2s crosses into the
+        # next 10s bucket whenever now.second is 8 or 9 -- a ~20% failure rate.
+        now = datetime.now().replace(microsecond=0)
+        now -= timedelta(seconds=now.second % 10)
 
         # Add multiple observations in same 10s bucket
         buffer._observations["device:1"] = [
