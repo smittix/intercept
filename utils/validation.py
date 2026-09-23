@@ -119,6 +119,18 @@ def validate_ppm(ppm: Any) -> int:
         raise ValueError(f"Invalid PPM: {ppm}") from e
 
 
+def validate_sensor_units(units: Any) -> str:
+    """Validate and return the rtl_433 unit conversion mode.
+
+    Maps to rtl_433's -C flag: "si" forces metric (Celsius, km/h, mm),
+    "customary" forces imperial, "native" leaves each device's own units.
+    """
+    units_str = str(units).strip().lower()
+    if units_str not in ("si", "customary", "native"):
+        raise ValueError(f"Units must be one of si, customary, native; got {units}")
+    return units_str
+
+
 def validate_hours(hours: Any, min_hours: int = 1, max_hours: int = 168) -> int:
     """Validate and return hours value (for satellite predictions)."""
     try:

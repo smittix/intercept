@@ -65,13 +65,15 @@ class TestDSCParser:
         """Test distress nature code to text conversion."""
         from utils.dsc.parser import get_distress_nature_text
 
-        assert get_distress_nature_text(100) == "UNDESIGNATED"
-        assert get_distress_nature_text(101) == "FIRE"
-        assert get_distress_nature_text(102) == "FLOODING"
-        assert get_distress_nature_text(103) == "COLLISION"
-        assert get_distress_nature_text(106) == "SINKING"
-        assert get_distress_nature_text(109) == "PIRACY"
-        assert get_distress_nature_text(110) == "MOB"  # Man overboard
+        assert get_distress_nature_text(100) == "FIRE_EXPLOSION"
+        assert get_distress_nature_text(101) == "FLOODING"
+        assert get_distress_nature_text(102) == "COLLISION"
+        assert get_distress_nature_text(103) == "GROUNDING"
+        assert get_distress_nature_text(105) == "SINKING"
+        assert get_distress_nature_text(107) == "UNDESIGNATED"
+        assert get_distress_nature_text(109) == "PIRACY_ARMED_ROBBERY"
+        assert get_distress_nature_text(110) == "MAN_OVERBOARD"
+        assert get_distress_nature_text(112) == "EPIRB"
 
     def test_get_distress_nature_text_unknown(self):
         """Test distress nature returns formatted unknown for invalid codes."""
@@ -84,19 +86,19 @@ class TestDSCParser:
         """Test distress nature accepts string input."""
         from utils.dsc.parser import get_distress_nature_text
 
-        assert get_distress_nature_text("101") == "FIRE"
+        assert get_distress_nature_text("101") == "FLOODING"
         assert get_distress_nature_text("invalid") == "invalid"
 
     def test_get_format_text(self):
         """Test format code to text conversion per ITU-R M.493."""
         from utils.dsc.parser import get_format_text
 
-        assert get_format_text(102) == "ALL_SHIPS"
-        assert get_format_text(112) == "INDIVIDUAL"
-        assert get_format_text(114) == "INDIVIDUAL_ACK"
-        assert get_format_text(116) == "GROUP"
-        assert get_format_text(120) == "DISTRESS"
-        assert get_format_text(123) == "ALL_SHIPS_URGENCY_SAFETY"
+        assert get_format_text(102) == "GEOGRAPHIC_AREA"
+        assert get_format_text(112) == "DISTRESS"
+        assert get_format_text(114) == "GROUP"
+        assert get_format_text(116) == "ALL_SHIPS"
+        assert get_format_text(120) == "INDIVIDUAL"
+        assert get_format_text(123) == "INDIVIDUAL_SEMI_AUTO"
 
     def test_get_format_text_unknown(self):
         """Test format code returns unknown for invalid codes."""
@@ -118,10 +120,12 @@ class TestDSCParser:
         """Test telecommand code to text conversion."""
         from utils.dsc.parser import get_telecommand_text
 
-        assert get_telecommand_text(100) == "F3E_G3E_ALL"
-        assert get_telecommand_text(105) == "DATA"
+        assert get_telecommand_text(100) == "F3E/G3E ALL MODES TP"
         assert get_telecommand_text(107) == "DISTRESS_ACK"
-        assert get_telecommand_text(111) == "TEST"
+        assert get_telecommand_text(118) == "TEST"
+        assert get_telecommand_text(126) == "NO_INFORMATION"
+        # Unverified codes report UNKNOWN rather than guessing a label
+        assert "UNKNOWN" in get_telecommand_text(105)
 
     def test_get_category_priority(self):
         """Test category priority values."""
@@ -188,13 +192,13 @@ class TestDSCParser:
         assert classify_mmsi("812345678") == "unknown"
 
     def test_parse_dsc_message_distress(self):
-        """Test parsing a distress message with ITU format 120."""
+        """Test parsing a distress message with ITU format 112."""
         from utils.dsc.parser import parse_dsc_message
 
         raw = json.dumps(
             {
                 "type": "dsc",
-                "format": 120,
+                "format": 112,
                 "source_mmsi": "232123456",
                 "dest_mmsi": "002320001",
                 "category": "DISTRESS",
@@ -202,7 +206,7 @@ class TestDSCParser:
                 "position": {"lat": 51.5, "lon": -0.1},
                 "telecommand1": 100,
                 "timestamp": "2025-01-15T12:00:00Z",
-                "raw": "120002032123456101100127",
+                "raw": "112002032123456101100127",
             }
         )
 
@@ -213,7 +217,7 @@ class TestDSCParser:
         assert msg["source_mmsi"] == "232123456"
         assert msg["category"] == "DISTRESS"
         assert msg["source_country"] == "United Kingdom"
-        assert msg["nature_of_distress"] == "FIRE"
+        assert msg["nature_of_distress"] == "FLOODING"
         assert msg["latitude"] == 51.5
         assert msg["longitude"] == -0.1
         assert msg["is_critical"] is True
@@ -494,10 +498,10 @@ class TestDSCParser:
             "source_mmsi": "232123456",
             "source_country": "United Kingdom",
             "dest_mmsi": "002320001",
-            "nature_of_distress": "FIRE",
+            "nature_of_distress": "FLOODING",
             "latitude": 51.5074,
             "longitude": -0.1278,
-            "telecommand1_text": "F3E_G3E_ALL",
+            "telecommand1_text": "F3E/G3E ALL MODES TP",
             "channel": 16,
             "timestamp": "2025-01-15T12:00:00Z",
         }
@@ -507,7 +511,7 @@ class TestDSCParser:
         assert "DISTRESS" in output
         assert "232123456" in output
         assert "United Kingdom" in output
-        assert "FIRE" in output
+        assert "FLOODING" in output
         assert "51.5074" in output
         assert "Channel: 16" in output
 
@@ -729,12 +733,22 @@ class TestDSCConstants:
     """Tests for DSC constants."""
 
     def test_format_codes_completeness(self):
-        """Test that all ITU-R M.493 format specifiers are defined."""
+        """Test format specifiers match ITU-R M.493 exactly.
+
+        Asserts values, not just key presence. Checking keys alone
+        passed while 112 and 120 were swapped, which labelled a routine
+        individual call as DISTRESS and a real mayday as INDIVIDUAL.
+        """
         from utils.dsc.constants import FORMAT_CODES
 
-        # ITU-R M.493 format specifiers (and only these)
-        expected_keys = {102, 112, 114, 116, 120, 123}
-        assert set(FORMAT_CODES.keys()) == expected_keys
+        assert FORMAT_CODES == {
+            102: "GEOGRAPHIC_AREA",
+            112: "DISTRESS",
+            114: "GROUP",
+            116: "ALL_SHIPS",
+            120: "INDIVIDUAL",
+            123: "INDIVIDUAL_SEMI_AUTO",
+        }
 
     def test_valid_format_specifiers_set(self):
         """Test VALID_FORMAT_SPECIFIERS matches FORMAT_CODES keys."""
@@ -749,17 +763,28 @@ class TestDSCConstants:
         assert {117, 122, 127} == VALID_EOS
 
     def test_distress_nature_codes_completeness(self):
-        """Test that all distress nature codes are defined."""
+        """Test distress nature codes match ITU-R M.493 exactly.
+
+        Asserts values, not just membership: a membership-only check
+        passes even when every label is shifted off its code, which is
+        how these codes drifted a full position out of alignment.
+        """
         from utils.dsc.constants import DISTRESS_NATURE_CODES
 
-        # ITU-R M.493 distress nature codes
-        assert 100 in DISTRESS_NATURE_CODES  # UNDESIGNATED
-        assert 101 in DISTRESS_NATURE_CODES  # FIRE
-        assert 102 in DISTRESS_NATURE_CODES  # FLOODING
-        assert 103 in DISTRESS_NATURE_CODES  # COLLISION
-        assert 106 in DISTRESS_NATURE_CODES  # SINKING
-        assert 109 in DISTRESS_NATURE_CODES  # PIRACY
-        assert 110 in DISTRESS_NATURE_CODES  # MOB
+        assert DISTRESS_NATURE_CODES == {
+            100: "FIRE_EXPLOSION",
+            101: "FLOODING",
+            102: "COLLISION",
+            103: "GROUNDING",
+            104: "LISTING_CAPSIZE_DANGER",
+            105: "SINKING",
+            106: "DISABLED_ADRIFT",
+            107: "UNDESIGNATED",
+            108: "ABANDONING_SHIP",
+            109: "PIRACY_ARMED_ROBBERY",
+            110: "MAN_OVERBOARD",
+            112: "EPIRB",
+        }
 
     def test_mid_country_map_completeness(self):
         """Test that common MID codes are defined."""
@@ -798,8 +823,9 @@ class TestDSCConstants:
 
         assert len(TELECOMMAND_CODES_FULL) == 128
         # Known codes map correctly
-        assert TELECOMMAND_CODES_FULL[100] == "F3E_G3E_ALL"
+        assert TELECOMMAND_CODES_FULL[100] == "F3E/G3E ALL MODES TP"
         assert TELECOMMAND_CODES_FULL[107] == "DISTRESS_ACK"
+        assert TELECOMMAND_CODES_FULL[118] == "TEST"
         # Unknown codes map to "UNKNOWN"
         assert TELECOMMAND_CODES_FULL[0] == "UNKNOWN"
         assert TELECOMMAND_CODES_FULL[99] == "UNKNOWN"
@@ -808,7 +834,7 @@ class TestDSCConstants:
         """Test TELECOMMAND_FORMATS contains correct format codes."""
         from utils.dsc.constants import TELECOMMAND_FORMATS
 
-        assert {112, 114, 116, 120, 123} == TELECOMMAND_FORMATS
+        assert {102, 114, 116, 120, 123} == TELECOMMAND_FORMATS
 
     def test_min_symbols_for_format(self):
         """Test MIN_SYMBOLS_FOR_FORMAT constant."""

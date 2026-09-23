@@ -984,6 +984,9 @@ class ModeManager:
         ppm = params.get("ppm")
         bias_t = params.get("bias_t", False)
         sdr_type_str = params.get("sdr_type", "rtlsdr")
+        units = str(params.get("units", "si")).strip().lower()
+        if units not in ("si", "customary", "native"):
+            return {"status": "error", "message": f"Invalid units: {params.get('units')}"}
 
         # Try to use Intercept's SDR abstraction layer
         sdr_factory = self._get_sdr_factory()
@@ -1011,6 +1014,9 @@ class ModeManager:
         else:
             # Fallback: build command directly
             cmd = self._build_sensor_command_fallback(freq, gain, device, ppm)
+
+        # Unit conversion, matching the controller's /start_sensor handling
+        cmd.extend(["-C", units])
 
         try:
             proc = subprocess.Popen(
