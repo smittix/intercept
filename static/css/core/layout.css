@@ -315,6 +315,18 @@
     color: var(--text-primary);
 }
 
+/* Kill All Processes - destructive, so it reads as distinct from the
+   other nav tools rather than sitting among them unremarked. */
+.nav-killall-btn {
+    color: var(--accent-red, #ff3366);
+}
+
+.nav-killall-btn:hover {
+    color: var(--accent-red, #ff3366);
+    border-color: var(--accent-red, #ff3366);
+    background: rgba(255, 51, 102, 0.12);
+}
+
 /* ============================================
    MOBILE NAVIGATION
    ============================================ */

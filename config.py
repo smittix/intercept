@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.5"
+VERSION = "2.33.6"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.6",
+        "date": "September 2026",
+        "highlights": [
+            "Feat: Kill All Processes is now in the global nav, so it is reachable from every page instead of only the main dashboard's System panel.",
+        ],
+    },
     {
         "version": "2.33.5",
         "date": "September 2026",
