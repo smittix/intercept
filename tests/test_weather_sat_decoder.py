@@ -24,6 +24,22 @@ from utils.weather_sat import (
 )
 
 
+def _satdump_argv(mock_popen):
+    """Return the satdump invocation captured by a patched subprocess.Popen.
+
+    A background system-stats thread shells out to vcgencmd, and it can land
+    inside these tests' global Popen patch. assert_called_once() therefore
+    asserts something these tests do not mean -- that no other subprocess ran
+    anywhere in the process -- and fails depending on thread timing. What they
+    actually care about is how satdump was launched.
+    """
+    for call in mock_popen.call_args_list:
+        argv = call[0][0] if call[0] else None
+        if isinstance(argv, (list, tuple)) and argv and argv[0] == "satdump":
+            return argv
+    raise AssertionError(f"satdump was not launched; Popen calls: {mock_popen.call_args_list}")
+
+
 @pytest.fixture(autouse=True)
 def _stop_decoder_threads():
     """Stop watcher/reader threads leaked by tests that call start().
@@ -154,8 +170,7 @@ class TestWeatherSatDecoder:
             assert decoder.current_mode == "APT"
             assert decoder.device_index == 0
 
-            mock_popen.assert_called_once()
-            cmd = mock_popen.call_args[0][0]
+            cmd = _satdump_argv(mock_popen)
             assert cmd[0] == "satdump"
             assert "live" in cmd
             assert "noaa_apt" in cmd
@@ -189,8 +204,7 @@ class TestWeatherSatDecoder:
             assert success is True
             assert error_msg is None
 
-            mock_popen.assert_called_once()
-            cmd = mock_popen.call_args[0][0]
+            cmd = _satdump_argv(mock_popen)
             assert "--source" in cmd
             source_idx = cmd.index("--source")
             assert cmd[source_idx + 1] == "rtltcp"
@@ -320,8 +334,7 @@ class TestWeatherSatDecoder:
             assert decoder.is_running is True
             assert decoder.current_satellite == "NOAA-18"
 
-            mock_popen.assert_called_once()
-            cmd = mock_popen.call_args[0][0]
+            cmd = _satdump_argv(mock_popen)
             assert cmd[0] == "satdump"
             assert "noaa_apt" in cmd
             assert "audio_wav" in cmd
