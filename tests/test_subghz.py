@@ -96,12 +96,15 @@ class TestReceive:
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
         manager._rx_process = mock_proc
-        # Pre-lock device checks now run before active_mode guard
-        manager._hackrf_available = True
+        # Pre-lock device checks now run before active_mode guard. start_receive
+        # resolves hackrf_transfer directly rather than going through
+        # check_hackrf(), so stubbing _hackrf_available is not enough on a host
+        # without the binary installed.
         manager._hackrf_device_cache = True
         manager._hackrf_device_cache_ts = _time.time()
 
-        result = manager.start_receive(frequency_hz=433920000)
+        with patch.object(manager, "_resolve_tool", return_value="/usr/bin/hackrf_transfer"):
+            result = manager.start_receive(frequency_hz=433920000)
         assert result["status"] == "error"
         assert "Already running" in result["message"]
 
@@ -209,8 +212,10 @@ class TestTxSafety:
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
         manager._rx_process = mock_proc
-        # Pre-lock device checks now run before active_mode guard
-        manager._hackrf_available = True
+        # Pre-lock device checks now run before active_mode guard. transmit()
+        # resolves hackrf_transfer directly rather than going through
+        # check_hackrf(), so stubbing _hackrf_available is not enough on a host
+        # without the binary installed.
         manager._hackrf_device_cache = True
         manager._hackrf_device_cache_ts = _time.time()
         # Capture lookup also runs pre-lock now; provide a valid capture + IQ file
@@ -224,7 +229,8 @@ class TestTxSafety:
         (tmp_data_dir / "captures" / "test.json").write_text(json.dumps(meta))
         (tmp_data_dir / "captures" / "test.iq").write_bytes(b"\x00" * 64)
 
-        result = manager.transmit(capture_id="test123")
+        with patch.object(manager, "_resolve_tool", return_value="/usr/bin/hackrf_transfer"):
+            result = manager.transmit(capture_id="test123")
         assert result["status"] == "error"
         assert "Already running" in result["message"]
 
