@@ -28,6 +28,7 @@ from utils.validation import (
     validate_ppm,
     validate_rtl_tcp_host,
     validate_rtl_tcp_port,
+    validate_sensor_units,
 )
 
 sensor_bp = Blueprint("sensor", __name__)
@@ -181,6 +182,7 @@ def start_sensor() -> Response:
             gain = validate_gain(data.get("gain", "0"))
             ppm = validate_ppm(data.get("ppm", "0"))
             device = validate_device_index(data.get("device", "0"))
+            units = validate_sensor_units(data.get("units", "si"))
         except ValueError as e:
             return api_error(str(e), 400)
 
@@ -245,6 +247,10 @@ def start_sensor() -> Response:
         # Add signal level metadata so the frontend scope can display RSSI/SNR
         # Disable stats reporting to suppress "row count limit 50 reached" warnings
         cmd.extend(["-M", "level", "-M", "stats:0"])
+
+        # Unit conversion: let rtl_433 normalise units rather than converting
+        # in the frontend, so logged and displayed values always agree.
+        cmd.extend(["-C", units])
 
         try:
             app_module.sensor_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

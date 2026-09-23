@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.2"
+VERSION = "2.33.3"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.3",
+        "date": "September 2026",
+        "highlights": [
+            "Feat: 433MHz sensor Units selector (Metric / Imperial / Native). Defaults to Metric, so temperatures now read in °C — pick Native to restore the previous per-device behaviour.",
+        ],
+    },
     {
         "version": "2.33.2",
         "date": "September 2026",

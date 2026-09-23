@@ -5382,6 +5382,7 @@
             const freq = document.getElementById('sensorFrequency').value;
             const gain = document.getElementById('sensorGain').value;
             const ppm = document.getElementById('sensorPpm').value;
+            const units = document.getElementById('sensorUnits').value;
             const device = getSelectedDevice();
 
             // Check if using remote agent
@@ -5396,6 +5397,7 @@
                     frequency: freq,
                     gain: gain,
                     ppm: ppm,
+                    units: units,
                     device: device
                 };
 
@@ -5434,6 +5436,7 @@
                 frequency: freq,
                 gain: gain,
                 ppm: ppm,
+                units: units,
                 device: device,
                 sdr_type: getSelectedSDRType(),
                 bias_t: getBiasTEnabled()

@@ -8,6 +8,7 @@ from utils.validation import (
     validate_gain,
     validate_rtl_tcp_host,
     validate_rtl_tcp_port,
+    validate_sensor_units,
 )
 
 
@@ -114,3 +115,33 @@ class TestRtlTcpPortValidation:
             validate_rtl_tcp_port(70000)
         with pytest.raises(ValueError):
             validate_rtl_tcp_port("abc")
+
+
+class TestSensorUnitsValidation:
+    """Tests for rtl_433 unit conversion mode validation."""
+
+    def test_valid_units(self):
+        """Test accepted unit modes."""
+        assert validate_sensor_units("si") == "si"
+        assert validate_sensor_units("customary") == "customary"
+        assert validate_sensor_units("native") == "native"
+
+    def test_units_normalised(self):
+        """Test case and surrounding whitespace are tolerated."""
+        assert validate_sensor_units("SI") == "si"
+        assert validate_sensor_units(" Native ") == "native"
+
+    def test_invalid_units(self):
+        """Test rejected unit modes.
+
+        Anything unrecognised must raise rather than reach rtl_433's -C
+        flag, which would fail the spawn with an unhelpful error.
+        """
+        with pytest.raises(ValueError):
+            validate_sensor_units("celsius")
+        with pytest.raises(ValueError):
+            validate_sensor_units("metric")
+        with pytest.raises(ValueError):
+            validate_sensor_units("")
+        with pytest.raises(ValueError):
+            validate_sensor_units(None)
