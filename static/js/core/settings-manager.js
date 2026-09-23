@@ -1387,6 +1387,8 @@ function switchSettingsTab(tabName) {
         loadUpdateStatus();
     } else if (tabName === 'location') {
         loadObserverLocation();
+    } else if (tabName === 'sdr') {
+        loadSdrDeviceSettings();
     } else if (tabName === 'alerts') {
         loadVoiceAlertConfig();
         if (typeof AlertCenter !== 'undefined') {
@@ -1525,6 +1527,131 @@ function setThemePreference(value) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ theme: value })
     }).catch(() => {});
+}
+
+/**
+ * Load per-device SDR configuration into the SDR settings tab.
+ * Built with DOM APIs throughout: names are user-supplied.
+ */
+function loadSdrDeviceSettings() {
+    const container = document.getElementById('settingsSdrDevices');
+    if (!container) return;
+
+    const message = (text) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'text-align: center; padding: 30px; color: var(--text-dim);';
+        div.textContent = text;
+        container.replaceChildren(div);
+    };
+
+    fetch('/devices')
+        .then(r => r.json())
+        .then(devices => {
+            if (!Array.isArray(devices) || devices.length === 0) {
+                message('No SDR devices detected');
+                return;
+            }
+            container.replaceChildren(...devices.map(renderSdrDeviceRow));
+        })
+        .catch(() => message('Could not load devices'));
+}
+
+function renderSdrDeviceRow(device) {
+    const config = device.config || {};
+    const row = document.createElement('div');
+    row.className = 'settings-row';
+    row.style.cssText = 'flex-direction: column; align-items: stretch; gap: 8px;';
+
+    const title = document.createElement('div');
+    title.className = 'settings-label-text';
+    const serial = device.serial && !['N/A', 'Unknown'].includes(device.serial) ? ` (SN: ${device.serial})` : '';
+    title.textContent = `${(device.sdr_type || 'sdr').toUpperCase()} #${device.index}: ${device.hardware_name || device.name}${serial}`;
+    row.appendChild(title);
+
+    if (!device.keyed_by_serial) {
+        const note = document.createElement('div');
+        note.className = 'settings-label-desc';
+        note.style.color = 'var(--accent-orange, #f0a030)';
+        note.textContent = 'No unique serial number: these settings belong to USB position ' +
+            `#${device.index}, not to this dongle, and follow whatever is plugged in there. ` +
+            'Give the dongle its own serial with rtl_eeprom -s to make them follow it.';
+        row.appendChild(note);
+    }
+
+    const field = (label, input) => {
+        const wrap = document.createElement('label');
+        wrap.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px;';
+        const span = document.createElement('span');
+        span.textContent = label;
+        wrap.append(span, input);
+        return wrap;
+    };
+    const input = (type, value, placeholder, attrs = {}) => {
+        const el = document.createElement('input');
+        el.type = type;
+        el.className = 'settings-input';
+        el.value = value ?? '';
+        el.placeholder = placeholder;
+        Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+        return el;
+    };
+
+    const name = input('text', config.name, device.hardware_name || 'Display name', { maxlength: 48 });
+    const ppm = input('number', config.ppm, 'Not set (0)', { step: 1, min: -1000, max: 1000 });
+    const gain = input('number', config.gain, 'Not set (mode default)', { step: 0.1, min: 0, max: 102 });
+    const biasT = document.createElement('select');
+    biasT.className = 'settings-input';
+    [['', 'Not set (off)'], ['true', 'On'], ['false', 'Off']].forEach(([value, label]) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = label;
+        biasT.appendChild(opt);
+    });
+    biasT.value = config.bias_t === undefined ? '' : String(config.bias_t);
+
+    row.append(
+        field('Name', name),
+        field('PPM correction', ppm),
+        field('Default gain (dB)', gain),
+        field('Bias-T default', biasT),
+    );
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display: flex; align-items: center; gap: 10px;';
+    const status = document.createElement('span');
+    status.style.cssText = 'font-size: 11px; color: var(--text-dim);';
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'check-assets-btn';
+    save.textContent = 'Save';
+    save.addEventListener('click', () => {
+        const body = {
+            name: name.value,
+            ppm: ppm.value,
+            gain: gain.value,
+            bias_t: biasT.value === '' ? null : biasT.value === 'true',
+        };
+        save.disabled = true;
+        fetch(`/devices/config/${encodeURIComponent(device.config_key)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        })
+            .then(r => r.json().then(data => ({ ok: r.ok, data })))
+            .then(({ ok, data }) => {
+                status.style.color = ok ? 'var(--accent-green)' : 'var(--accent-red)';
+                status.textContent = ok ? 'Saved' : (data.message || 'Save failed');
+                if (ok && typeof refreshDevices === 'function') refreshDevices();
+            })
+            .catch(() => {
+                status.style.color = 'var(--accent-red)';
+                status.textContent = 'Save failed';
+            })
+            .finally(() => { save.disabled = false; });
+    });
+    actions.append(save, status);
+    row.appendChild(actions);
+    return row;
 }
 
 /**

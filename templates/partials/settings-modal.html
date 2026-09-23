@@ -12,6 +12,7 @@
         <div class="settings-tabs" role="tablist" aria-label="Settings sections">
             <button type="button" class="settings-tab active" data-tab="offline" onclick="switchSettingsTab('offline')" role="tab" aria-controls="settings-offline" aria-selected="true">Offline</button>
             <button type="button" class="settings-tab" data-tab="location" onclick="switchSettingsTab('location')" role="tab" aria-controls="settings-location" aria-selected="false">Location</button>
+            <button type="button" class="settings-tab" data-tab="sdr" onclick="switchSettingsTab('sdr')" role="tab" aria-controls="settings-sdr" aria-selected="false">SDR</button>
             <button type="button" class="settings-tab" data-tab="display" onclick="switchSettingsTab('display')" role="tab" aria-controls="settings-display" aria-selected="false">Display</button>
             <button type="button" class="settings-tab" data-tab="updates" onclick="switchSettingsTab('updates')" role="tab" aria-controls="settings-updates" aria-selected="false">Updates</button>
             <button type="button" class="settings-tab" data-tab="tools" onclick="switchSettingsTab('tools')" role="tab" aria-controls="settings-tools" aria-selected="false">Tools</button>
@@ -215,6 +216,21 @@
         </div>
 
         <!-- Display Section -->
+        <div id="settings-sdr" class="settings-section">
+            <div class="settings-group">
+                <div class="settings-group-title">SDR Devices</div>
+                <p style="color: var(--text-dim); margin-bottom: 15px; font-size: 12px;">
+                    Name each receiver and set its corrections. A mode uses the PPM, gain and bias-T
+                    set here whenever its own field is left blank. A value entered in the mode still wins.
+                </p>
+                <div id="settingsSdrDevices">
+                    <div style="text-align: center; padding: 30px; color: var(--text-dim);">
+                        Loading devices...
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="settings-display" class="settings-section">
             <div class="settings-group">
                 <div class="settings-group-title">Visual Preferences</div>

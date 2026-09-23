@@ -511,15 +511,16 @@ def get_sdr_devices() -> Response:
     """Enumerate all connected SDR devices (on-demand, not every tick)."""
     try:
         from utils.sdr.detection import detect_all_devices
+        from utils.sdr.device_config import display_names
 
         devices = detect_all_devices()
         result = []
-        for d in devices:
+        for d, name in zip(devices, display_names(devices)):
             result.append(
                 {
                     "type": d.sdr_type.value if hasattr(d.sdr_type, "value") else str(d.sdr_type),
                     "index": d.index,
-                    "name": d.name,
+                    "name": name,
                     "serial": d.serial or "",
                     "driver": d.driver or "",
                 }

@@ -15,6 +15,7 @@ from flask import Blueprint, Response, jsonify, request, send_file
 
 from utils.logging import get_logger
 from utils.responses import api_error
+from utils.sdr.device_config import apply_device_defaults
 from utils.sse import sse_stream
 from utils.validation import (
     validate_device_index,
@@ -165,6 +166,7 @@ def start_capture():
         )
 
     data = request.get_json(silent=True) or {}
+    data = apply_device_defaults(data)
     sdr_type_str = data.get("sdr_type", "rtlsdr")
 
     if sdr_type_str != "rtlsdr":

@@ -2,6 +2,21 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.9] - 2026-09-23
+
+### Added
+
+- **Named SDR devices.** Settings > SDR lists each detected receiver with a display name, which then replaces the hardware name ("Generic RTL2832U", "Device 0") in every device selector. Useful where several dongles each have a dedicated antenna. Names are capped at 48 characters and may not contain control characters or any of `` < > " ' ` ``. Requested by @bob1234uk (#269).
+- **Per-device PPM correction, default gain and bias-T.** Set once per receiver, applied on every start of any mode using it: pager, 433 MHz sensors, morse, OOK, ACARS, VDL2, rtlamr, APRS, DSC, radiosonde, waterfall and Meteor, plus ADS-B and AIS, whose RTL-SDR commands now carry the correction (`dump1090 --ppm`, `AIS-catcher -p`). A mode's own field wins when filled in; left blank, the device default applies. The PPM (and pager and sensor gain) fields now start blank for that reason (#238).
+- Settings follow the dongle across replugs when it reports a unique serial number. Most RTL-SDRs ship with the factory serial `00000001`; those, and any serial two dongles share, are keyed by USB position instead, and the SDR tab says so. Give a dongle its own serial with `rtl_eeprom -s` to make its settings follow it.
+- Remote agents apply the same defaults, read from the agent host's own settings, and now validate PPM and gain before starting a decoder.
+
+### Fixed
+
+- **rtlamr ignored PPM correction and could not connect.** The correction was passed to `rtl_tcp` as `-p`, which is its listen port; it is now `-P`.
+
+---
+
 ## [2.33.8] - 2026-09-23
 
 ### Security

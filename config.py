@@ -7,10 +7,19 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.8"
+VERSION = "2.33.9"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.9",
+        "date": "September 2026",
+        "highlights": [
+            "Feat: name your SDRs. Settings > SDR gives each receiver a display name that replaces 'Device 0' in every device selector (#269).",
+            "Feat: per-device PPM correction, default gain and bias-T. A mode uses them whenever its own field is left blank; a value entered in the mode still wins (#238).",
+            "Fix: rtlamr passed PPM correction to rtl_tcp as its listen port.",
+        ],
+    },
     {
         "version": "2.33.8",
         "date": "September 2026",

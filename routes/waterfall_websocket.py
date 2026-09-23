@@ -27,6 +27,8 @@ from utils.logging import get_logger
 from utils.process import register_process, safe_terminate, unregister_process
 from utils.sdr import SDRFactory, SDRType
 from utils.sdr.base import SDRCapabilities, SDRDevice
+from utils.sdr.device_config import apply_device_defaults
+from utils.validation import validate_ppm
 from utils.waterfall_fft import (
     build_binary_frame,
     compute_power_spectrum,
@@ -453,6 +455,8 @@ def init_waterfall_websocket(app: Flask):
                     if was_restarting:
                         time.sleep(0.5)
 
+                    data = apply_device_defaults(data)
+
                     # Parse config
                     try:
                         center_freq_mhz = _parse_center_freq_mhz(data)
@@ -475,7 +479,7 @@ def init_waterfall_websocket(app: Flask):
                         avg_count = int(data.get("avg_count", 4))
                         ppm = data.get("ppm")
                         if ppm is not None:
-                            ppm = int(ppm)
+                            ppm = validate_ppm(ppm)
                         bias_t = bool(data.get("bias_t", False))
                         db_min = data.get("db_min")
                         db_max = data.get("db_max")

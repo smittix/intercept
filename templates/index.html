@@ -6353,7 +6353,7 @@
             } else {
                 select.innerHTML = filteredDevices.map(d => {
                     const serialSuffix = d.serial && d.serial !== 'N/A' && d.serial !== 'Unknown' ? ` (SN: ${d.serial})` : '';
-                    return `<option value="${d.index}" data-sdr-type="${d.sdr_type || 'rtlsdr'}">${d.index}: ${d.name}${serialSuffix}</option>`;
+                    return `<option value="${d.index}" data-sdr-type="${escapeHtml(d.sdr_type || 'rtlsdr')}">${d.index}: ${escapeHtml(d.name)}${escapeHtml(serialSuffix)}</option>`;
                 }).join('');
             }
 
@@ -6426,7 +6426,7 @@
                 return `<div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid var(--border-color);">
                     <div style="display: flex; align-items: center;">
                         ${statusDot}
-                        <span style="font-size: 11px;">#${d.index} ${d.name || 'Unknown'}${d.serial && d.serial !== 'N/A' && d.serial !== 'Unknown' ? ` (${d.serial})` : ''}</span>
+                        <span style="font-size: 11px;">#${d.index} ${escapeHtml(d.name || 'Unknown')}${d.serial && d.serial !== 'N/A' && d.serial !== 'Unknown' ? ` (${escapeHtml(d.serial)})` : ''}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span style="font-size: 10px; color: ${modeColor}; font-weight: bold;">${modeName}</span>

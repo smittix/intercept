@@ -62,6 +62,7 @@ from utils.constants import (
 from utils.dependencies import check_all_dependencies, check_tool
 from utils.process import cleanup_stale_dump1090, cleanup_stale_processes
 from utils.sdr import SDRFactory
+from utils.sdr.device_config import describe_devices, set_device_config
 
 try:
     from flask_limiter import Limiter
@@ -589,7 +590,7 @@ def index() -> str:
         "rtl_433": check_tool("rtl_433"),
         "rtlamr": check_tool("rtlamr"),
     }
-    devices = [d.to_dict() for d in SDRFactory.detect_devices()]
+    devices = describe_devices(SDRFactory.detect_devices())
     return render_template(
         "index.html",
         tools=tools,
@@ -622,8 +623,19 @@ def pwa_manifest() -> Response:
 @app.route("/devices")
 def get_devices() -> Response:
     """Get all detected SDR devices with hardware type info."""
-    devices = SDRFactory.detect_devices()
-    return jsonify([d.to_dict() for d in devices])
+    return jsonify(describe_devices(SDRFactory.detect_devices()))
+
+
+@app.route("/devices/config/<key>", methods=["PUT", "DELETE"])
+@(csrf.exempt if csrf else lambda f: f)  # fetch() JSON API, like the blueprints
+def update_device_config(key: str) -> Response:
+    """Set or clear a device's display name, PPM, default gain and bias-T."""
+    try:
+        data = {} if request.method == "DELETE" else request.get_json(silent=True)
+        config = set_device_config(key, data)
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+    return jsonify({"status": "success", "key": key, "config": config})
 
 
 @app.route("/devices/status")
@@ -633,8 +645,7 @@ def get_devices_status() -> Response:
     registry = get_sdr_device_status()
 
     result = []
-    for device in devices:
-        d = device.to_dict()
+    for device, d in zip(devices, describe_devices(devices)):
         key = f"{device.sdr_type.value}:{device.index}"
         d["in_use"] = key in registry
         d["used_by"] = registry.get(key)
