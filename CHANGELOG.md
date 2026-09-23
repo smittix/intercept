@@ -2,6 +2,13 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.4] - 2026-09-23
+
+### Fixed
+- **ADS-B aircraft from a remote agent never cleared** — `intercept_agent.py` accumulated every aircraft it heard for the lifetime of the scan, with no expiry, and served the whole set on every dashboard poll. The dashboard stamps each arrival as freshly seen, so its own 60-second expiry could never fire and contacts stayed on the map until the mode was stopped. The agent now drops aircraft not heard within `MAX_AIRCRAFT_AGE_SECONDS` (5 minutes), the same TTL local mode already used, and reports an accurate live count. Local (non-agent) tracking was unaffected. Reported by @bob1234uk (#263).
+
+---
+
 ## [2.33.3] - 2026-09-23
 
 ### Added
