@@ -96,7 +96,15 @@ def register_blueprints(app):
     app.register_blueprint(ground_station_bp)  # Ground station automation
     app.register_blueprint(drone_bp)  # Drone intelligence / UAV detection
 
-    # Exempt all API blueprints from CSRF (they use JSON, not form tokens)
+    # Every blueprint here is a JSON API driven by fetch(), so none carries a
+    # CSRF form token and all are exempt. The exemption is blanket on purpose:
+    # an explicit allow-list of 40+ names would break a new blueprint that
+    # someone forgot to add, without protecting anything extra.
+    #
+    # The actual CSRF protection is the session cookie's SameSite=Lax setting
+    # (app.py), which stops the cookie being sent on a cross-site POST at all.
+    # If a future blueprint serves HTML forms, protect it individually rather
+    # than relying on this loop.
     if _csrf:
         for bp in app.blueprints.values():
             _csrf.exempt(bp)

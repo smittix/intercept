@@ -282,4 +282,11 @@ def create_client_from_agent(agent: dict) -> AgentClient:
     Returns:
         Configured AgentClient
     """
-    return AgentClient(base_url=agent["base_url"], api_key=agent.get("api_key"), timeout=60.0)
+    # Agent dicts no longer carry the key (it is returned to browsers), so
+    # fetch it here. A dict that still has one - a test fixture, say - wins.
+    api_key = agent.get("api_key")
+    if api_key is None and agent.get("id") is not None:
+        from utils.database import get_agent_api_key
+
+        api_key = get_agent_api_key(agent["id"])
+    return AgentClient(base_url=agent["base_url"], api_key=api_key, timeout=60.0)
