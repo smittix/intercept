@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.0"
+VERSION = "2.33.2"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.2",
+        "date": "September 2026",
+        "highlights": [
+            "Fix: DSC call types and nature-of-distress labels were wrong — format specifiers 112/120 were swapped, so a routine individual call displayed as DISTRESS and a real mayday displayed as INDIVIDUAL. Nature-of-distress labels were shifted one position off every code.",
+        ],
+    },
     {
         "version": "2.33.0",
         "date": "August 2026",
