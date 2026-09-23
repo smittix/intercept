@@ -50,6 +50,13 @@ try:
 except ImportError:
     HAS_CAPABILITIES_MODULE = False
 
+# Share the controller's aircraft TTL so agent and local mode age contacts
+# out at the same rate.
+try:
+    from utils.constants import MAX_AIRCRAFT_AGE_SECONDS
+except ImportError:
+    MAX_AIRCRAFT_AGE_SECONDS = 300
+
 # Import TSCM modules for consistent analysis (same as local mode)
 try:
     from utils.tscm.correlation import CorrelationEngine
@@ -594,6 +601,7 @@ class ModeManager:
             info = {"running": True, **self.running_modes[mode]}
             # Add mode-specific stats
             if mode == "adsb":
+                self._prune_stale_aircraft()
                 info["aircraft_count"] = len(self.adsb_aircraft)
             elif mode == "wifi":
                 info["network_count"] = len(self.wifi_networks)
@@ -635,6 +643,7 @@ class ModeManager:
 
         # Mode-specific data
         if mode == "adsb":
+            self._prune_stale_aircraft()
             data["data"] = list(self.adsb_aircraft.values())
         elif mode == "wifi":
             data["data"] = {
@@ -1328,6 +1337,26 @@ class ModeManager:
             pass
 
         self.adsb_aircraft[icao] = aircraft
+
+    def _prune_stale_aircraft(self) -> None:
+        """Drop aircraft not heard from within MAX_AIRCRAFT_AGE_SECONDS.
+
+        The agent serves its whole aircraft dict on every poll, and the
+        dashboard stamps each one as freshly seen on arrival. Without
+        pruning here, a contact heard once stays on the map until the mode
+        is stopped -- the dashboard's own 60s expiry can never fire for it.
+        """
+        cutoff = datetime.now(timezone.utc).timestamp() - MAX_AIRCRAFT_AGE_SECONDS
+        for icao, aircraft in list(self.adsb_aircraft.items()):
+            last_seen = aircraft.get("last_seen")
+            if not last_seen:
+                continue
+            try:
+                seen_at = datetime.fromisoformat(last_seen).timestamp()
+            except (TypeError, ValueError):
+                continue
+            if seen_at < cutoff:
+                del self.adsb_aircraft[icao]
 
     # -------------------------------------------------------------------------
     # WIFI MODE (airodump-ng) - Uses Intercept's utilities

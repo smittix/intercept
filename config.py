@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.3"
+VERSION = "2.33.4"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.4",
+        "date": "September 2026",
+        "highlights": [
+            "Fix: ADS-B aircraft tracked via a remote agent never left the map \u2014 the agent kept every contact for the life of the scan and re-sent them on each poll, so they only cleared when the mode was stopped. Contacts now age out after 5 minutes, matching local mode.",
+        ],
+    },
     {
         "version": "2.33.3",
         "date": "September 2026",
