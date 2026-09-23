@@ -96,8 +96,15 @@ def temp_csv_file():
 # =============================================================================
 
 
+@pytest.mark.live
 class TestToolDetection:
-    """Tests for tool availability detection."""
+    """Tests for tool availability detection.
+
+    These assert that the external decoders are actually installed, so they
+    describe the machine rather than the code and cannot pass on a bare CI
+    runner. Marked live, matching the rest of this file, so they are
+    deselected by default and run explicitly with: pytest -m live
+    """
 
     def test_rtl_433_available(self):
         """rtl_433 should be installed."""
@@ -137,8 +144,12 @@ class TestToolDetection:
 class TestRTLSDRDetection:
     """Tests for RTL-SDR hardware detection."""
 
+    @pytest.mark.live
     def test_rtl_test_runs(self):
-        """rtl_test should run (even if no device)."""
+        """rtl_test should run (even if no device).
+
+        Requires rtl_test on PATH, so it is live-only.
+        """
         result = subprocess.run(["rtl_test", "-t"], capture_output=True, timeout=5)
         # Will return 0 if device found, non-zero if not
         # We just verify it runs without crashing
