@@ -466,10 +466,6 @@ def require_login():
     # Routes that don't require login (to avoid infinite redirect loop)
     allowed_routes = ["login", "static", "favicon", "health", "health_check"]
 
-    # Allow audio streaming endpoints without session auth
-    if request.path.startswith("/listening/audio/"):
-        return None
-
     # A WebSocket upgrade is an ordinary HTTP request until the handshake
     # completes, so the session is checkable here. It used to be allowed
     # through on the assumption that a page load had already authenticated

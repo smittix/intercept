@@ -17,7 +17,7 @@ CHANGELOG = [
         "highlights": [
             "Security: the /controller/* API required no authentication at all \u2014 anyone who could reach the port could list remote agents, read their API keys, register or delete agents, and start or stop SDR hardware on remote nodes. It now requires a session, or an API key for agent push.",
             "Security: agent API keys are no longer included in API responses.",
-            "Security: WebSocket endpoints now verify the session; the default admin password has been removed; session cookies set SameSite and HttpOnly explicitly.",
+            "Security: WebSocket endpoints now verify the session; a stale auth exemption for audio streaming was removed; the default admin password has been removed; session cookies set SameSite and HttpOnly explicitly.",
             "Action required: if you run remote agents, each must now have an API key configured to push data.",
         ],
     },

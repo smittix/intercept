@@ -1,5 +1,19 @@
 """Tests for the offline asset checker, notably its path containment."""
 
+import pytest
+
+
+@pytest.fixture
+def auth_enabled_client(app, monkeypatch):
+    """A client with authentication ACTUALLY enabled.
+
+    tests/conftest.py sets INTERCEPT_DISABLE_AUTH=1 for the shared app, so
+    every other test bypasses require_login entirely. Anything asserting
+    that a route is gated has to undo that, or it proves nothing.
+    """
+    monkeypatch.delenv("INTERCEPT_DISABLE_AUTH", raising=False)
+    return app.test_client()
+
 
 def _logged_in_get(client, path, **kwargs):
     with client.session_transaction() as sess:
@@ -53,3 +67,41 @@ class TestCheckAssetContainment:
     def test_non_vendor_prefix_still_refused(self, client):
         resp = _logged_in_get(client, "/offline/check-asset", query_string={"path": "/etc/passwd"})
         assert resp.status_code == 400
+
+
+class TestNoAudioAuthBypass:
+    """Audio streaming endpoints must require a session.
+
+    app.py carried an exemption for paths under "/listening/audio/". The
+    blueprint was later renamed to "/receiver", so the rule matched nothing
+    and the endpoints were in fact protected - but the rule sat there ready
+    to reopen a hole if a "/listening" route were ever added back.
+    """
+
+    AUDIO_PATHS = [
+        "/receiver/audio/stream",
+        "/receiver/audio/status",
+        "/receiver/audio/probe",
+        "/receiver/audio/debug",
+    ]
+
+    def test_audio_endpoints_require_auth(self, auth_enabled_client):
+        for path in self.AUDIO_PATHS:
+            resp = auth_enabled_client.get(path)
+            assert resp.status_code in (302, 401), f"{path} reachable anonymously"
+
+    def test_audio_endpoints_reachable_when_logged_in(self, auth_enabled_client):
+        """The paths exist; they are gated, not missing."""
+        with auth_enabled_client.session_transaction() as sess:
+            sess["logged_in"] = True
+        resp = auth_enabled_client.get("/receiver/audio/status")
+        assert resp.status_code != 404
+
+    def test_no_route_is_exempted_by_path_prefix(self, app):
+        """No registered route should sit under a path the gate exempts."""
+        exempt_prefixes = ("/listening/",)
+        rules = [r.rule for r in app.url_map.iter_rules()]
+        for prefix in exempt_prefixes:
+            assert not [r for r in rules if r.startswith(prefix)], (
+                f"routes exist under exempted prefix {prefix}"
+            )
