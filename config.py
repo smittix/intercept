@@ -19,6 +19,20 @@ CHANGELOG = [
         ],
     },
     {
+        "version": "2.33.2",
+        "date": "September 2026",
+        "highlights": [
+            "Fix: DSC call types and nature-of-distress labels were wrong — format specifiers 112/120 were swapped, so a routine individual call displayed as DISTRESS and a real mayday displayed as INDIVIDUAL. Nature-of-distress labels were shifted one position off every code.",
+        ],
+    },
+    {
+        "version": "2.33.1",
+        "date": "September 2026",
+        "highlights": [
+            "Fix: ACARS crashed with SIGILL in the amd64 Docker image — acarsdec was compiled with the build host's instruction set (AVX-512) and would not run on older CPUs. Pull the latest image to pick up the fix.",
+        ],
+    },
+    {
         "version": "2.33.0",
         "date": "August 2026",
         "highlights": [

@@ -12,6 +12,20 @@ All notable changes to iNTERCEPT will be documented in this file.
 
 ---
 
+## [2.33.2] - 2026-09-23
+
+### Fixed
+- **DSC call types and distress labels were mislabelled** — `utils/dsc/constants.py` held a second, unverified copy of the ITU-R M.493 lookup tables that disagreed with the spec-verified tables in `decoder.py`. Format specifiers 112 and 120 were swapped, so a routine individual call was labelled `DISTRESS` and an actual distress alert was labelled `INDIVIDUAL` in the VHF DSC monitor. Nature-of-distress codes were shifted one position against the spec, mislabelling every nature (a sinking read as "listing", man overboard read as "piracy"). The telecommand table also mapped 111 to `TEST` where the spec assigns 118. All three tables now match the spec, unverified telecommand codes report `UNKNOWN (<code>)` rather than guessing, and the tests assert exact values instead of key membership. Reported by @jimarndt (#244).
+
+---
+
+## [2.33.1] - 2026-09-23
+
+### Fixed
+- **ACARS SIGILL in the amd64 Docker image** — `acarsdec` upstream hardcodes `-Ofast -march=native`, so the published amd64 binary was compiled for the build runner's CPU and contained AVX-512 instructions. Starting ACARS on any CPU without AVX-512 (e.g. Core i5-8500) crashed immediately with `Illegal instruction`. The container build now strips `-march=native` while keeping `-Ofast`. Same fix class as the SatDump build (#185); ARM64 images were unaffected. Thanks to @mitchross for the diagnosis (#246).
+
+---
+
 ## [2.33.0] - 2026-08-31
 
 ### Added
