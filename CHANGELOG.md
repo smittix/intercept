@@ -2,6 +2,22 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.8] - 2026-09-23
+
+### Security
+
+- **A password you did not choose must now be changed before the interface is usable.** Removing the shipped `admin` default in 2.33.6 closed the vulnerability, but an install seeded with a generated password could still be left on it indefinitely. Accounts seeded that way, and any existing install still using `admin`, are now flagged: login redirects to a change-password page and every other route is blocked until a new password is set. An explicitly configured `INTERCEPT_ADMIN_PASSWORD` is treated as the operator's own choice and does not force a change.
+
+### Added
+
+- **Change Password page** at `/change-password`, reachable whether or not a change is required. Requires the current password, a minimum of 12 characters, and confirmation.
+
+### Fixed
+
+- **Logout now clears the whole session** rather than only the `logged_in` flag, so no state survives into the next session.
+
+---
+
 ## [2.33.7] - 2026-09-23
 
 ### Added

@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.7"
+VERSION = "2.33.8"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.8",
+        "date": "September 2026",
+        "highlights": [
+            "Security: an account seeded with a password you did not choose now has to set one before the interface is usable. New installs, and any install still using the old admin/admin default, are prompted at first login.",
+            "Feat: a Change Password page, reachable at /change-password whether or not a change is required.",
+        ],
+    },
     {
         "version": "2.33.7",
         "date": "September 2026",

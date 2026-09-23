@@ -464,7 +464,7 @@ def require_login():
         return None
 
     # Routes that don't require login (to avoid infinite redirect loop)
-    allowed_routes = ["login", "static", "favicon", "health", "health_check"]
+    allowed_routes = ["login", "static", "favicon", "health", "health_check", "change_password"]
 
     # A WebSocket upgrade is an ordinary HTTP request until the handshake
     # completes, so the session is checkable here. It used to be allowed
@@ -485,10 +485,61 @@ def require_login():
     if "logged_in" not in session and request.endpoint not in allowed_routes:
         return redirect(url_for("login"))
 
+    # An account seeded with a password the operator did not choose must set
+    # one before anything else is reachable. The flag is cleared by
+    # set_user_password(), so this resolves as soon as the change is made.
+    if session.get("must_change_password") and request.endpoint not in allowed_routes:
+        if request.path.startswith("/api/") or request.is_json:
+            return jsonify({"status": "error", "message": "Password change required"}), 403
+        return redirect(url_for("change_password"))
+
+
+@app.route("/change-password", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
+def change_password() -> Response | str:
+    """Set a new password.
+
+    Reachable only when logged in. Required before anything else when the
+    account was seeded with a password the operator did not choose.
+    """
+    if "logged_in" not in session:
+        return redirect(url_for("login"))
+
+    username = session.get("username")
+    forced = bool(session.get("must_change_password"))
+
+    if request.method == "POST":
+        from utils.database import set_user_password, verify_user_password
+
+        current = request.form.get("current_password") or ""
+        new = request.form.get("new_password") or ""
+        confirm = request.form.get("confirm_password") or ""
+
+        error = None
+        if not verify_user_password(username, current):
+            error = "Current password is incorrect"
+        elif len(new) < 12:
+            error = "New password must be at least 12 characters"
+        elif new != confirm:
+            error = "New passwords do not match"
+        elif new == current:
+            error = "New password must differ from the current one"
+
+        if error:
+            flash(error, "error")
+        else:
+            set_user_password(username, new)
+            session.pop("must_change_password", None)
+            logger.info(f"Password changed for user '{username}'.")
+            flash("Password updated", "success")
+            return redirect(url_for("index"))
+
+    return render_template("change_password.html", version=VERSION, forced=forced, username=username)
+
 
 @app.route("/logout")
 def logout():
-    session.pop("logged_in", None)
+    session.clear()
     return redirect(url_for("login"))
 
 
@@ -511,6 +562,14 @@ def login():
             session["username"] = username
             session["role"] = user["role"]
 
+            from utils.database import user_must_change_password
+
+            if user_must_change_password(username):
+                session["must_change_password"] = True
+                logger.info(f"User '{username}' logged in; password change required.")
+                return redirect(url_for("change_password"))
+
+            session.pop("must_change_password", None)
             logger.info(f"User '{username}' logged in successfully.")
             return redirect(url_for("index"))
         else:
