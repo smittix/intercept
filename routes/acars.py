@@ -441,7 +441,7 @@ def get_frequencies() -> Response:
             "default": DEFAULT_ACARS_FREQUENCIES,
             "regions": {
                 "north_america": ["131.550", "130.025", "129.125", "131.725", "131.825"],
-                "europe": ["131.525", "131.725", "131.550"],
+                "europe": ["131.525", "131.725", "131.550", "131.825"],
                 "asia_pacific": ["131.550", "131.450"],
             },
         }
