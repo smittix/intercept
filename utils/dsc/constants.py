@@ -14,12 +14,12 @@ from __future__ import annotations
 # =============================================================================
 
 FORMAT_CODES = {
-    102: "ALL_SHIPS",  # All ships call
-    112: "INDIVIDUAL",  # Individual call
-    114: "INDIVIDUAL_ACK",  # Individual acknowledgement
-    116: "GROUP",  # Group call (including geographic area)
-    120: "DISTRESS",  # Distress alert
-    123: "ALL_SHIPS_URGENCY_SAFETY",  # All ships urgency/safety
+    102: "GEOGRAPHIC_AREA",  # Geographical area call
+    112: "DISTRESS",  # Distress alert
+    114: "GROUP",  # Group call (ships with common interest)
+    116: "ALL_SHIPS",  # All ships call
+    120: "INDIVIDUAL",  # Individual call
+    123: "INDIVIDUAL_SEMI_AUTO",  # Individual, semi-automatic/automatic service
 }
 
 # Valid ITU-R M.493 format specifiers
@@ -45,17 +45,17 @@ CATEGORY_PRIORITY = {
 # =============================================================================
 
 DISTRESS_NATURE_CODES = {
-    100: "UNDESIGNATED",  # Undesignated distress
-    101: "FIRE",  # Fire, explosion
-    102: "FLOODING",  # Flooding
-    103: "COLLISION",  # Collision
-    104: "GROUNDING",  # Grounding
-    105: "LISTING",  # Listing, in danger of capsizing
-    106: "SINKING",  # Sinking
-    107: "DISABLED",  # Disabled and adrift
-    108: "ABANDONING",  # Abandoning ship
-    109: "PIRACY",  # Piracy/armed robbery attack
-    110: "MOB",  # Man overboard
+    100: "FIRE_EXPLOSION",  # Fire, explosion
+    101: "FLOODING",  # Flooding
+    102: "COLLISION",  # Collision
+    103: "GROUNDING",  # Grounding
+    104: "LISTING_CAPSIZE_DANGER",  # Listing, in danger of capsizing
+    105: "SINKING",  # Sinking
+    106: "DISABLED_ADRIFT",  # Disabled and adrift
+    107: "UNDESIGNATED",  # Undesignated distress
+    108: "ABANDONING_SHIP",  # Abandoning ship
+    109: "PIRACY_ARMED_ROBBERY",  # Piracy/armed robbery attack
+    110: "MAN_OVERBOARD",  # Man overboard
     112: "EPIRB",  # EPIRB emission
 }
 
@@ -65,34 +65,25 @@ DISTRESS_NATURE_CODES = {
 # Per ITU-R M.493-15 Tables 4-5
 # =============================================================================
 
+# Only values confirmed directly against spec text are listed. Anything
+# else resolves to UNKNOWN (<code>) rather than a guess, matching the
+# decoder's policy -- a wrong label is worse than an honest unknown.
 TELECOMMAND_CODES = {
-    # First telecommand (type of subsequent communication)
-    100: "F3E_G3E_ALL",  # F3E/G3E all modes (VHF telephony)
-    101: "F3E_G3E_DUPLEX",  # F3E/G3E duplex
-    102: "POLLING",  # Polling
-    103: "UNABLE_TO_COMPLY",  # Unable to comply
-    104: "END_OF_CALL",  # End of call
-    105: "DATA",  # Data
-    106: "J3E_TELEPHONY",  # J3E telephony (SSB)
+    100: "F3E/G3E ALL MODES TP",  # All modes telephony
+    101: "F3E/G3E DUPLEX TP",  # Duplex telephony
     107: "DISTRESS_ACK",  # Distress acknowledgement
     108: "DISTRESS_RELAY",  # Distress relay
-    109: "F1B_J2B_FEC",  # F1B/J2B FEC NBDP telegraphy
-    110: "F1B_J2B_ARQ",  # F1B/J2B ARQ NBDP telegraphy
-    111: "TEST",  # Test
-    112: "SHIP_POSITION",  # Ship position request
-    113: "NO_INFO",  # No information
-    118: "FREQ_ANNOUNCEMENT",  # Frequency announcement
-    126: "NO_REASON",  # No reason given
-    # Second telecommand (additional info)
-    200: "F3E_G3E_SIMPLEX",  # Simplex VHF telephony requested
-    201: "POLL_RESPONSE",  # Poll response
+    118: "TEST",  # Test
+    121: "POSITION_OR_LOCATION_UPDATING",  # Position/location updating
+    126: "NO_INFORMATION",  # No information
 }
 
 # Full 0-127 telecommand lookup (maps unknown codes to "UNKNOWN")
 TELECOMMAND_CODES_FULL = {i: TELECOMMAND_CODES.get(i, "UNKNOWN") for i in range(128)}
 
-# Format codes that carry telecommand fields
-TELECOMMAND_FORMATS = {112, 114, 116, 120, 123}
+# Format codes that carry telecommand fields. Distress (112) carries a
+# nature-of-distress symbol instead, so it is excluded.
+TELECOMMAND_FORMATS = {102, 114, 116, 120, 123}
 
 # Minimum symbols (after phasing strip) before an EOS can be accepted
 MIN_SYMBOLS_FOR_FORMAT = 12
