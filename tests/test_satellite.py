@@ -167,7 +167,11 @@ def test_tle_auto_refresh_schedules_daily_repeat(mock_load_db, mock_refresh):
             if self._delay <= 5:
                 self._fn()
 
-    with patch("routes.satellite.threading") as mock_threading:
+    # Never fetched before: the first fetch is at startup (see test_tle_fetch_schedule.py)
+    with (
+        patch("routes.satellite.threading") as mock_threading,
+        patch("routes.satellite._tle_startup_delay", return_value=2.0),
+    ):
         mock_threading.Timer = CapturingTimer
         mock_threading.Thread = real_threading.Thread
 
