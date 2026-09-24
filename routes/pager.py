@@ -22,7 +22,7 @@ from flask import Blueprint, Response, jsonify, request
 import app as app_module
 from utils.dependencies import get_tool_path, install_hint
 from utils.logging import pager_logger as logger
-from utils.process import register_process, unregister_process
+from utils.process import register_process, terminate_together, unregister_process
 from utils.responses import api_error
 from utils.sdr import SDRFactory, SDRType
 from utils.sdr.device_config import apply_device_defaults
@@ -475,30 +475,18 @@ def stop_decoding() -> Response:
 
     with app_module.process_lock:
         if app_module.current_process:
-            # Signal audio relay thread to stop
-            if hasattr(app_module.current_process, "_stop_relay"):
-                app_module.current_process._stop_relay.set()
+            process = app_module.current_process
+            # rtl_fm and multimon-ng together, waiting until both are gone.
+            # The audio relay keeps draining rtl_fm meanwhile: stopped first,
+            # it left rtl_fm blocked writing to a full pipe, deaf to SIGTERM
+            # until killed two seconds later.
+            terminate_together([getattr(process, "_rtl_process", None), process])
 
-            # Kill rtl_fm process first
-            if hasattr(app_module.current_process, "_rtl_process"):
-                try:
-                    app_module.current_process._rtl_process.terminate()
-                    app_module.current_process._rtl_process.wait(timeout=2)
-                except (subprocess.TimeoutExpired, OSError):
-                    with contextlib.suppress(OSError):
-                        app_module.current_process._rtl_process.kill()
-
-            # Close PTY master fd
-            if hasattr(app_module.current_process, "_master_fd"):
+            if hasattr(process, "_stop_relay"):
+                process._stop_relay.set()
+            if hasattr(process, "_master_fd"):
                 with contextlib.suppress(OSError):
-                    os.close(app_module.current_process._master_fd)
-
-            # Kill multimon-ng
-            app_module.current_process.terminate()
-            try:
-                app_module.current_process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                app_module.current_process.kill()
+                    os.close(process._master_fd)
 
             app_module.current_process = None
 

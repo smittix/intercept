@@ -434,6 +434,7 @@
         let agentPollTimer = null;  // Polling fallback for agent mode
         let isTracking = false;
         let isTrackingStarting = false;
+        let isTrackingStopping = false;
         let currentFilter = 'all';
         // ICAO -> { emergency: bool, watchlist: bool, military: bool }
         let alertedAircraft = {};
@@ -2305,7 +2306,7 @@ sudo make install</code>
             const btn = document.getElementById('startBtn');
             const useAgent = typeof adsbCurrentAgent !== 'undefined' && adsbCurrentAgent !== 'local';
 
-            if (isTrackingStarting) {
+            if (isTrackingStarting || isTrackingStopping) {
                 return;
             }
 
@@ -2453,6 +2454,11 @@ sudo make install</code>
                     }
                 }
             } else {
+                // A stop can take a few seconds (dump1090 has to let go of the
+                // dongle): say so, and ignore clicks meanwhile, rather than look dead.
+                isTrackingStopping = true;
+                btn.disabled = true;
+                btn.textContent = 'STOPPING…';
                 try {
                     // Route stop through the source that actually started tracking.
                     const stopSource = adsbTrackingSource || (useAgent ? adsbCurrentAgent : 'local');
@@ -2490,7 +2496,11 @@ sudo make install</code>
                     }
                 } catch (err) {
                     alert('Failed to stop ADS-B: ' + err.message);
+                    btn.textContent = 'STOP';
                     return;
+                } finally {
+                    isTrackingStopping = false;
+                    btn.disabled = false;
                 }
 
                 stopEventStream();

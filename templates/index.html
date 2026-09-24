@@ -4435,7 +4435,11 @@
             }
         }
 
-        const LOCAL_STOP_TIMEOUT_MS = 2200;
+        // Long enough for a stop to finish: the server signals a mode's
+        // processes together, and kills and waits for any that ignore it
+        // (2 s + 2 s; ADS-B allows dump1090 5 s). Giving up sooner showed
+        // "stopped" while a decoder was still running.
+        const LOCAL_STOP_TIMEOUT_MS = 8000;
         const REMOTE_STOP_TIMEOUT_MS = 8000;
         const DASHBOARD_NAV_PATHS = new Set([
             '/adsb/dashboard',
@@ -4632,6 +4636,25 @@
                     const elapsedMs = Math.round(performance.now() - started);
                     console.debug(`[Stop] ${url} finished in ${elapsedMs}ms`);
                 });
+        }
+
+        /**
+         * After a local stop that did not confirm, ask the mode whether its
+         * decoder is still running. If it is, show it running again and say
+         * so, rather than showing "stopped" over a radio that is not.
+         */
+        async function confirmStopped(label, statusUrl, result, onStillRunning) {
+            if (result && (result.status === 'stopped' || result.status === 'not_running')) return true;
+            try {
+                const status = await (await fetch(statusUrl)).json();
+                if (!status.running) return true;
+            } catch (err) {
+                // status unknown: say nothing rather than guess
+                return true;
+            }
+            onStillRunning();
+            showError(`${label} did not stop. Use Kill All Processes to stop it.`);
+            return false;
         }
 
         async function awaitStopAction(name, action, timeoutMs = LOCAL_STOP_TIMEOUT_MS) {
@@ -5525,9 +5548,12 @@
                 releaseDevice('sensor');
             }
 
-            return postStopRequest(endpoint, timeoutMs).then((data) => {
+            return postStopRequest(endpoint, timeoutMs).then(async (data) => {
                 if (isAgentMode && data && data.status !== 'error' && data.status !== 'timeout') {
                     showInfo('Sensor stopped on remote agent');
+                }
+                if (!isAgentMode) {
+                    await confirmStopped('433 MHz decoder', '/sensor/status', data, () => setSensorRunning(true));
                 }
                 return data;
             });
@@ -6926,7 +6952,12 @@
                 pagerPollTimer = null;
             }
 
-            return postStopRequest(endpoint, timeoutMs);
+            return postStopRequest(endpoint, timeoutMs).then(async (data) => {
+                if (!isAgentMode) {
+                    await confirmStopped('Pager decoder', '/status', data, () => setRunning(true));
+                }
+                return data;
+            });
         }
 
         function killAll() {
