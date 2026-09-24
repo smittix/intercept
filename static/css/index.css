@@ -23,6 +23,7 @@
 
     /* Accent colors - slate/cyan */
     --accent-cyan: #4aa3ff;
+    --accent: var(--accent-cyan);  /* selected toggles in OOK and Morse use this name */
     --accent-cyan-dim: rgba(var(--accent-cyan-rgb), 0.16);
     --accent-green: #38c180;
     --accent-green-dim: rgba(56, 193, 128, 0.18);
