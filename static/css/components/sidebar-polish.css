@@ -109,3 +109,41 @@
         animation: none;
     }
 }
+
+/* A mode's describe-only opening section, shown from the status card's (i) */
+.sidebar .section.sb-intro {
+    display: none;
+}
+
+.sidebar .section.sb-intro.sb-intro-open {
+    display: block;
+}
+
+.sidebar .section.sb-intro > h3 {
+    display: none;
+}
+
+.sidebar .section.sb-intro,
+.sidebar .section.sb-intro * {
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.sb-status-info {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-secondary);
+    font: italic 700 11px/16px Georgia, serif;
+    cursor: pointer;
+}
+
+.sb-status-info:hover,
+.sb-status-info.on {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
