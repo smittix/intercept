@@ -414,12 +414,12 @@ const Meshtastic = (function() {
 
         // Update sidebar
         if (nameEl) nameEl.textContent = nodeName;
-        if (idEl) idEl.textContent = nodeId;
+        if (idEl) CopyId.set(idEl, nodeId === '--' ? '' : nodeId, nodeId);
         if (modelEl) modelEl.textContent = hwModel;
 
         // Update strip
         if (stripNodeName) stripNodeName.textContent = nodeName;
-        if (stripNodeId) stripNodeId.textContent = nodeId;
+        if (stripNodeId) CopyId.set(stripNodeId, nodeId === '--' ? '' : nodeId, nodeId);
         if (stripModel) stripModel.textContent = hwModel;
 
         // Position is nested in the response
@@ -771,7 +771,7 @@ const Meshtastic = (function() {
         const popupContent = `
             <div style="min-width: 150px;">
                 <strong style="color: var(--accent-cyan);">${node.long_name || shortName}</strong><br>
-                <span style="color: var(--text-dim);">ID:</span> ${nodeId}<br>
+                <span style="color: var(--text-dim);">ID:</span> ${CopyId.html(nodeId)}<br>
                 <span style="color: var(--text-dim);">Model:</span> ${node.hw_model || 'Unknown'}<br>
                 <span style="color: var(--text-dim);">Position:</span> ${node.latitude.toFixed(5)}, ${node.longitude.toFixed(5)}<br>
                 ${node.altitude ? `<span style="color: var(--text-dim);">Altitude:</span> ${node.altitude}m<br>` : ''}
