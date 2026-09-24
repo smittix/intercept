@@ -105,6 +105,9 @@ class TestWeFaxScheduler:
     @patch("threading.Timer")
     def test_terminal_progress_releases_scheduler_device_early(self, mock_timer):
         """Scheduler captures must release SDR as soon as terminal progress arrives."""
+        # A broadcast still ahead, whatever the time of day: one whose window
+        # has already passed is stopped (and completed) as soon as it starts.
+        upcoming = (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%H:%M")
         scheduler = WeFaxScheduler()
         scheduler._enabled = True
         scheduler._callsign = "NOJ"
@@ -119,7 +122,7 @@ class TestWeFaxScheduler:
             station="USCG Kodiak",
             callsign="NOJ",
             frequency_khz=4298.0,
-            utc_time="12:00",
+            utc_time=upcoming,
             duration_min=20,
             content="Chart",
             occurrence_date="2026-01-01",
