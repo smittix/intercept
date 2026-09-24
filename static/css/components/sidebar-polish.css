@@ -1,0 +1,111 @@
+/* Sidebar polish: status card and section icons (static/js/core/sidebar-polish.js) */
+
+.sb-status {
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-cyan);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(var(--accent-cyan-rgb, 74, 163, 255), 0.06), transparent), var(--bg-card);
+    font-size: 11px;
+}
+
+.sb-status[hidden] {
+    display: none;
+}
+
+.sb-status-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sb-status-top strong {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+}
+
+.sb-status-state {
+    margin-left: auto;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
+
+.sb-status-light {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+}
+
+.sb-status-light.on {
+    background: var(--accent-green);
+    box-shadow: 0 0 8px var(--accent-green);
+    animation: sb-status-pulse 2s ease-in-out infinite;
+}
+
+.sb-status-light.off {
+    background: transparent;
+    border: 1.5px solid var(--text-dim);
+}
+
+@keyframes sb-status-pulse {
+    50% { box-shadow: 0 0 2px var(--accent-green); }
+}
+
+.sb-status-rows {
+    display: grid;
+    gap: 3px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+}
+
+.sb-status-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+.sb-status-row span:first-child {
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+
+.sb-status-row span:last-child {
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Section icons take the place of the accent bar */
+.sb-icon {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--accent-cyan);
+    opacity: 0.85;
+}
+
+.sb-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.section h3:has(.sb-icon)::before {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sb-status-light.on {
+        animation: none;
+    }
+}
