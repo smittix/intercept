@@ -281,7 +281,9 @@ def init_db() -> None:
                 logger.warning(f"Generated admin password: {admin_password}")
                 logger.warning("Set INTERCEPT_ADMIN_PASSWORD env var to use a fixed password.")
                 try:
-                    pw_path = Path("instance/.initial_password")
+                    # Beside the database, not relative to the working
+                    # directory, which is wherever the process was started.
+                    pw_path = DB_DIR / ".initial_password"
                     pw_path.parent.mkdir(parents=True, exist_ok=True)
                     pw_path.write_text(f"{ADMIN_USERNAME}:{admin_password}\n")
                 except OSError as e:
