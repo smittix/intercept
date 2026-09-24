@@ -18,6 +18,7 @@ CHANGELOG = [
             "Fix: TSCM reports now assess each finding's signal from what was observed; every finding previously read 'Minimal, Low confidence'.",
             "Fix: the TSCM CSV annex listed every device as informational with risk score 0, and could carry spreadsheet formulas from device names.",
             "Fix: a TSCM report for a running or aborted sweep failed with a server error; sweep times were shown in UTC beside a local 'Generated' time.",
+            "Fix: a TSCM sweep that detected nothing is now reported as INCONCLUSIVE, not as a clean LOW, and an enabled Wi-Fi or Bluetooth band that saw no devices is called out.",
         ],
     },
     {

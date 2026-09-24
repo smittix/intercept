@@ -85,7 +85,7 @@ class TSCMReport:
 
     # Executive summary
     executive_summary: str = ""
-    overall_risk_assessment: str = "low"  # low, moderate, elevated, high
+    overall_risk_assessment: str = "low"  # inconclusive, low, moderate, elevated, high
     key_findings_count: int = 0
 
     # Capabilities used
@@ -190,6 +190,10 @@ def generate_executive_summary(report: TSCMReport) -> str:
 
     # Overall assessment
     assessment_text = {
+        "inconclusive": (
+            "No devices were detected on any band. This usually means the sweep equipment "
+            "was not receiving, and is not evidence that the area is clear."
+        ),
         "low": "No significant indicators of surveillance activity were detected.",
         "moderate": "Some devices require review but no confirmed surveillance indicators.",
         "elevated": "Multiple indicators warrant further investigation.",
@@ -851,6 +855,9 @@ class TSCMReportBuilder:
                 self.report.overall_risk_assessment = "elevated"
         elif self.report.needs_review_findings:
             self.report.overall_risk_assessment = "moderate"
+        elif not self.report.total_devices_scanned and not self.report.informational_findings:
+            # Nothing seen at all points at the equipment, not at a clear room.
+            self.report.overall_risk_assessment = "inconclusive"
         else:
             self.report.overall_risk_assessment = "low"
 
@@ -957,6 +964,23 @@ def generate_report(
         new=baseline_diff.get("summary", {}).get("new_devices", 0) if baseline_diff else 0,
         missing=baseline_diff.get("summary", {}).get("missing_devices", 0) if baseline_diff else 0,
     )
+
+    # An enabled band that saw nothing points at the equipment. Wi-Fi and
+    # Bluetooth are never empty in an occupied building; a quiet RF band can
+    # be genuine, so it is not called out. Leads the limitations because the
+    # executive summary shows only the first three.
+    if sweep_data.get("results") is not None:
+        silent = [
+            band
+            for band, enabled, count in (
+                ("Wi-Fi", "wifi_enabled", wifi_count + wifi_client_count),
+                ("Bluetooth", "bt_enabled", bt_count),
+            )
+            if sweep_data.get(enabled, True) and count == 0
+        ]
+        builder.report.limitations = [
+            f"{band} was enabled but detected no devices; verify the adapter" for band in silent
+        ] + builder.report.limitations
 
     # Technical data
     builder.add_device_timelines(timelines)

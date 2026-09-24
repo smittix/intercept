@@ -67,9 +67,7 @@ def report(frozen, tscm_survey):
 def _empty_survey():
     """A sweep that saw devices but flagged none: the legitimate 'nothing found'.
 
-    Not zero devices scanned. That report currently also reads 'LOW, no
-    significant indicators', which would present a sweep whose adapters saw
-    nothing as a clean room; it is flagged for review, not tested here.
+    Not zero devices scanned: that is inconclusive (see TestNothingDetected).
     """
     return {
         "sweep_id": 1,
@@ -436,3 +434,64 @@ class TestReportRoutes:
     def test_running_sweep_does_not_500(self, client, sweep):
         sweep.update(results=None, completed_at=None, status="running")
         assert client.get("/tscm/report/pdf?sweep_id=42").status_code == 200
+
+
+class TestNothingDetected:
+    """A sweep that detected nothing is inconclusive, not clear.
+
+    In an occupied building Wi-Fi and Bluetooth are never empty, so zero
+    devices almost always means the equipment was not receiving. Reporting
+    that as 'LOW, no significant indicators' would present a failed sweep
+    to the client as a clean room.
+    """
+
+    def _survey(self, **results):
+        survey = _empty_survey()
+        survey["sweep_data"]["results"] = results
+        survey["sweep_data"].update(wifi_enabled=True, bt_enabled=True, rf_enabled=True)
+        return survey
+
+    def test_zero_devices_is_inconclusive(self, frozen):
+        report = reports.generate_report(**self._survey())
+        text = reports.get_pdf_report(report)
+        assert report.overall_risk_assessment == "inconclusive"
+        assert "OVERALL ASSESSMENT: INCONCLUSIVE" in text
+        assert "not evidence that the area is clear" in text
+        assert "No significant indicators" not in text
+
+    def test_a_device_seen_without_counts_is_not_inconclusive(self, frozen):
+        """A running sweep has no result counts yet but may have seen devices."""
+        survey = self._survey()
+        survey["sweep_data"]["results"] = None
+        survey["device_profiles"] = [{"identifier": "AA:BB:CC:DD:EE:FF", "protocol": "wifi"}]
+        assert reports.generate_report(**survey).overall_risk_assessment == "low"
+
+    def test_empty_enabled_band_is_called_out(self, frozen):
+        report = reports.generate_report(**self._survey(wifi_count=0, bt_count=12, rf_count=0))
+        assert report.overall_risk_assessment == "low"
+        assert "Wi-Fi was enabled but detected no devices; verify the adapter" in report.executive_summary
+        assert "Bluetooth was enabled" not in report.executive_summary
+
+    def test_band_warnings_lead_the_limitations(self, frozen, tscm_survey):
+        """The summary shows only the first three limitations."""
+        tscm_survey["sweep_data"]["results"] = {"wifi_count": 0, "bt_count": 0, "rf_count": 4}
+        report = reports.generate_report(**tscm_survey)
+        assert report.limitations[:2] == [
+            "Wi-Fi was enabled but detected no devices; verify the adapter",
+            "Bluetooth was enabled but detected no devices; verify the adapter",
+        ]
+        assert "No coverage above 1.7 GHz" in report.limitations
+        assert tscm_survey["capabilities"]["all_limitations"] == [
+            "No coverage above 1.7 GHz",
+            "Single-antenna Bluetooth; no direction finding",
+        ], "the caller's capabilities must not be modified"
+
+    def test_disabled_band_is_not_called_out(self, frozen):
+        survey = self._survey(wifi_count=0, bt_count=12)
+        survey["sweep_data"]["wifi_enabled"] = False
+        assert "Wi-Fi was enabled" not in reports.generate_report(**survey).executive_summary
+
+    def test_no_band_warnings_before_results_exist(self, frozen):
+        survey = self._survey()
+        survey["sweep_data"]["results"] = None
+        assert not any("was enabled" in x for x in reports.generate_report(**survey).limitations)
