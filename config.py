@@ -7,10 +7,19 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.21"
+VERSION = "2.33.22"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.22",
+        "date": "September 2026",
+        "highlights": [
+            "Polish round 3: the light theme no longer leaves dark panels on a light page, and every page has thin, dark scrollbars.",
+            "Leaner screens: mode descriptions fold behind an (i), the duplicate Kill All button and the bottom bar go where they did nothing, and phones get modes first.",
+            "An idle waterfall that explains itself, WebSDR receivers on first visit, trend lines on the ADS-B and AIS counts, and Settings tabs that fit.",
+        ],
+    },
     {
         "version": "2.33.21",
         "date": "September 2026",
