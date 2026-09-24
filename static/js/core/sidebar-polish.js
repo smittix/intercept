@@ -9,6 +9,8 @@
  * - Sections were all collapsed on every visit. Now the sections you open in
  *   a mode are remembered for that mode, and a mode you have not arranged
  *   opens its first section.
+ * - The card carries the mode's Start / Stop: it presses the mode's own
+ *   button, so long sidebars need no scrolling to start or stop.
  * - A mode's opening section that only describes it (a heading and a
  *   paragraph, no controls) is folded behind an (i) on the status card, so
  *   the sidebar starts with something you can set.
@@ -53,6 +55,16 @@
 
     let health = null;
     let introShown = false;
+
+    // Modes whose start/stop buttons are not .run-btn / .stop-btn in their panel
+    const ACTION_IDS = {
+        aprs: ['aprsStripStartBtn', 'aprsStripStopBtn'],
+        sstv: ['sstvStartBtn', 'sstvStopBtn'],
+        sstv_general: ['sstvGeneralStartBtn', 'sstvGeneralStopBtn'],
+        wefax: ['wefaxStartBtn', 'wefaxStopBtn'],
+        weathersat: ['wxsatStartBtn', 'wxsatStopBtn'],
+        subghz: ['subghzRxStartBtn', 'subghzRxStopBtn'],
+    };
 
     function currentModeName() {
         try { return currentMode; } catch (err) { return null; }  // eslint-disable-line no-undef
@@ -142,6 +154,44 @@
         if (!sections.length) return;
         const open = sections.filter((s) => !s.classList.contains('collapsed')).map(titleOf);
         try { localStorage.setItem(OPEN_KEY + mode, JSON.stringify(open)); } catch (err) { /* this visit only */ }
+    }
+
+    // ------------------------------------------------------------ start / stop
+
+    function shown(btn) {
+        if (!btn || btn.disabled) return false;
+        if (btn.style.display === 'none') return false;
+        // In a collapsed section it is only folded away, not unavailable
+        return btn.offsetParent !== null || !!btn.closest('.section.collapsed');
+    }
+
+    /** The mode's own Start or Stop button that is showing now, if any. */
+    function actionButton(mode) {
+        const panel = modePanel(mode);
+        const candidates = [];
+        (ACTION_IDS[mode] || []).forEach((id) => candidates.push(document.getElementById(id)));
+        if (panel) candidates.push(...panel.querySelectorAll('.run-btn, .stop-btn'));
+        // Only a start or stop: not "Rescan SDR", "Open TSCM mode" or "Find Receivers"
+        return candidates.find((b) => shown(b) && START_STOP.test(b.textContent)) || null;
+    }
+
+    const START_STOP = /\b(start|stop|connect|disconnect)\b|\b(quick|deep) scan\b/i;
+
+    function actionControl(mode) {
+        const target = actionButton(mode);
+        if (!target) return null;
+        const label = target.textContent.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+        const stop = /\b(stop|disconnect)\b/i.test(label) || target.classList.contains('stop-btn');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sb-status-action ' + (stop ? 'stop' : 'start');
+        btn.textContent = label.length > 18 ? (stop ? 'Stop' : 'Start') : label;
+        btn.title = label;
+        btn.addEventListener('click', () => {
+            target.click();
+            [400, 1500].forEach((ms) => setTimeout(renderCard, ms));
+        });
+        return btn;
     }
 
     // ------------------------------------------------------------ status card
@@ -249,7 +299,8 @@
         const body = document.createElement('div');
         body.className = 'sb-status-rows';
         body.append(...rows);
-        el.replaceChildren(top, ...(rows.length ? [body] : []));
+        const action = actionControl(mode);
+        el.replaceChildren(top, ...(rows.length ? [body] : []), ...(action ? [action] : []));
     }
 
     // ------------------------------------------------------------ wiring
