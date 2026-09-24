@@ -972,7 +972,7 @@ const Meshtastic = (function() {
             : (msg.to_name || formatNodeId(msg.to));
 
         const time = msg.timestamp
-            ? new Date(msg.timestamp * 1000).toLocaleTimeString()
+            ? InterceptTime.relTimeHtml(msg.timestamp * 1000)
             : '--:--:--';
 
         let body;

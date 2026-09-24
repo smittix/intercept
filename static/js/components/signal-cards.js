@@ -301,21 +301,7 @@ const SignalCards = (function() {
      * Format timestamp to relative time
      */
     function formatRelativeTime(timestamp) {
-        if (!timestamp) return '';
-        let date = new Date(timestamp);
-        // Handle time-only strings like "HH:MM:SS" (from pager/sensor backends)
-        if (isNaN(date.getTime()) && /^\d{1,2}:\d{2}(:\d{2})?$/.test(timestamp)) {
-            const today = new Date();
-            date = new Date(today.toDateString() + ' ' + timestamp);
-        }
-        if (isNaN(date.getTime())) return timestamp;
-        const now = new Date();
-        const diff = Math.floor((now - date) / 1000);
-
-        if (diff < 60) return 'Just now';
-        if (diff < 3600) return Math.floor(diff / 60) + ' min ago';
-        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-        return date.toLocaleDateString();
+        return InterceptTime.relative(timestamp);
     }
 
     /**

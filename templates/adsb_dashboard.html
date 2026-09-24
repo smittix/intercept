@@ -3510,7 +3510,7 @@ sudo make install</code>
             const text = msg.text || msg.msg || '';
             const truncText = escapeHtml(text.length > 200 ? text.substring(0, 200) + '...' : text);
             const time = msg.timestamp && typeof InterceptTime !== 'undefined'
-                ? InterceptTime.shortTime(msg.timestamp) + InterceptTime.tzSuffix()
+                ? InterceptTime.relTimeHtml(msg.timestamp)
                 : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '');
             const flight = escapeHtml(msg.flight || '');
             const tail = escapeHtml(msg.tail || msg.reg || '');

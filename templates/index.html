@@ -4084,14 +4084,6 @@
         // Sync stats periodically
         setInterval(syncHeaderStats, 500);
 
-        // Update relative timestamps on signal cards every 30 seconds
-        setInterval(function() {
-            const output = document.getElementById('output');
-            if (output && typeof SignalCards !== 'undefined') {
-                SignalCards.updateTimestamps(output);
-            }
-        }, 30000);
-
         // Observer location for distance calculations (load from localStorage or default to London)
         let observerLocation = (function () {
             if (window.ObserverLocation && ObserverLocation.getForModule) {
@@ -6128,31 +6120,14 @@
             lastMessageTime = Date.now();
         }
 
-        // Relative timestamps
+        // Relative timestamps: rendered by InterceptTime, whose one page-wide
+        // clock keeps every .msg-time, card and device timestamp current.
         function getRelativeTime(timestamp) {
-            if (!timestamp) return '';
-            const now = new Date();
-            const parts = timestamp.split(':');
-            const msgTime = new Date();
-            msgTime.setHours(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
-
-            const diff = Math.floor((now - msgTime) / 1000);
-            if (diff < 5) return 'just now';
-            if (diff < 60) return diff + 's ago';
-            if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-            return timestamp;
-        }
-
-        function updateRelativeTimes() {
-            document.querySelectorAll('.msg-time').forEach(el => {
-                const ts = el.dataset.timestamp;
-                if (ts) el.textContent = getRelativeTime(ts);
-            });
+            return InterceptTime.relative(timestamp);
         }
 
         // Update timers
         setInterval(updateSignalMeter, 100);
-        setInterval(updateRelativeTimes, 10000);
 
         // Default presets (UK frequencies)
         const defaultPresets = ['153.350', '153.025'];
