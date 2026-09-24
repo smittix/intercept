@@ -4,6 +4,13 @@
  * Requires: variables.css, base.css, components.css
  */
 
+/* Thin dark scrollbars (Firefox) on every page; the browser's default is a
+   white bar beside each scrolling panel. Every page loads this file. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-light) transparent;
+}
+
 /* ============================================
    APP SHELL
    ============================================ */
