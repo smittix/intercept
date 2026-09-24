@@ -2,8 +2,7 @@ TSCM Sweep Report - Head Office, 3rd floor boardroom
 Conducted: 2026-09-24 10:00
 Duration: 90 minutes
 
-OVERALL ASSESSMENT: ELEVATED
-Multiple indicators warrant further investigation.
+OVERALL ASSESSMENT: 2 devices require investigation, 2 devices require review.
 
 SCAN STATISTICS:
   - Total devices scanned: 50

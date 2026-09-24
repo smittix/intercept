@@ -7,12 +7,13 @@ change with:
 
 and review the diff before committing.
 
-Lines carrying the report's per-finding signal confidence, proximity
-interpretation and risk score are replaced with "<flagged>" before
-comparison. Their wording is under review (whether a confidence figure
-built from RSSI, duration and sighting count, or a proximity statement
-built from RSSI alone, belongs in a client report), so these tests check
-the lines are present without fixing what they say.
+The client report states measurements and patterns, and every line of it
+is pinned. The technical annexes still carry the derived signal
+confidence, interpretation and risk score for the practitioner; those
+values are replaced with "<flagged>" before comparison, so the annex
+golden files check they are present without fixing what they say. They
+rest on RSSI, duration and a sum of unrelated indicator scores, and their
+wording is still open.
 """
 
 from __future__ import annotations
@@ -21,7 +22,6 @@ import csv
 import io
 import json
 import os
-import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -89,11 +89,10 @@ def _empty_survey():
 
 
 def _normalise_text(text: str) -> str:
-    """Drop incidental whitespace and the flagged lines' values."""
+    """Drop incidental whitespace: trailing spaces and repeated blank lines."""
     lines = []
     for line in text.splitlines():
         line = line.rstrip()
-        line = re.sub(r"^(\s+)(Signal|Interpretation|Note|Risk Score|Assessment): .+$", rf"\1\2: {FLAGGED}", line)
         if line or (lines and lines[-1]):
             lines.append(line)
     return "\n".join(lines).strip() + "\n"
@@ -103,7 +102,7 @@ def _normalise_annex(annex: dict) -> dict:
     annex = json.loads(json.dumps(annex))  # a deep copy that also proves it serialises
     for tier in annex["findings"].values():
         for finding in tier:
-            for key in ("risk_score", "description", "signal_classification"):
+            for key in ("risk_score", "signal_classification"):
                 finding[key] = FLAGGED
     return annex
 
@@ -119,9 +118,7 @@ def _normalise_csv(text: str) -> list[list[str]]:
 
     devices = [blank(r, device_header, {"risk_score"}) for r in rows[1:findings_at]]
     findings = [
-        blank(
-            r, findings_header, {"risk_score", "signal_strength", "signal_confidence", "description", "interpretation"}
-        )
+        blank(r, findings_header, {"risk_score", "signal_strength", "signal_confidence", "interpretation"})
         for r in rows[findings_at + 2 :]
     ]
     return [device_header, *devices, *rows[findings_at : findings_at + 2], *findings]
@@ -495,3 +492,105 @@ class TestNothingDetected:
         survey = self._survey()
         survey["sweep_data"]["results"] = None
         assert not any("was enabled" in x for x in reports.generate_report(**survey).limitations)
+
+
+class TestClientReportStatesObservations:
+    """The client report states what was observed, not labels derived from it.
+
+    'Confidence' encoded only RSSI, duration and sighting count; proximity was
+    inferred from RSSI alone; the risk score summed unrelated indicators. The
+    report now gives the measurements and the pattern, and the technical
+    annexes keep the derived values for the practitioner.
+    """
+
+    def _block(self, text, identifier):
+        start = text.index(f"   Identifier: {identifier}")
+        return text[text.rindex("\n\n", 0, start) : text.index("\n\n", start)]
+
+    def test_signal_line_gives_measurements(self, report):
+        text = reports.get_pdf_report(report)
+        assert "   Signal: -48 dBm, observed for 80 minutes (40 sightings)" in self._block(text, "4C:E6:76:12:34:56")
+        assert "   Signal: -74 dBm, observed for 2 minutes (2 sightings)" in self._block(text, "F0:12:34:AB:CD:EF")
+
+    @pytest.mark.parametrize(
+        "identifier,assessment",
+        [
+            ("4C:E6:76:12:34:56", "Pattern consistent with an Apple AirTag (+2 further indicators)"),
+            ("433.920", "Narrowband emission (+2 further indicators)"),
+            ("F0:12:34:AB:CD:EF", "Audio-capable device (+1 further indicator)"),
+            ("02:11:22:33:44:55", "Concealed identity (hidden name or SSID) (+1 further indicator)"),
+        ],
+    )
+    def test_assessment_describes_the_pattern(self, report, identifier, assessment):
+        assert f"   Assessment: {assessment}" in self._block(reports.get_pdf_report(report), identifier)
+
+    def test_derived_labels_are_not_in_the_client_report(self, report):
+        text = reports.get_pdf_report(report)
+        for derived in ("Risk Score", "Interpretation:", "Confidence", "proximity"):
+            assert derived not in text, derived
+
+    def test_missing_measurements_are_left_out(self, frozen):
+        survey = _empty_survey()
+        survey["device_profiles"] = [
+            {"identifier": "AA:BB:CC:DD:EE:FF", "protocol": "wifi", "risk_level": "needs_review"}
+        ]
+        text = reports.get_pdf_report(reports.generate_report(**survey))
+        assert "   Signal:" not in text
+        assert "   Assessment: WIFI device observed" in text
+
+    def test_brief_sighting(self, frozen):
+        survey = _empty_survey()
+        survey["device_profiles"] = [
+            {
+                "identifier": "AA:BB:CC:DD:EE:FF",
+                "protocol": "bluetooth",
+                "risk_level": "needs_review",
+                "rssi_current": -80,
+                "detection_count": 1,
+                "first_seen": "2026-09-24T10:00:00",
+                "last_seen": "2026-09-24T10:00:20",
+            }
+        ]
+        text = reports.get_pdf_report(reports.generate_report(**survey))
+        assert "   Signal: -80 dBm, observed for under a minute (1 sighting)" in text
+
+    def test_annexes_keep_the_derived_values(self, report):
+        annex = reports.get_json_annex(report)
+        airtag = annex["findings"]["high_interest"][0]
+        assert airtag["risk_score"] == 7
+        assert airtag["signal_classification"]["confidence"] == "high"
+        header = next(
+            csv.reader(io.StringIO(reports.get_csv_annex(report).split("--- FINDINGS SUMMARY ---")[1].strip()))
+        )
+        assert {"risk_score", "signal_confidence", "interpretation"} <= set(header)
+
+
+class TestOverallAssessmentWording:
+    """Counts and actions instead of a HIGH/ELEVATED adjective derived from a count."""
+
+    def _summary(self, levels):
+        survey = _empty_survey()
+        survey["device_profiles"] = [
+            {"identifier": f"AA:BB:CC:DD:EE:{i:02X}", "protocol": "bluetooth", "risk_level": level}
+            for i, level in enumerate(levels)
+        ]
+        return reports.generate_report(**survey).executive_summary
+
+    def test_fixture(self, report):
+        assert (
+            "OVERALL ASSESSMENT: 2 devices require investigation, 2 devices require review." in report.executive_summary
+        )
+
+    def test_singular(self, frozen):
+        assert "OVERALL ASSESSMENT: 1 device requires investigation." in self._summary(["high_interest"])
+        assert "OVERALL ASSESSMENT: 1 device requires review." in self._summary(["needs_review"])
+
+    def test_nothing_flagged(self, frozen):
+        summary = self._summary(["informational"])
+        assert "OVERALL ASSESSMENT: No devices require investigation or review." in summary
+        assert "No significant indicators of surveillance activity were detected." in summary
+
+    def test_no_urgency_from_a_count(self, frozen):
+        summary = self._summary(["high_interest"] * 3)
+        assert "OVERALL ASSESSMENT: 3 devices require investigation." in summary
+        assert "HIGH" not in summary and "immediate attention" not in summary

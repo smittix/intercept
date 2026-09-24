@@ -13,7 +13,7 @@ TSCM Sweep Report - Location Not Specified
 Conducted: 2026-09-24 10:00
 Duration: 20 minutes
 
-OVERALL ASSESSMENT: LOW
+OVERALL ASSESSMENT: No devices require investigation or review.
 No significant indicators of surveillance activity were detected.
 
 SCAN STATISTICS:

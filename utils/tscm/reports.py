@@ -20,7 +20,6 @@ from datetime import datetime, timezone
 from utils.tscm.signal_classification import (
     SIGNAL_ANALYSIS_DISCLAIMER,
     assess_signal,
-    generate_hedged_statement,
 )
 
 logger = logging.getLogger("intercept.tscm.reports")
@@ -48,6 +47,10 @@ class ReportFinding:
     signal_confidence: str | None = None  # low, medium, high
     signal_interpretation: str | None = None
     signal_caveats: list[str] = field(default_factory=list)
+    # What was measured, for the client report (None when not recorded)
+    rssi: float | None = None
+    observed_seconds: float | None = None
+    sightings: int | None = None
 
 
 @dataclass
@@ -188,19 +191,27 @@ def generate_executive_summary(report: TSCMReport) -> str:
     lines.append(f"Duration: {report.duration_minutes:.0f} minutes")
     lines.append("")
 
-    # Overall assessment
-    assessment_text = {
-        "inconclusive": (
+    # Overall assessment: what needs doing, not an adjective derived from a count
+    if report.overall_risk_assessment == "inconclusive":
+        lines.append("OVERALL ASSESSMENT: INCONCLUSIVE")
+        lines.append(
             "No devices were detected on any band. This usually means the sweep equipment "
             "was not receiving, and is not evidence that the area is clear."
-        ),
-        "low": "No significant indicators of surveillance activity were detected.",
-        "moderate": "Some devices require review but no confirmed surveillance indicators.",
-        "elevated": "Multiple indicators warrant further investigation.",
-        "high": "Significant indicators detected requiring immediate attention.",
-    }
-    lines.append(f"OVERALL ASSESSMENT: {report.overall_risk_assessment.upper()}")
-    lines.append(assessment_text.get(report.overall_risk_assessment, ""))
+        )
+    else:
+        actions = [
+            _count_devices(len(findings), action)
+            for findings, action in (
+                (report.high_interest_findings, "investigation"),
+                (report.needs_review_findings, "review"),
+            )
+            if findings
+        ]
+        if actions:
+            lines.append(f"OVERALL ASSESSMENT: {', '.join(actions)}.")
+        else:
+            lines.append("OVERALL ASSESSMENT: No devices require investigation or review.")
+            lines.append("No significant indicators of surveillance activity were detected.")
     lines.append("")
 
     # Key statistics
@@ -247,8 +258,36 @@ def generate_executive_summary(report: TSCMReport) -> str:
     return "\n".join(lines)
 
 
+def _count_devices(n: int, action: str) -> str:
+    return f"{n} device requires {action}" if n == 1 else f"{n} devices require {action}"
+
+
+def _describe_measurements(finding: ReportFinding) -> str | None:
+    """'-48 dBm, observed for 80 minutes (40 sightings)', from what was recorded."""
+    parts = []
+    if finding.rssi is not None:
+        parts.append(f"{finding.rssi:.0f} dBm")
+    if finding.observed_seconds is not None:
+        minutes = round(finding.observed_seconds / 60)
+        if finding.observed_seconds < 60:
+            parts.append("observed for under a minute")
+        else:
+            parts.append(f"observed for {minutes} minute{'' if minutes == 1 else 's'}")
+    text = ", ".join(parts)
+    if finding.sightings is not None:
+        sightings = f"{finding.sightings} sighting{'' if finding.sightings == 1 else 's'}"
+        text = f"{text} ({sightings})" if text else sightings
+    return text or None
+
+
 def generate_findings_section(findings: list[ReportFinding], title: str) -> str:
-    """Generate a findings section for the report with confidence-safe language."""
+    """Generate a findings section for the client report.
+
+    States what was measured and the pattern observed. The derived signal
+    confidence, interpretation and risk score stay in the technical annexes:
+    they rest on RSSI, duration and a sum of unrelated indicator scores, and
+    read to a client as more certain than they are.
+    """
     if not findings:
         return f"{title}\n\nNo findings in this category.\n"
 
@@ -258,19 +297,12 @@ def generate_findings_section(findings: list[ReportFinding], title: str) -> str:
         lines.append(f"{i}. {finding.name or finding.identifier}")
         lines.append(f"   Protocol: {finding.protocol.upper()}")
         lines.append(f"   Identifier: {finding.identifier}")
-        lines.append(f"   Risk Score: {finding.risk_score}")
 
-        # Signal classification with confidence
-        if finding.signal_strength:
-            confidence_label = (finding.signal_confidence or "low").capitalize()
-            strength_label = finding.signal_strength.replace("_", " ").title()
-            lines.append(f"   Signal: {strength_label} (Confidence: {confidence_label})")
+        measurements = _describe_measurements(finding)
+        if measurements:
+            lines.append(f"   Signal: {measurements}")
 
         lines.append(f"   Assessment: {finding.description}")
-
-        # Interpretation with hedged language
-        if finding.signal_interpretation:
-            lines.append(f"   Interpretation: {finding.signal_interpretation}")
 
         if finding.indicators:
             lines.append("   Indicators:")
@@ -629,7 +661,15 @@ def _number(value) -> float | None:
         return None
 
 
-def _signal_inputs(profile: dict) -> tuple[float | None, float | None, int]:
+_TRACKER_PATTERNS = {
+    "airtag_detected": "an Apple AirTag",
+    "tile_detected": "a Tile tracker",
+    "smarttag_detected": "a Samsung SmartTag",
+    "known_tracker": "a known tracker",
+}
+
+
+def _signal_inputs(profile: dict) -> tuple[float | None, float | None, int | None]:
     """RSSI, observed duration and sighting count for assess_signal().
 
     Correlation-engine profiles, which is what the report routes pass, carry
@@ -654,7 +694,7 @@ def _signal_inputs(profile: dict) -> tuple[float | None, float | None, int]:
     count = _number(profile.get("observation_count"))
     if count is None:
         count = _number(profile.get("detection_count"))
-    return rssi, duration, max(1, int(count or 1))
+    return rssi, duration, None if count is None else max(1, int(count))
 
 
 class TSCMReportBuilder:
@@ -720,6 +760,7 @@ class TSCMReportBuilder:
         for profile in profiles:
             # Get signal classification data
             signal_data = self._classify_finding_signal(profile)
+            rssi, observed_seconds, sightings = _signal_inputs(profile)
 
             finding = ReportFinding(
                 identifier=profile.get("identifier") or "",
@@ -735,49 +776,46 @@ class TSCMReportBuilder:
                 signal_confidence=signal_data["signal_confidence"],
                 signal_interpretation=signal_data["signal_interpretation"],
                 signal_caveats=signal_data["signal_caveats"],
+                rssi=rssi,
+                observed_seconds=observed_seconds,
+                sightings=sightings,
             )
             self.add_finding(finding)
 
         return self
 
     def _generate_finding_description(self, profile: dict) -> str:
-        """Generate description from profile indicators using hedged language."""
-        indicators = profile.get("indicators", [])
+        """Describe the pattern the primary indicator shows.
+
+        Says what was seen, not where the device is or how likely it is to be
+        a surveillance device: signal strength alone cannot place a device.
+        """
+        indicators = profile.get("indicators") or []
         protocol = (profile.get("protocol") or "Unknown").upper()
 
-        # Assess signal to determine confidence
-        assessment = assess_signal(*_signal_inputs(profile))
-        confidence = assessment.confidence
-
         if not indicators:
-            # Use hedged language based on confidence
-            return generate_hedged_statement(f"Observed {protocol} signal", "device_presence", confidence)
+            return f"{protocol} device observed"
 
-        # Build description with hedged language
         primary = indicators[0]
-        indicator_type = primary.get("type", "pattern")
-
-        # Map indicator types to hedged descriptions
-        if indicator_type in ("airtag_detected", "tile_detected", "smarttag_detected", "known_tracker"):
-            desc = generate_hedged_statement(f"{protocol} signal characteristics", "device_presence", confidence)
-            desc += f" - pattern consistent with {indicator_type.replace('_', ' ')}"
+        indicator_type = primary.get("type")
+        if indicator_type in _TRACKER_PATTERNS:
+            desc = f"Pattern consistent with {_TRACKER_PATTERNS[indicator_type]}"
         elif indicator_type == "audio_capable":
-            desc = generate_hedged_statement("Device characteristics", "surveillance_indicator", confidence)
-            desc += " - audio-capable device type identified"
+            desc = "Audio-capable device"
         elif indicator_type in ("hidden_identity", "hidden_ssid"):
-            desc = generate_hedged_statement("Network configuration", "surveillance_indicator", confidence)
-            desc += " - concealed identity pattern observed"
+            desc = "Concealed identity (hidden name or SSID)"
         else:
-            desc = generate_hedged_statement(f"{protocol} signal pattern", "device_presence", confidence)
+            desc = primary.get("description") or f"{protocol} device observed"
 
-        if len(indicators) > 1:
-            desc += f" (+{len(indicators) - 1} additional indicators)"
-
+        further = len(indicators) - 1
+        if further:
+            desc += f" (+{further} further indicator{'' if further == 1 else 's'})"
         return desc
 
     def _classify_finding_signal(self, profile: dict) -> dict:
         """Extract signal classification data for a finding."""
-        assessment = assess_signal(*_signal_inputs(profile))
+        rssi, duration, count = _signal_inputs(profile)
+        assessment = assess_signal(rssi, duration, count or 1)
 
         return {
             "signal_strength": assessment.signal_strength.value,

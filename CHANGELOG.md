@@ -4,6 +4,14 @@ All notable changes to iNTERCEPT will be documented in this file.
 
 ## [2.33.10] - 2026-09-24
 
+### Changed
+
+- **The TSCM client report states observations rather than labels derived from them.** Each finding's signal line now gives the measurements, for example `Signal: -48 dBm, observed for 80 minutes (40 sightings)`, in place of `Signal: Strong (Confidence: High)`. The "confidence" encoded only those three numbers but read to a client as confidence that a device was a bug.
+- The **Assessment** line describes the pattern (`Pattern consistent with an Apple AirTag`), and the **Interpretation** line ("probable close proximity") is gone: signal strength alone cannot place a device.
+- The **Risk Score** line is gone from the client report. It summed unrelated indicator scores, and the indicators themselves are listed under each finding.
+- The **overall assessment** states what needs doing (`2 devices require investigation, 2 devices require review.`) instead of HIGH/ELEVATED/MODERATE, which were derived from a count: three trackers in an office read "HIGH, requiring immediate attention".
+- The JSON and CSV technical annexes still carry the signal classification, interpretation and risk score for the practitioner.
+
 ### Fixed
 
 - **A TSCM sweep that detected nothing was reported as clear.** With zero devices on every band the report read "OVERALL ASSESSMENT: LOW. No significant indicators of surveillance activity were detected", presenting a sweep whose equipment was not receiving as a clean room. It now reads INCONCLUSIVE and says why. An enabled Wi-Fi or Bluetooth band that detected no devices is listed first under the sweep's limitations, with a prompt to check the adapter; a quiet RF band can be genuine and is not flagged.
