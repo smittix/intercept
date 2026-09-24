@@ -942,6 +942,23 @@ class UnifiedWiFiScanner:
                 except Exception as e:
                     logger.debug(f"Network callback error: {e}")
 
+        # Activity feed, at ingestion: every v2 scan backend passes through here.
+        # Not direct: the legacy /wifi stream reaches the feed only through
+        # process_event(), and the SSE copy of this sighting has the same BSSID,
+        # so the per-identifier interval absorbs it.
+        try:
+            from utils.observations import emit_observation
+
+            emit_observation(
+                "wifi",
+                bssid,
+                rssi=obs.rssi,
+                summary=obs.essid or "(hidden)",
+                raw={"bssid": bssid, "essid": obs.essid, "channel": obs.channel, "rssi": obs.rssi},
+            )
+        except Exception as e:
+            logger.debug(f"Observation emit failed: {e}")
+
     def _create_access_point(self, obs: WiFiObservation) -> WiFiAccessPoint:
         """Create new access point from observation."""
         now = datetime.now()

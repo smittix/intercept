@@ -27,6 +27,7 @@ def register_blueprints(app):
     from .meshtastic import meshtastic_bp
     from .meteor_websocket import meteor_bp
     from .morse import morse_bp
+    from .observations import observations_bp
     from .offline import offline_bp
     from .ook import ook_bp
     from .pager import pager_bp
@@ -95,6 +96,7 @@ def register_blueprints(app):
     app.register_blueprint(ook_bp)  # Generic OOK signal decoder
     app.register_blueprint(ground_station_bp)  # Ground station automation
     app.register_blueprint(drone_bp)  # Drone intelligence / UAV detection
+    app.register_blueprint(observations_bp)  # Activity feed across modes
 
     # Every blueprint here is a JSON API driven by fetch(), so none carries a
     # CSRF form token and all are exempt. The exemption is blanket on purpose:

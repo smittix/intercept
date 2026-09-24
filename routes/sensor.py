@@ -18,6 +18,7 @@ import app as app_module
 from utils.dependencies import install_hint
 from utils.event_pipeline import process_event
 from utils.logging import sensor_logger as logger
+from utils.observations import emit_observation
 from utils.process import register_process, unregister_process
 from utils.responses import api_error, api_success
 from utils.sdr import SDRFactory, SDRType
@@ -89,6 +90,16 @@ def stream_sensor_output(process: subprocess.Popen[bytes]) -> None:
                 data = json.loads(line)
                 data["type"] = "sensor"
                 app_module.sensor_queue.put(data)
+
+                # Activity feed: emitted here, at ingestion, so it is recorded
+                # whether or not a browser is subscribed to the stream.
+                if data.get("model"):
+                    sensor_id = ":".join(
+                        str(p) for p in (data["model"], data.get("id"), data.get("channel")) if p not in (None, "")
+                    )
+                    emit_observation(
+                        "sensor", sensor_id, rssi=data.get("rssi"), summary=data["model"], raw=data, direct=True
+                    )
 
                 # Track RSSI history per device
                 _model = data.get("model", "")
