@@ -9,6 +9,7 @@ import socket
 import subprocess
 import threading
 import time
+from collections import deque
 from contextlib import suppress
 from typing import Any
 
@@ -356,6 +357,49 @@ def _build_dummy_device(device_index: int, sdr_type: SDRType) -> SDRDevice:
     )
 
 
+_TUNE_CMDS = ("tune", "set_vfo")
+
+
+def _coalesce_commands(batch: list[dict]) -> list[dict]:
+    """Of the commands waiting on the socket, the ones still worth running.
+
+    A start restarts the SDR capture, which takes a second or more. Clicking
+    along the waterfall faster than that queued a start per click, and each
+    was run in turn, so the radio visited every frequency on the way to the
+    last. Only the latest intent matters: a start supersedes earlier starts
+    and tunes, a tune supersedes earlier tunes, and a stop supersedes
+    everything before it. Other commands keep their place.
+    """
+    kept: list[dict] = []
+    for command in batch:
+        cmd = command.get("cmd")
+        if cmd == "stop":
+            kept = [c for c in kept if c.get("cmd") not in ("start", "stop", *_TUNE_CMDS)]
+        elif cmd == "start":
+            kept = [c for c in kept if c.get("cmd") not in ("start", *_TUNE_CMDS)]
+        elif cmd in _TUNE_CMDS:
+            kept = [c for c in kept if c.get("cmd") not in _TUNE_CMDS]
+        kept.append(command)
+    return kept
+
+
+def _drain_waiting(ws, limit: int = 64) -> list[dict]:
+    """Commands already waiting on the socket, without blocking."""
+    waiting = []
+    for _ in range(limit):
+        try:
+            msg = ws.receive(timeout=0.001)
+        except Exception:
+            break
+        if msg is None:
+            break
+        with suppress(json.JSONDecodeError, TypeError):
+            data = json.loads(msg)
+            if isinstance(data, dict):
+                waiting.append(data)
+    return waiting
+
+
 def init_waterfall_websocket(app: Flask):
     """Initialize WebSocket waterfall streaming."""
     if not WEBSOCKET_AVAILABLE:
@@ -383,6 +427,8 @@ def init_waterfall_websocket(app: Flask):
         capture_end_freq = 0.0
         # Queue for outgoing messages — only the main loop touches ws.send()
         send_queue = queue.Queue(maxsize=120)
+        # Commands received but not yet run, already coalesced
+        pending: deque[dict] = deque()
 
         try:
             while True:
@@ -398,8 +444,18 @@ def init_waterfall_websocket(app: Flask):
                         stop_event.set()
                         break
 
+                if pending:
+                    # Clicks that arrived during the last restart are folded in too
+                    waiting = _drain_waiting(ws)
+                    if waiting:
+                        pending = deque(_coalesce_commands([*pending, *waiting]))
+                    data = pending.popleft()
+                    cmd = data.get("cmd")
+                    msg = None
+                else:
+                    cmd = None
                 try:
-                    msg = ws.receive(timeout=0.01)
+                    msg = None if cmd else ws.receive(timeout=0.01)
                 except Exception as e:
                     err = str(e).lower()
                     if "closed" in err:
@@ -408,21 +464,28 @@ def init_waterfall_websocket(app: Flask):
                         logger.error(f"WebSocket receive error: {e}")
                     continue
 
-                if msg is None:
-                    # simple-websocket returns None on timeout AND on
-                    # close; check ws.connected to tell them apart.
-                    if not ws.connected:
-                        break
-                    if stop_event.is_set():
-                        break
-                    continue
+                if cmd is None:
+                    if msg is None:
+                        # simple-websocket returns None on timeout AND on
+                        # close; check ws.connected to tell them apart.
+                        if not ws.connected:
+                            break
+                        if stop_event.is_set():
+                            break
+                        continue
 
-                try:
-                    data = json.loads(msg)
-                except (json.JSONDecodeError, TypeError):
-                    continue
+                    try:
+                        data = json.loads(msg)
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+                    if not isinstance(data, dict):
+                        continue
 
-                cmd = data.get("cmd")
+                    # Anything else already sent (a burst of clicks) is folded in,
+                    # so the capture goes straight to the latest request.
+                    pending.extend(_coalesce_commands([data, *_drain_waiting(ws)]))
+                    data = pending.popleft()
+                    cmd = data.get("cmd")
 
                 if cmd == "start":
                     shared_before = get_shared_capture_status()
