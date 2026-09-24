@@ -119,7 +119,13 @@ class CommandBuilder(ABC):
         pass
 
     @abstractmethod
-    def build_adsb_command(self, device: SDRDevice, gain: float | None = None, bias_t: bool = False) -> list[str]:
+    def build_adsb_command(
+        self,
+        device: SDRDevice,
+        gain: float | None = None,
+        bias_t: bool = False,
+        ppm: int | None = None,
+    ) -> list[str]:
         """
         Build ADS-B decoder command.
 
@@ -127,6 +133,7 @@ class CommandBuilder(ABC):
             device: The SDR device to use
             gain: Gain in dB (None for auto)
             bias_t: Enable bias-T power (for active antennas)
+            ppm: PPM frequency correction (ignored where the decoder has none)
 
         Returns:
             Command as list of strings for subprocess
@@ -166,6 +173,7 @@ class CommandBuilder(ABC):
         tcp_port: int = 10110,
         udp_host: str | None = None,
         udp_port: int | None = None,
+        ppm: int | None = None,
     ) -> list[str]:
         """
         Build AIS decoder command for vessel tracking.
@@ -177,6 +185,7 @@ class CommandBuilder(ABC):
             tcp_port: TCP port for JSON output server
             udp_host: Optional host to forward NMEA 0183 sentences via UDP
             udp_port: UDP port for NMEA forwarding (required if udp_host set)
+            ppm: PPM frequency correction (ignored where the decoder has none)
 
         Returns:
             Command as list of strings for subprocess

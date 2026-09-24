@@ -99,7 +99,7 @@ var MorseMode = (function () {
         var config = {
             frequency: (el('morseFrequency') && el('morseFrequency').value) || '14.060',
             gain: (el('morseGain') && el('morseGain').value) || '40',
-            ppm: (el('morsePPM') && el('morsePPM').value) || '0',
+            ppm: (el('morsePPM') && el('morsePPM').value) || '',
             device: (el('deviceSelect') && el('deviceSelect').value) || '0',
             sdr_type: (el('sdrTypeSelect') && el('sdrTypeSelect').value) || 'rtlsdr',
             bias_t: (typeof getBiasTEnabled === 'function') ? getBiasTEnabled() : false,
@@ -135,7 +135,7 @@ var MorseMode = (function () {
             var payload = {
                 frequency: (el('morseFrequency') && el('morseFrequency').value) || '14.060',
                 gain: (el('morseGain') && el('morseGain').value) || '40',
-                ppm: (el('morsePPM') && el('morsePPM').value) || '0',
+                ppm: (el('morsePPM') && el('morsePPM').value) || '',
                 detect_mode: (el('morseDetectMode') && el('morseDetectMode').value) || 'goertzel',
                 tone_freq: (el('morseToneFreq') && el('morseToneFreq').value) || '700',
                 bandwidth_hz: (el('morseBandwidth') && el('morseBandwidth').value) || '200',

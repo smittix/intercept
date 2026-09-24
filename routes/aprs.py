@@ -32,6 +32,7 @@ from utils.event_pipeline import process_event
 from utils.logging import sensor_logger as logger
 from utils.responses import api_error, api_success
 from utils.sdr import SDRFactory, SDRType
+from utils.sdr.device_config import apply_device_defaults
 from utils.sse import sse_stream_fanout
 from utils.validation import (
     validate_device_index,
@@ -1732,6 +1733,7 @@ def start_aprs() -> Response:
         return api_error("No APRS decoder found. Install direwolf or multimon-ng", 400)
 
     data = request.json or {}
+    data = apply_device_defaults(data)
 
     # Validate inputs
     try:

@@ -31,8 +31,9 @@ from utils.event_pipeline import process_event
 from utils.logging import get_logger
 from utils.responses import api_error, api_success
 from utils.sdr import SDRFactory, SDRType
+from utils.sdr.device_config import apply_device_defaults
 from utils.sse import sse_stream_fanout
-from utils.validation import validate_device_index, validate_gain
+from utils.validation import validate_device_index, validate_gain, validate_ppm
 
 logger = get_logger("intercept.ais")
 
@@ -367,11 +368,13 @@ def start_ais():
             return api_error("AIS tracking already active", 409)
 
     data = request.json or {}
+    data = apply_device_defaults(data)
 
     # Validate inputs
     try:
         gain = int(validate_gain(data.get("gain", "40")))
         device = validate_device_index(data.get("device", "0"))
+        ppm = validate_ppm(data.get("ppm", "0"))
     except ValueError as e:
         return api_error(str(e), 400)
 
@@ -430,6 +433,7 @@ def start_ais():
         device=sdr_device,
         gain=float(gain),
         bias_t=bias_t,
+        ppm=ppm or None,
         tcp_port=tcp_port,
         udp_host=udp_host,
         udp_port=udp_port,

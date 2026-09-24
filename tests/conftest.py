@@ -12,14 +12,21 @@ import pytest
 # test mocks (e.g. a patched subprocess.Popen catching its pkill call)
 os.environ.setdefault("INTERCEPT_SKIP_DEFERRED_INIT", "1")
 
+# A developer shell with auth disabled would make every gate test pass
+# against an open app. Tests control auth through fixtures instead.
+os.environ.pop("INTERCEPT_DISABLE_AUTH", None)
+
 from app import app as flask_app
 from routes import register_blueprints
 
 
 @pytest.fixture(scope="session")
 def app():
-    """Create application for testing."""
-    os.environ["INTERCEPT_DISABLE_AUTH"] = "1"
+    """Create application for testing.
+
+    Authentication stays enabled. Tests that only care about route behaviour
+    use the logged-in `client`; tests of the gate itself use `anon_client`.
+    """
     flask_app.config["TESTING"] = True
     # Disable CSRF for tests
     flask_app.config["WTF_CSRF_ENABLED"] = False
@@ -31,7 +38,18 @@ def app():
 
 @pytest.fixture
 def client(app):
-    """Create test client."""
+    """A logged-in test client."""
+    c = app.test_client()
+    with c.session_transaction() as sess:
+        sess["logged_in"] = True
+        sess["username"] = "admin"
+        sess["role"] = "admin"
+    return c
+
+
+@pytest.fixture
+def anon_client(app):
+    """An unauthenticated client, for testing the auth gate itself."""
     return app.test_client()
 
 

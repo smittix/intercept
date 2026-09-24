@@ -35,8 +35,9 @@ from utils.meteor_detector import MeteorDetector
 from utils.process import register_process, safe_terminate, unregister_process
 from utils.sdr import SDRFactory, SDRType
 from utils.sdr.base import SDRCapabilities, SDRDevice
+from utils.sdr.device_config import apply_device_defaults
 from utils.sse import sse_stream_fanout
-from utils.validation import validate_device_index, validate_frequency, validate_gain
+from utils.validation import validate_device_index, validate_frequency, validate_gain, validate_ppm
 from utils.waterfall_fft import (
     build_binary_frame,
     compute_power_spectrum,
@@ -300,6 +301,7 @@ def init_meteor_websocket(app: Flask):
                     if was_restarting:
                         time.sleep(0.5)
 
+                    data = apply_device_defaults(data)
                     # Parse config
                     try:
                         frequency_mhz = float(data.get("frequency_mhz", 143.05))
@@ -317,7 +319,7 @@ def init_meteor_websocket(app: Flask):
                         avg_count = int(data.get("avg_count", 4))
                         ppm = data.get("ppm")
                         if ppm is not None:
-                            ppm = int(ppm)
+                            ppm = validate_ppm(ppm)
                         bias_t = bool(data.get("bias_t", False))
 
                         # Detection settings

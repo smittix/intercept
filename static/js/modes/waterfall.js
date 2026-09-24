@@ -2027,7 +2027,9 @@ const Waterfall = (function () {
         const fftSize = parseInt(document.getElementById('wfFftSize')?.value, 10) || 1024;
         const fps = parseInt(document.getElementById('wfFps')?.value, 10) || 20;
         const avgCount = parseInt(document.getElementById('wfAvgCount')?.value, 10) || 4;
-        const ppm = parseInt(document.getElementById('wfPpm')?.value, 10) || 0;
+        // Blank means "use the device's configured correction"
+        const ppmRaw = document.getElementById('wfPpm')?.value ?? '';
+        const ppm = ppmRaw === '' ? null : (parseInt(ppmRaw, 10) || 0);
         const biasT = !!document.getElementById('wfBiasT')?.checked;
 
         return {
@@ -3108,7 +3110,7 @@ const Waterfall = (function () {
         const previous = sel.value;
         sel.innerHTML = devices.map((d) => {
             const label = d.serial ? `${d.name} [${d.serial}]` : d.name;
-            return `<option value="${d.sdr_type}:${d.index}">${label}</option>`;
+            return `<option value="${_escapeHtml(`${d.sdr_type}:${d.index}`)}">${_escapeHtml(label)}</option>`;
         }).join('');
 
         if (previous && [...sel.options].some((opt) => opt.value === previous)) {
