@@ -8,6 +8,7 @@ import time
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta
 from typing import Any
 
 from flask import Blueprint, Response, jsonify
@@ -98,12 +99,33 @@ def _fetch_cached_json(cache_key: str, url: str, ttl: int) -> Any | None:
     return data
 
 
+def _as_table(data: Any, columns: list[str]) -> Any:
+    """SWPC moved several products from header-plus-rows tables to lists of
+    objects. The page reads tables, so objects are put back into one; a
+    table is returned as it is."""
+    if isinstance(data, list) and data and all(isinstance(row, dict) for row in data):
+
+        def cell(row: dict, column: str) -> Any:
+            value = row.get(column)
+            # the tables had "2026-09-24 12:00:00"; the objects have a "T"
+            return value.replace("T", " ") if column == "time_tag" and isinstance(value, str) else value
+
+        return [columns] + [[cell(row, c) for c in columns] for row in data]
+    return data
+
+
 def _fetch_kp_index() -> Any | None:
-    return _fetch_cached_json("kp_index", f"{SWPC_JSON}/noaa-planetary-k-index.json", TTL_REALTIME)
+    return _as_table(
+        _fetch_cached_json("kp_index", f"{SWPC_JSON}/noaa-planetary-k-index.json", TTL_REALTIME),
+        ["time_tag", "Kp", "a_running", "station_count"],
+    )
 
 
 def _fetch_kp_forecast() -> Any | None:
-    return _fetch_cached_json("kp_forecast", f"{SWPC_JSON}/noaa-planetary-k-index-forecast.json", TTL_FORECAST)
+    return _as_table(
+        _fetch_cached_json("kp_forecast", f"{SWPC_JSON}/noaa-planetary-k-index-forecast.json", TTL_FORECAST),
+        ["time_tag", "kp", "observed", "noaa_scale"],
+    )
 
 
 def _fetch_scales() -> Any | None:
@@ -111,19 +133,65 @@ def _fetch_scales() -> Any | None:
 
 
 def _fetch_flux() -> Any | None:
-    return _fetch_cached_json("flux", f"{SWPC_JSON}/10cm-flux-30-day.json", TTL_DAILY)
+    return _as_table(
+        _fetch_cached_json("flux", f"{SWPC_JSON}/10cm-flux-30-day.json", TTL_DAILY),
+        ["time_tag", "flux"],
+    )
 
 
 def _fetch_alerts() -> Any | None:
     return _fetch_cached_json("alerts", f"{SWPC_JSON}/alerts.json", TTL_REALTIME)
 
 
+# SWPC retired products/solar-wind/{plasma,mag}-6-hour.json (now 404). The
+# real-time solar wind feeds replace them: one-minute rows from every
+# spacecraft (DSCOVR as "SOLAR1", ACE, IMAP), newest first, with "active"
+# marking the operational source. They are reshaped here into the old
+# header-plus-rows tables, which is what the page reads.
+RTSW_HOURS = 6
+
+
+def _rtsw_table(url: str, columns: list[str]) -> list[list] | None:
+    rows = _fetch_json(url)
+    if not isinstance(rows, list) or not rows:
+        return None
+    active = [r for r in rows if isinstance(r, dict) and r.get("active")] or [r for r in rows if isinstance(r, dict)]
+    active.sort(key=lambda r: r.get("time_tag") or "")
+    if not active:
+        return None
+    try:
+        newest = datetime.fromisoformat(active[-1]["time_tag"])
+        cutoff = (newest - timedelta(hours=RTSW_HOURS)).isoformat()
+        active = [r for r in active if (r.get("time_tag") or "") >= cutoff]
+    except (KeyError, TypeError, ValueError):
+        pass
+    table = [["time_tag", *columns]]
+    table.extend([str(r.get("time_tag", "")).replace("T", " "), *(r.get(c) for c in columns)] for r in active)
+    return table
+
+
 def _fetch_solar_wind_plasma() -> Any | None:
-    return _fetch_cached_json("sw_plasma", f"{SWPC_JSON}/solar-wind/plasma-6-hour.json", TTL_REALTIME)
+    cached = _cache_get("sw_plasma")
+    if cached is not None:
+        return cached
+    data = _rtsw_table(
+        f"{SWPC_BASE}/json/rtsw/rtsw_wind_1m.json", ["proton_density", "proton_speed", "proton_temperature"]
+    )
+    if data is not None:
+        _cache_set("sw_plasma", data, TTL_REALTIME)
+    return data
 
 
 def _fetch_solar_wind_mag() -> Any | None:
-    return _fetch_cached_json("sw_mag", f"{SWPC_JSON}/solar-wind/mag-6-hour.json", TTL_REALTIME)
+    cached = _cache_get("sw_mag")
+    if cached is not None:
+        return cached
+    data = _rtsw_table(
+        f"{SWPC_BASE}/json/rtsw/rtsw_mag_1m.json", ["bx_gsm", "by_gsm", "bz_gsm", "phi_gsm", "theta_gsm", "bt"]
+    )
+    if data is not None:
+        _cache_set("sw_mag", data, TTL_REALTIME)
+    return data
 
 
 def _fetch_xrays() -> Any | None:
@@ -135,7 +203,11 @@ def _fetch_xray_flares() -> Any | None:
 
 
 def _fetch_flare_probability() -> Any | None:
-    return _fetch_cached_json("flare_prob", f"{SWPC_BASE}/json/solar_probabilities.json", TTL_FORECAST)
+    data = _fetch_cached_json("flare_prob", f"{SWPC_BASE}/json/solar_probabilities.json", TTL_FORECAST)
+    # Now served newest first; the page shows the last rows as the latest.
+    if isinstance(data, list) and all(isinstance(row, dict) for row in data):
+        data = sorted(data, key=lambda row: row.get("date") or "")
+    return data
 
 
 def _fetch_solar_regions() -> Any | None:
