@@ -513,3 +513,15 @@ def test_drone_claims_its_sdr_and_reports_the_sources_it_started(client, lifecyc
         client.post(spec["stop"], json={})
         assert app_module.sdr_device_registry == {}
         assert client.get("/drone/status").get_json()["vectors"] == []
+
+
+@pytest.mark.parametrize("mode", ["subghz_receive", "subghz_decode", "subghz_sweep"])
+def test_subghz_missing_tool_is_not_a_conflict(client, lifecycle, mode):
+    """A missing HackRF tool is a 400 with install advice, like every other
+    mode; 409 is kept for a start that conflicts with one already running."""
+    spec = lifecycle(mode)
+    with _decoders(installed=False):
+        resp = client.post(spec["start"], json=spec["body"])
+    assert resp.status_code == 400, (resp.status_code, _message(resp))
+    assert resp.get_json()["error_type"] == "TOOL_MISSING"
+    assert "not found" in _message(resp)

@@ -34,11 +34,16 @@ from utils.constants import (
     SUBGHZ_VGA_GAIN_MAX,
     SUBGHZ_VGA_GAIN_MIN,
 )
-from utils.dependencies import get_tool_path
+from utils.dependencies import get_tool_path, install_hint
 from utils.logging import get_logger
 from utils.process import register_process, safe_terminate, unregister_process
 
 logger = get_logger("intercept.subghz")
+
+
+def _tool_missing(tool: str) -> dict:
+    """A start result for a missing executable, named, with install advice."""
+    return {"status": "error", "error_type": "TOOL_MISSING", "message": f"{tool} not found. {install_hint(tool)}"}
 
 
 @dataclass
@@ -339,7 +344,7 @@ class SubGhzManager:
         # Pre-lock: tool availability & device detection (blocking I/O)
         hackrf_transfer_path = self._resolve_tool("hackrf_transfer")
         if not hackrf_transfer_path:
-            return {"status": "error", "message": "hackrf_transfer not found"}
+            return _tool_missing("hackrf_transfer")
         device_err = self._require_hackrf_device()
         if device_err:
             return {"status": "error", "message": device_err}
@@ -467,7 +472,7 @@ class SubGhzManager:
                 }
 
             except FileNotFoundError:
-                return {"status": "error", "message": "hackrf_transfer not found"}
+                return _tool_missing("hackrf_transfer")
             except Exception as e:
                 logger.error(f"Failed to start RX: {e}")
                 return {"status": "error", "message": str(e)}
@@ -1309,10 +1314,10 @@ class SubGhzManager:
         # Pre-lock: tool availability & device detection (blocking I/O)
         hackrf_transfer_path = self._resolve_tool("hackrf_transfer")
         if not hackrf_transfer_path:
-            return {"status": "error", "message": "hackrf_transfer not found"}
+            return _tool_missing("hackrf_transfer")
         rtl433_path = self._resolve_tool("rtl_433")
         if not rtl433_path:
-            return {"status": "error", "message": "rtl_433 not found"}
+            return _tool_missing("rtl_433")
         device_err = self._require_hackrf_device()
         if device_err:
             return {"status": "error", "message": device_err}
@@ -1550,7 +1555,7 @@ class SubGhzManager:
                     safe_terminate(self._decode_hackrf_process)
                     unregister_process(self._decode_hackrf_process)
                     self._decode_hackrf_process = None
-                return {"status": "error", "message": f"Tool not found: {e.filename or 'unknown'}"}
+                return _tool_missing(os.path.basename(str(e.filename or "hackrf_transfer")))
             except Exception as e:
                 for proc in (self._decode_hackrf_process, self._decode_process):
                     if proc:
@@ -2068,7 +2073,7 @@ class SubGhzManager:
         # Pre-lock: tool availability & device detection (blocking I/O)
         hackrf_transfer_path = self._resolve_tool("hackrf_transfer")
         if not hackrf_transfer_path:
-            return {"status": "error", "message": "hackrf_transfer not found"}
+            return _tool_missing("hackrf_transfer")
         device_err = self._require_hackrf_device()
         if device_err:
             return {"status": "error", "message": device_err}
@@ -2228,7 +2233,7 @@ class SubGhzManager:
 
             except FileNotFoundError:
                 self._cleanup_tx_temp_file()
-                return {"status": "error", "message": "hackrf_transfer not found"}
+                return _tool_missing("hackrf_transfer")
             except Exception as e:
                 self._cleanup_tx_temp_file()
                 logger.error(f"Failed to start TX: {e}")
@@ -2324,7 +2329,7 @@ class SubGhzManager:
         # Pre-lock: tool availability & device detection (blocking I/O)
         hackrf_sweep_path = self._resolve_tool("hackrf_sweep")
         if not hackrf_sweep_path:
-            return {"status": "error", "message": "hackrf_sweep not found"}
+            return _tool_missing("hackrf_sweep")
         device_err = self._require_hackrf_device()
         if device_err:
             return {"status": "error", "message": device_err}
@@ -2385,7 +2390,7 @@ class SubGhzManager:
                 }
 
             except FileNotFoundError:
-                return {"status": "error", "message": "hackrf_sweep not found"}
+                return _tool_missing("hackrf_sweep")
             except Exception as e:
                 logger.error(f"Failed to start sweep: {e}")
                 return {"status": "error", "message": str(e)}
