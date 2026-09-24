@@ -73,6 +73,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/toast.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/ux-platform.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/signal-waveform.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/burst-plot.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core/components.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core/map-utils.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/modes/waterfall.css') }}?v={{ version }}&r=wfdeck19">
@@ -3356,18 +3357,9 @@
                 <div id="pagerTimelineContainer" style="display: none; margin-bottom: 12px;"></div>
 
                 <!-- Sensor Signal Scope -->
+                <!-- Sensor packets over the last minute (BurstPlot) -->
                 <div id="sensorScopePanel" style="display: none; margin-bottom: 12px;">
-                    <div style="background: #0a0a0a; border: 1px solid #1a2e1a; border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
-                            <span>Audio Waveform</span>
-                            <div style="display: flex; gap: 14px;">
-                                <span>RSSI: <span id="sensorScopeRssiLabel" style="color: #0f0; font-variant-numeric: tabular-nums;">--</span><span style="color: #444;"> dB</span></span>
-                                <span>SNR: <span id="sensorScopeSnrLabel" style="color: #fa0; font-variant-numeric: tabular-nums;">--</span><span style="color: #444;"> dB</span></span>
-                                <span id="sensorScopeStatusLabel" style="color: #444;">IDLE</span>
-                            </div>
-                        </div>
-                        <canvas id="sensorScopeCanvas" style="width: 100%; height: 80px; display: block; border-radius: 3px; background: #050510;"></canvas>
-                    </div>
+                    <div id="sensorBurstPlot"></div>
                 </div>
 
                 <div id="sensorTimelineContainer" style="display: none; margin-bottom: 12px;"></div>
@@ -3678,6 +3670,7 @@
     <script src="{{ url_for('static', filename='js/components/proximity-radar.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/timeline-heatmap.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/signal-waveform.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/burst-plot.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/signal-id-modal.js') }}?v={{ version }}"></script>
     <!-- Mode scripts are lazy-loaded via ensureModeScript() in switchMode() -->
     <!-- WiFi v2 components (eagerly loaded — shared component) -->
@@ -5078,315 +5071,24 @@
             }
         }
 
-        // --- Sensor Signal Scope ---
-        let sensorScopeCtx = null;
-        let sensorScopeAnim = null;
-        let sensorScopeHistory = [];
-        let sensorScopeWaveBuffer = [];
-        let sensorScopeDisplayWave = [];
-        const SENSOR_SCOPE_LEN = 200;
-        const SENSOR_SCOPE_WAVE_BUFFER_LEN = 2048;
-        const SENSOR_SCOPE_WAVE_INPUT_SMOOTH_ALPHA = 0.55;
-        const SENSOR_SCOPE_WAVE_DISPLAY_SMOOTH_ALPHA = 0.22;
-        const SENSOR_SCOPE_WAVE_IDLE_DECAY = 0.96;
-        let sensorScopeRssi = 0;
-        let sensorScopeSnr = 0;
-        let sensorScopeTargetRssi = 0;
-        let sensorScopeTargetSnr = 0;
-        let sensorScopeMsgBurst = 0;
-        let sensorScopeLastWaveAt = 0;
-        let sensorScopeLastInputSample = 0;
-
-        function resizeSensorScopeCanvas(canvas) {
-            if (!canvas) return;
-            const rect = canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            const width = Math.max(1, Math.floor(rect.width * dpr));
-            const height = Math.max(1, Math.floor(rect.height * dpr));
-            if (canvas.width !== width || canvas.height !== height) {
-                canvas.width = width;
-                canvas.height = height;
-            }
-        }
-
-        function buildSensorWaveformFallback(rssi, snr, noise, points = 160) {
-            const rssiNorm = Math.min(Math.max(Math.abs(rssi) / 40, 0), 1);
-            const snrNorm = Math.min(Math.max((snr + 5) / 35, 0), 1);
-            const noiseNorm = Math.min(Math.max(Math.abs(noise) / 40, 0), 1);
-
-            const amplitude = Math.max(0.06, Math.min(1.0, (0.6 * rssiNorm + 0.4 * snrNorm) - (0.22 * noiseNorm)));
-            const cycles = 3 + (snrNorm * 8);
-            const harmonic = 0.25 + (0.35 * snrNorm);
-            const hiss = 0.08 + (0.18 * noiseNorm);
-            const phase = (performance.now() * 0.002 * (1.4 + (snrNorm * 2.2))) % (Math.PI * 2);
-
-            const waveform = [];
-            for (let i = 0; i < points; i++) {
-                const t = points > 1 ? (i / (points - 1)) : 0;
-                const base = Math.sin((Math.PI * 2 * cycles * t) + phase);
-                const overtone = Math.sin((Math.PI * 2 * (cycles * 2.4) * t) + (phase * 0.7));
-                const noiseWobble = Math.sin((Math.PI * 2 * (cycles * 7.0) * t) + (phase * 2.1));
-                let sample = amplitude * (base + (harmonic * overtone) + (hiss * noiseWobble));
-                sample /= (1 + harmonic + hiss);
-                waveform.push(Math.round(Math.max(-1, Math.min(1, sample)) * 127));
-            }
-            return waveform;
-        }
-
-        function appendSensorWaveformSamples(waveform) {
-            if (!Array.isArray(waveform) || waveform.length === 0) return;
-
-            for (const packedSample of waveform) {
-                const sample = Number(packedSample);
-                if (!Number.isFinite(sample)) continue;
-                const normalized = Math.max(-127, Math.min(127, sample)) / 127;
-                sensorScopeLastInputSample += (normalized - sensorScopeLastInputSample) * SENSOR_SCOPE_WAVE_INPUT_SMOOTH_ALPHA;
-                sensorScopeWaveBuffer.push(sensorScopeLastInputSample);
-            }
-
-            if (sensorScopeWaveBuffer.length > SENSOR_SCOPE_WAVE_BUFFER_LEN) {
-                sensorScopeWaveBuffer.splice(0, sensorScopeWaveBuffer.length - SENSOR_SCOPE_WAVE_BUFFER_LEN);
-            }
-            sensorScopeLastWaveAt = performance.now();
-        }
-
-        function applySensorScopeData(scopeData) {
-            if (!scopeData || typeof scopeData !== 'object') return;
-
-            const parsedRssi = Number(scopeData.rssi);
-            const parsedSnr = Number(scopeData.snr);
-            const parsedNoise = Number(scopeData.noise);
-
-            const rssi = Number.isFinite(parsedRssi) ? parsedRssi : 0;
-            const snr = Number.isFinite(parsedSnr) ? parsedSnr : 0;
-            const noise = Number.isFinite(parsedNoise) ? parsedNoise : 0;
-
-            sensorScopeTargetRssi = rssi;
-            sensorScopeTargetSnr = snr;
-
-            if (Array.isArray(scopeData.waveform) && scopeData.waveform.length) {
-                appendSensorWaveformSamples(scopeData.waveform);
-            } else {
-                appendSensorWaveformSamples(buildSensorWaveformFallback(rssi, snr, noise));
-            }
-        }
+        // --- Sensor packets: one mark per packet, by level and SNR (BurstPlot) ---
+        let sensorBurstPlot = null;
 
         function initSensorScope() {
-            const canvas = document.getElementById('sensorScopeCanvas');
-            if (!canvas) return;
-
-            if (sensorScopeAnim) {
-                cancelAnimationFrame(sensorScopeAnim);
-                sensorScopeAnim = null;
-            }
-
-            resizeSensorScopeCanvas(canvas);
-            sensorScopeCtx = canvas.getContext('2d');
-            sensorScopeHistory = new Array(SENSOR_SCOPE_LEN).fill(0);
-            sensorScopeWaveBuffer = [];
-            sensorScopeDisplayWave = [];
-            sensorScopeRssi = 0;
-            sensorScopeSnr = 0;
-            sensorScopeTargetRssi = 0;
-            sensorScopeTargetSnr = 0;
-            sensorScopeMsgBurst = 0;
-            sensorScopeLastWaveAt = 0;
-            sensorScopeLastInputSample = 0;
-            drawSensorScope();
+            const el = document.getElementById('sensorBurstPlot');
+            if (!el || typeof BurstPlot === 'undefined') return;
+            if (sensorBurstPlot) sensorBurstPlot.destroy();
+            sensorBurstPlot = BurstPlot.create(el, { title: 'Packets' });
         }
 
-        function drawSensorScope() {
-            const ctx = sensorScopeCtx;
-            if (!ctx) return;
-
-            resizeSensorScopeCanvas(ctx.canvas);
-            const W = ctx.canvas.width;
-            const H = ctx.canvas.height;
-            const midY = H / 2;
-
-            // Phosphor persistence
-            ctx.fillStyle = 'rgba(5, 5, 16, 0.26)';
-            ctx.fillRect(0, 0, W, H);
-
-            // Smooth towards targets
-            sensorScopeRssi += (sensorScopeTargetRssi - sensorScopeRssi) * 0.25;
-            sensorScopeSnr += (sensorScopeTargetSnr - sensorScopeSnr) * 0.15;
-
-            // Decay targets back to idle between updates
-            sensorScopeTargetRssi *= 0.97;
-            sensorScopeTargetSnr *= 0.97;
-
-            // Keep amplitude envelope for context
-            const rssiNorm = Math.min(Math.max(Math.abs(sensorScopeRssi) / 40, 0), 1.0);
-            sensorScopeHistory.push(rssiNorm);
-            if (sensorScopeHistory.length > SENSOR_SCOPE_LEN) {
-                sensorScopeHistory.shift();
-            }
-
-            // Grid lines (horizontal + vertical)
-            ctx.strokeStyle = 'rgba(40, 80, 40, 0.4)';
-            ctx.lineWidth = 0.8;
-            for (let i = 1; i < 8; i++) {
-                const gx = (W / 8) * i;
-                ctx.beginPath();
-                ctx.moveTo(gx, 0);
-                ctx.lineTo(gx, H);
-                ctx.stroke();
-            }
-            for (let g = 0.25; g < 1; g += 0.25) {
-                const gy = midY - g * midY;
-                const gy2 = midY + g * midY;
-                ctx.beginPath();
-                ctx.moveTo(0, gy); ctx.lineTo(W, gy);
-                ctx.moveTo(0, gy2); ctx.lineTo(W, gy2);
-                ctx.stroke();
-            }
-
-            // Center baseline
-            ctx.strokeStyle = 'rgba(60, 100, 60, 0.5)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(0, midY);
-            ctx.lineTo(W, midY);
-            ctx.stroke();
-
-            // Slow envelope as context around baseline
-            const envStepX = W / (SENSOR_SCOPE_LEN - 1);
-            ctx.strokeStyle = 'rgba(86, 230, 120, 0.45)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            for (let i = 0; i < sensorScopeHistory.length; i++) {
-                const x = i * envStepX;
-                const amp = sensorScopeHistory[i] * midY * 0.85;
-                const y = midY - amp;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-            ctx.beginPath();
-            for (let i = 0; i < sensorScopeHistory.length; i++) {
-                const x = i * envStepX;
-                const amp = sensorScopeHistory[i] * midY * 0.85;
-                const y = midY + amp;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-
-            // Actual waveform trace
-            const waveformPointCount = Math.min(Math.max(120, Math.floor(W / 3.2)), 420);
-            if (sensorScopeWaveBuffer.length > 1) {
-                const waveIsFresh = (performance.now() - sensorScopeLastWaveAt) < 1000;
-                const sourceLen = sensorScopeWaveBuffer.length;
-                const sourceWindow = Math.min(sourceLen, 1536);
-                const sourceStart = sourceLen - sourceWindow;
-
-                if (sensorScopeDisplayWave.length !== waveformPointCount) {
-                    sensorScopeDisplayWave = new Array(waveformPointCount).fill(0);
-                }
-
-                for (let i = 0; i < waveformPointCount; i++) {
-                    const a = sourceStart + Math.floor((i / waveformPointCount) * sourceWindow);
-                    const b = sourceStart + Math.floor(((i + 1) / waveformPointCount) * sourceWindow);
-                    const start = Math.max(sourceStart, Math.min(sourceLen - 1, a));
-                    const end = Math.max(start + 1, Math.min(sourceLen, b));
-
-                    let sum = 0;
-                    let count = 0;
-                    for (let j = start; j < end; j++) {
-                        sum += sensorScopeWaveBuffer[j];
-                        count++;
-                    }
-                    const targetSample = count > 0 ? (sum / count) : 0;
-                    sensorScopeDisplayWave[i] += (targetSample - sensorScopeDisplayWave[i]) * SENSOR_SCOPE_WAVE_DISPLAY_SMOOTH_ALPHA;
-                }
-
-                ctx.strokeStyle = waveIsFresh ? '#40ff7a' : 'rgba(64, 255, 122, 0.45)';
-                ctx.lineWidth = 1.7;
-                ctx.shadowColor = '#40ff7a';
-                ctx.shadowBlur = waveIsFresh ? 6 : 2;
-
-                const stepX = waveformPointCount > 1 ? (W / (waveformPointCount - 1)) : W;
-                ctx.beginPath();
-                const firstY = midY - (sensorScopeDisplayWave[0] * midY * 0.9);
-                ctx.moveTo(0, firstY);
-                for (let i = 1; i < waveformPointCount - 1; i++) {
-                    const x = i * stepX;
-                    const y = midY - (sensorScopeDisplayWave[i] * midY * 0.9);
-                    const nx = (i + 1) * stepX;
-                    const ny = midY - (sensorScopeDisplayWave[i + 1] * midY * 0.9);
-                    const cx = (x + nx) / 2;
-                    const cy = (y + ny) / 2;
-                    ctx.quadraticCurveTo(x, y, cx, cy);
-                }
-                const lastX = (waveformPointCount - 1) * stepX;
-                const lastY = midY - (sensorScopeDisplayWave[waveformPointCount - 1] * midY * 0.9);
-                ctx.lineTo(lastX, lastY);
-                ctx.stroke();
-
-                if (!waveIsFresh) {
-                    for (let i = 0; i < sensorScopeDisplayWave.length; i++) {
-                        sensorScopeDisplayWave[i] *= SENSOR_SCOPE_WAVE_IDLE_DECAY;
-                    }
-                }
-            }
-            ctx.shadowBlur = 0;
-
-            // SNR indicator (amber dashed line)
-            const snrNorm = Math.min(Math.max(Math.abs(sensorScopeSnr) / 40, 0), 1.0);
-            if (snrNorm > 0.01) {
-                const snrY = midY - snrNorm * midY * 0.9;
-                ctx.strokeStyle = 'rgba(255, 170, 0, 0.6)';
-                ctx.lineWidth = 1;
-                ctx.setLineDash([4, 4]);
-                ctx.beginPath();
-                ctx.moveTo(0, snrY);
-                ctx.lineTo(W, snrY);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-
-            // Sensor decode flash
-            if (sensorScopeMsgBurst > 0.01) {
-                ctx.fillStyle = `rgba(0, 255, 100, ${sensorScopeMsgBurst * 0.15})`;
-                ctx.fillRect(0, 0, W, H);
-                sensorScopeMsgBurst *= 0.88;
-            }
-
-            // Update labels
-            const rssiLabel = document.getElementById('sensorScopeRssiLabel');
-            const snrLabel = document.getElementById('sensorScopeSnrLabel');
-            const statusLabel = document.getElementById('sensorScopeStatusLabel');
-            if (rssiLabel) rssiLabel.textContent = sensorScopeRssi < -0.5 ? sensorScopeRssi.toFixed(1) : '--';
-            if (snrLabel) snrLabel.textContent = sensorScopeSnr > 0.5 ? sensorScopeSnr.toFixed(1) : '--';
-            if (statusLabel) {
-                const waveIsFresh = (performance.now() - sensorScopeLastWaveAt) < 1000;
-                if (Math.abs(sensorScopeRssi) > 1.2 && waveIsFresh) {
-                    statusLabel.textContent = 'DEMODULATING';
-                    statusLabel.style.color = '#40ff7a';
-                } else if (Math.abs(sensorScopeRssi) > 0.6) {
-                    statusLabel.textContent = 'CARRIER';
-                    statusLabel.style.color = '#78ff9a';
-                } else {
-                    statusLabel.textContent = 'QUIET';
-                    statusLabel.style.color = '#555';
-                }
-            }
-
-            sensorScopeAnim = requestAnimationFrame(drawSensorScope);
+        function addSensorBurst(msg) {
+            if (!sensorBurstPlot || !msg || msg.rssi === undefined || msg.rssi === null) return;
+            sensorBurstPlot.add({ level: msg.rssi, snr: msg.snr, noise: msg.noise, label: msg.model });
         }
 
         function stopSensorScope() {
-            if (sensorScopeAnim) {
-                cancelAnimationFrame(sensorScopeAnim);
-                sensorScopeAnim = null;
-            }
-            sensorScopeCtx = null;
-            sensorScopeWaveBuffer = [];
-            sensorScopeDisplayWave = [];
-            sensorScopeHistory = [];
-            sensorScopeLastWaveAt = 0;
-            sensorScopeLastInputSample = 0;
+            if (sensorBurstPlot) sensorBurstPlot.destroy();
+            sensorBurstPlot = null;
         }
 
         // Start sensor decoding
@@ -5566,10 +5268,7 @@
             const placeholder = output.querySelector('.placeholder');
             if (placeholder) placeholder.style.display = 'none';
 
-            // Agent polling may only return decoded packets, so derive scope updates from packet levels.
-            if (msg && (msg.rssi !== undefined || msg.snr !== undefined || msg.noise !== undefined)) {
-                applySensorScopeData(msg);
-            }
+            addSensorBurst(msg);
 
             // Create signal card if SignalCards is available
             if (typeof SignalCards !== 'undefined' && SignalCards.createFromSensor) {
@@ -5617,8 +5316,6 @@
                 const data = JSON.parse(e.data);
                 if (data.type === 'sensor') {
                     addSensorReading(data);
-                } else if (data.type === 'scope') {
-                    applySensorScopeData(data);
                 } else if (data.type === 'status') {
                     if (data.text === 'stopped') {
                         setSensorRunning(false);
@@ -5643,14 +5340,7 @@
             playAlert();
             pulseSignal();
 
-            // Flash sensor scope green on decode
-            sensorScopeMsgBurst = 1.0;
-
-            // Fallback when no dedicated scope packet has arrived recently.
-            if ((data.rssi !== undefined || data.snr !== undefined || data.noise !== undefined)
-                && ((performance.now() - sensorScopeLastWaveAt) > 250)) {
-                applySensorScopeData(data);
-            }
+            addSensorBurst(data);
 
             sensorCount++;
             document.getElementById('sensorCount').textContent = sensorCount;

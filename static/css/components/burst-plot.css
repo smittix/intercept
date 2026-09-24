@@ -1,0 +1,106 @@
+/* BurstPlot: packets over the last minute (static/js/components/burst-plot.js) */
+
+.bp {
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-card, #0a0f16);
+}
+
+.bp-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 6px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.bp-readout {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text-secondary);
+}
+
+.bp-status {
+    min-width: 64px;
+    text-align: right;
+}
+
+.bp-status[data-state="active"] { color: var(--accent-cyan); }
+.bp-status[data-state="packet"] { color: var(--accent-green); }
+
+.bp-plot {
+    position: relative;
+    height: 90px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+
+.bp-plot svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.bp-grid {
+    stroke: rgba(255, 255, 255, 0.05);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+
+.bp-noise {
+    fill: rgba(255, 255, 255, 0.05);
+}
+
+.bp-mark { fill: var(--text-dim); opacity: 0.75; }
+.bp-mark.weak { fill: var(--accent-red); }
+.bp-mark.fair { fill: var(--accent-amber); }
+.bp-mark.strong { fill: var(--accent-green); }
+.bp-mark.fresh { opacity: 1; filter: drop-shadow(0 0 3px currentColor); }
+
+.bp-labels {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.bp-label {
+    position: absolute;
+    transform: translate(-100%, -2px);
+    padding-right: 5px;
+    font-size: 10px;
+    white-space: nowrap;
+    color: var(--text-secondary);
+}
+
+.bp-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.bp-empty[hidden] {
+    display: none;
+}
+
+.bp-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-dim);
+}
