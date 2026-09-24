@@ -11598,18 +11598,12 @@
             _loadSatellitesFromAPI();
         }
 
-        // Utility function
+        // Utility function. This later declaration replaces the feed version above,
+        // so status messages ("Sensor stream connected...") are the app's toasts.
         function showInfo(message) {
-            // Simple notification - could be enhanced
-            const existing = document.querySelector('.info-toast');
-            if (existing) existing.remove();
-
-            const toast = document.createElement('div');
-            toast.className = 'info-toast';
-            toast.textContent = message;
-            toast.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: var(--accent-cyan); color: #000; padding: 10px 20px; border-radius: 4px; z-index: 10001; font-size: 12px;';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+            if (window.AppFeedback) {
+                AppFeedback.toast({ type: 'info', message: String(message), durationMs: 3500 });
+            }
         }
 
         // Theme toggle functions

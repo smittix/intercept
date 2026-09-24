@@ -206,6 +206,19 @@
                 <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
             </button>
             <button type="button" class="nav-tool-btn" onclick="showHelp()" title="Help & Documentation" aria-label="Open help">?</button>
+            <div class="nav-notices">
+                <button type="button" class="nav-tool-btn nav-notices-btn" id="navNoticesBtn" aria-haspopup="dialog" aria-expanded="false" onclick="toggleNavNotices(event)" title="Recent notifications">
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+                    <span class="nav-notices-count" id="navNoticesCount" hidden></span>
+                </button>
+                <div class="nav-notices-panel" id="navNoticesPanel" role="dialog" aria-label="Recent notifications" hidden>
+                    <div class="nav-notices-head">
+                        <span>Recent notifications</span>
+                        <button type="button" onclick="clearNavNotices()">Clear</button>
+                    </div>
+                    <div class="nav-notices-list" id="navNoticesList"></div>
+                </div>
+            </div>
             <div class="nav-more">
                 <button type="button" class="nav-tool-btn nav-more-btn" id="navMoreBtn" aria-haspopup="menu" aria-expanded="false" onclick="toggleNavMore(event)" title="More tools">
                     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></span>
@@ -503,6 +516,106 @@
         };
     }
 
+    // Notification history: the toasts shown in this tab (ui-feedback.js keeps
+    // them in session storage), with a count of those not yet seen.
+    const NOTICES_KEY = 'intercept.notices';
+    const NOTICES_SEEN_KEY = 'intercept.notices.seen';
+
+    function readNotices() {
+        try { return JSON.parse(sessionStorage.getItem(NOTICES_KEY) || '[]'); } catch (e) { return []; }
+    }
+
+    function noticeAge(t) {
+        const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+        if (s < 60) return 'just now';
+        if (s < 3600) return Math.floor(s / 60) + ' min ago';
+        return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function readSeen() {
+        try { return Number(sessionStorage.getItem(NOTICES_SEEN_KEY)) || 0; } catch (e) { return 0; }
+    }
+
+    // highlightSince: mark as new what came after this (on opening, the time
+    // last seen before this opening)
+    function renderNavNotices(highlightSince) {
+        const list = readNotices();
+        const seen = readSeen();
+        const unread = list.filter((n) => n.t > seen).length;
+        const since = highlightSince === undefined ? seen : highlightSince;
+        const count = document.getElementById('navNoticesCount');
+        if (count) {
+            count.textContent = unread > 9 ? '9+' : String(unread);
+            count.hidden = unread === 0;
+        }
+        const box = document.getElementById('navNoticesList');
+        if (!box) return;
+        if (!list.length) {
+            box.innerHTML = '<div class="nav-notices-empty">Nothing yet. Alerts, errors and results shown as pop-ups are kept here.</div>';
+            return;
+        }
+        box.replaceChildren(...list.slice().reverse().map((n) => {
+            const row = document.createElement('div');
+            row.className = 'nav-notice ' + (n.type || 'info') + (n.t > since ? ' unread' : '');
+            const head = document.createElement('div');
+            head.className = 'nav-notice-head';
+            const title = document.createElement('b');
+            title.textContent = n.title || '';
+            const when = document.createElement('span');
+            when.textContent = noticeAge(n.t);
+            head.append(title, when);
+            const msg = document.createElement('div');
+            msg.className = 'nav-notice-msg';
+            msg.textContent = n.message || '';
+            row.append(head, msg);
+            return row;
+        }));
+    }
+
+    window.toggleNavNotices = function(event, open) {
+        if (event) event.stopPropagation();
+        const panel = document.getElementById('navNoticesPanel');
+        const btn = document.getElementById('navNoticesBtn');
+        if (!panel || !btn) return;
+        const show = open === undefined ? panel.hidden : open;
+        if (show) {
+            const before = readSeen();
+            try { sessionStorage.setItem(NOTICES_SEEN_KEY, String(Date.now())); } catch (e) { /* ignore */ }
+            renderNavNotices(before);  // the count clears; what was new stays marked
+            if (window.toggleNavMore) toggleNavMore(null, false);
+        } else {
+            renderNavNotices();
+        }
+        panel.hidden = !show;
+        btn.setAttribute('aria-expanded', String(show));
+        document.body.classList.toggle('nav-notices-open', show);
+    };
+
+    window.clearNavNotices = function() {
+        try { sessionStorage.removeItem(NOTICES_KEY); } catch (e) { /* ignore */ }
+        renderNavNotices();
+    };
+
+    window.addEventListener('intercept:notice', () => {
+        const panel = document.getElementById('navNoticesPanel');
+        renderNavNotices();
+        if (panel && !panel.hidden) {
+            try { sessionStorage.setItem(NOTICES_SEEN_KEY, String(Date.now())); } catch (e) { /* ignore */ }
+        }
+    });
+    document.addEventListener('click', (event) => {
+        const panel = document.getElementById('navNoticesPanel');
+        if (panel && !panel.hidden && !event.target.closest('.nav-notices')) toggleNavNotices(null, false);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            const panel = document.getElementById('navNoticesPanel');
+            if (panel && !panel.hidden) toggleNavNotices(null, false);
+        }
+    });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderNavNotices);
+    else renderNavNotices();
+
     // The toolbar's "More" menu: the tools used now and then, with labels
     window.toggleNavMore = function(event, open) {
         if (event) event.stopPropagation();
@@ -510,6 +623,7 @@
         const btn = document.getElementById('navMoreBtn');
         if (!menu || !btn) return;
         const show = open === undefined ? menu.hidden : open;
+        if (show && window.toggleNavNotices) toggleNavNotices(null, false);
         menu.hidden = !show;
         btn.setAttribute('aria-expanded', String(show));
         // The nav is its own stacking context, so toasts (z 25500) would cover
