@@ -617,6 +617,13 @@ body {
     grid-template-columns: 1fr;
 }
 
+/* Stacked on a phone, the modes come first; the Live card and changelog follow */
+@media (max-width: 767px) {
+    .welcome-modes {
+        order: -1;
+    }
+}
+
 .welcome-header {
     flex-wrap: wrap;
     justify-content: center;
@@ -7779,4 +7786,21 @@ html[data-ui-tier="enhanced"]:not([data-theme="light"]) .control-group {
 .locate-action.locate-action-lg svg {
     width: 13px;
     height: 13px;
+}
+
+/* Phone: the bottom bar is one row that scrolls sideways, not three stacked rows */
+@media (max-width: 767px) {
+    .status-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 8px;
+        padding: 8px 12px;
+    }
+
+    .status-bar > *,
+    .status-controls,
+    .status-controls > * {
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
+    }
 }
