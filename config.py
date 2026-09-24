@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.16"
+VERSION = "2.33.17"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.17",
+        "date": "September 2026",
+        "highlights": [
+            "Fix: with two Wi-Fi tabs open, each showed only about half the live updates.",
+            "Signal-strength tooltips no longer show a distance estimate: one receiver cannot measure distance from signal strength.",
+        ],
+    },
     {
         "version": "2.33.16",
         "date": "September 2026",

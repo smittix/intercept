@@ -409,9 +409,6 @@ def describe_signal_for_report(
     """
     assessment = assess_signal(rssi, duration_seconds, observation_count)
 
-    # Estimate range (very approximate, with appropriate hedging)
-    range_estimate = _estimate_range(rssi)
-
     return {
         "headline": f"{assessment.strength_label} {protocol} signal, {assessment.duration_label.lower()}",
         "description": assessment.summary,
@@ -423,7 +420,6 @@ def describe_signal_for_report(
             "duration_category": assessment.detection_duration.value,
             "observations": observation_count,
         },
-        "range_estimate": range_estimate,
         "confidence": assessment.confidence.value,
         "confidence_factors": {
             "signal_strength": assessment.strength_label,
@@ -431,55 +427,6 @@ def describe_signal_for_report(
             "observation_count": observation_count,
         },
         "caveats": assessment.caveats,
-    }
-
-
-def _estimate_range(rssi: float | int | None) -> dict:
-    """
-    Estimate approximate range from RSSI with heavy caveats.
-
-    Returns range as min/max estimate with disclaimer.
-    """
-    if rssi is None:
-        return {
-            "estimate": "Unknown",
-            "disclaimer": "Insufficient signal data for range estimation",
-        }
-
-    try:
-        rssi_val = float(rssi)
-    except (ValueError, TypeError):
-        return {
-            "estimate": "Unknown",
-            "disclaimer": "Invalid signal data",
-        }
-
-    # Very rough estimates based on free-space path loss
-    # These are intentionally wide ranges due to environmental variability
-    if rssi_val > -40:
-        estimate = "< 3 meters"
-        range_min, range_max = 0, 3
-    elif rssi_val > -55:
-        estimate = "3-10 meters"
-        range_min, range_max = 3, 10
-    elif rssi_val > -70:
-        estimate = "5-20 meters"
-        range_min, range_max = 5, 20
-    elif rssi_val > -85:
-        estimate = "10-50 meters"
-        range_min, range_max = 10, 50
-    else:
-        estimate = "> 30 meters or heavily obstructed"
-        range_min, range_max = 30, None
-
-    return {
-        "estimate": estimate,
-        "range_min_meters": range_min,
-        "range_max_meters": range_max,
-        "disclaimer": (
-            "Range estimates are approximate and significantly affected by "
-            "walls, interference, antenna characteristics, and transmit power"
-        ),
     }
 
 

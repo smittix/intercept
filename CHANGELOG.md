@@ -2,6 +2,18 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.17] - 2026-09-24
+
+### Fixed
+
+- **With two Wi-Fi tabs open, each showed only about half the live updates.** The tabs competed for events from one queue. Each tab now receives every event.
+
+### Removed
+
+- **Distance estimates from signal strength.** Signal tooltips and the signal assessment panel showed "Est. range: < 3 meters" and the like, worked out from RSSI alone. A single receiver cannot measure distance this way: the same reading comes from a weak transmitter nearby or a strong one behind a wall.
+
+---
+
 ## [2.33.16] - 2026-09-24
 
 ### Fixed
