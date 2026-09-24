@@ -96,7 +96,7 @@
 
 .activity-row {
     display: grid;
-    grid-template-columns: 80px 90px minmax(140px, auto) 1fr auto auto;
+    grid-template-columns: 80px 110px minmax(140px, auto) 1fr auto auto;
     align-items: center;
     gap: 10px;
     padding: 6px 12px;
@@ -114,9 +114,25 @@
 }
 
 .activity-source {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: var(--source-color);
     font-weight: 600;
     white-space: nowrap;
+}
+
+.activity-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    color: var(--source-color);
+}
+
+.activity-icon svg {
+    width: 100%;
+    height: 100%;
 }
 
 .activity-id {
@@ -172,24 +188,145 @@
     color: var(--text-primary);
 }
 
-.activity-sources {
+/* Source tiles: count in the window; click to show or hide */
+.activity-tiles {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.activity-source-toggle {
-    display: flex;
+.activity-tile {
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    padding: 7px 12px;
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--source-color);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font: inherit;
+    cursor: pointer;
+    transition: opacity 0.15s, border-color 0.15s;
+}
+
+.activity-tile .activity-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.activity-tile-label {
+    font-size: 12px;
+}
+
+.activity-tile-count {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--source-color);
+}
+
+.activity-tile:hover,
+.activity-tile:focus-visible {
+    border-color: var(--source-color);
+}
+
+.activity-tile.off {
+    opacity: 0.4;
+}
+
+.activity-tile.off .activity-tile-label {
+    text-decoration: line-through;
+}
+
+/* Timeline: stacked bars per time bucket, coloured by source */
+.activity-timeline {
+    padding: 10px 12px 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.activity-timeline-svg {
+    display: block;
+    width: 100%;
+    height: 64px;
+}
+
+.activity-bar {
+    fill: var(--source-color, var(--text-dim));
+    opacity: 0.85;
+}
+
+.activity-bucket-hit {
+    fill: transparent;
     cursor: pointer;
 }
 
-.activity-swatch {
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    background: var(--source-color);
+.activity-bucket:hover .activity-bucket-hit {
+    fill: rgba(255, 255, 255, 0.05);
+}
+
+.activity-bucket.chosen .activity-bucket-hit {
+    fill: var(--accent-cyan-dim, rgba(74, 163, 255, 0.15));
+}
+
+.activity-timeline-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
+
+/* Signal: a small bar banded as on the radars */
+.activity-signal {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.activity-signal-track {
+    position: relative;
+    width: 44px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.activity-signal-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 3px;
+}
+
+.activity-signal-fill.strong { background: var(--accent-green); }
+.activity-signal-fill.medium { background: var(--accent-amber); }
+.activity-signal-fill.weak { background: var(--accent-red); }
+
+/* Map of sightings with a position */
+.activity-map {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.activity-map[hidden] {
+    display: none;
+}
+
+.activity-map-canvas {
+    height: 260px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.activity-map-toggle.active {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
 }
 
 @media (max-width: 800px) {

@@ -2,6 +2,19 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.20] - 2026-09-24
+
+### Changed
+
+- **Activity feed** (Intel > Activity):
+  - **Source tiles** above the feed show each source's icon and count in the time window. Click one to hide or show that source.
+  - **A timeline** of the whole window: stacked bars per minute, coloured by source, so bursts and quiet periods stand out. Hover a bar for its counts, or click it to show just that period.
+  - **Rows** carry the source's icon, and signal strength as a small bar beside the dBm.
+  - **A Map** toggle shows the sightings that carry a position (aircraft, vessels, APRS) as dots coloured by source.
+  - `GET /observations/histogram` returns the per-source counts over time.
+
+---
+
 ## [2.33.19] - 2026-09-24
 
 A polish pass.

@@ -46,6 +46,32 @@ def list_observations() -> Response:
     return jsonify({"status": "success", "count": len(rows), "observations": rows})
 
 
+@observations_bp.route("/histogram")
+def observation_histogram() -> Response:
+    """Counts per source in equal time buckets, for the timeline.
+
+    Query: window_minutes (default 60) or since and until (epoch seconds),
+    buckets (default 60, max 500), source (comma separated), identifier.
+    """
+    try:
+        since = _float_arg("since")
+        until = _float_arg("until")
+        window = _float_arg("window_minutes")
+        buckets = int(request.args.get("buckets", 60))
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+    until = until if until is not None else time.time()
+    if since is None:
+        since = until - (window if window is not None else 60) * 60
+    if since >= until:
+        return jsonify({"status": "error", "message": "since must be before until"}), 400
+    sources = [s for s in request.args.get("source", "").split(",") if s.strip()] or None
+    data = observations.histogram(
+        since, until, buckets, source=sources, identifier=request.args.get("identifier") or None
+    )
+    return jsonify({"status": "success", **data})
+
+
 @observations_bp.route("/stream")
 def stream_observations() -> Response:
     """Live tail of new observations (SSE)."""

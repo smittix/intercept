@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.19"
+VERSION = "2.33.20"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.20",
+        "date": "September 2026",
+        "highlights": [
+            "Activity feed: source tiles with counts, a timeline of the window (click a bar to see that period), source icons and signal bars, and a map of sightings with a position.",
+        ],
+    },
     {
         "version": "2.33.19",
         "date": "September 2026",

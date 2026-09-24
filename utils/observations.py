@@ -317,6 +317,41 @@ def query(
     return [dict(row) for row in rows]
 
 
+def histogram(
+    since: float,
+    until: float,
+    buckets: int = 60,
+    source: list[str] | None = None,
+    identifier: str | None = None,
+) -> dict:
+    """Counts of observations per source in equal time buckets from since to
+    until, for the feed's timeline. Counted in SQL: the whole window, not
+    only the rows a page of the list holds."""
+    from utils.database import get_db
+
+    flush()
+    buckets = max(1, min(int(buckets), 500))
+    width = max(1e-6, (until - since) / buckets)
+    conditions, params = ["ts >= ?", "ts < ?"], [since, until]
+    if source:
+        conditions.append(f"source IN ({','.join('?' * len(source))})")
+        params.extend(source)
+    if identifier:
+        conditions.append("(identifier = ? OR entity = ?)")
+        params.extend([identifier, identifier])
+    with get_db() as conn:
+        rows = conn.execute(
+            f"SELECT source, CAST((ts - ?) / ? AS INTEGER) AS bucket, COUNT(*) FROM observations "
+            f"WHERE {' AND '.join(conditions)} GROUP BY source, bucket",
+            (since, width, *params),
+        ).fetchall()
+    counts: dict[str, list[int]] = {}
+    for src, bucket, count in rows:
+        if 0 <= bucket < buckets:
+            counts.setdefault(src, [0] * buckets)[bucket] += count
+    return {"since": since, "until": until, "bucket_seconds": width, "buckets": buckets, "sources": counts}
+
+
 def cleanup_old_observations(max_age_hours: float | None = None, max_rows: int | None = None) -> int:
     """The retention policy: drop observations older than max_age_hours, then
     the oldest beyond max_rows. Registered with the cleanup manager."""
