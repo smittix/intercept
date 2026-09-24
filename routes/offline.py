@@ -18,7 +18,7 @@ OFFLINE_DEFAULTS = {
     # Default to bundled assets/fonts to avoid third-party CDN privacy blocks.
     "offline.assets_source": "local",
     "offline.fonts_source": "local",
-    "offline.tile_provider": "cartodb_dark_cyan",
+    "offline.tile_provider": "esri_world",
     "offline.tile_server_url": "",
     "offline.stadia_key": "",
     "offline.carto_key": "",

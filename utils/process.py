@@ -108,6 +108,69 @@ def safe_terminate(process: subprocess.Popen | None, timeout: float = 2.0) -> bo
         return False
 
 
+def _leads_group(process: subprocess.Popen) -> bool:
+    """Whether a process leads its own group (started with start_new_session)."""
+    try:
+        return os.getpgid(process.pid) == process.pid
+    except (ProcessLookupError, OSError):
+        return False
+
+
+def _signal_process(process: subprocess.Popen, sig: int, group: bool) -> None:
+    """Signal a process, or its whole group if it leads one, so a decoder's
+    children go with it."""
+    with contextlib.suppress(ProcessLookupError, OSError):
+        if group:
+            os.killpg(process.pid, sig)
+        else:
+            process.send_signal(sig)
+
+
+def terminate_together(
+    processes: list[subprocess.Popen | None], timeout: float = 2.0, kill_timeout: float = 2.0
+) -> list[subprocess.Popen]:
+    """Stop a mode's processes together, and wait until they are gone.
+
+    Every process gets SIGTERM at once and they share one deadline, rather
+    than each waiting its turn. Survivors get SIGKILL, and are waited for:
+    until a decoder has actually exited it still holds the SDR, and
+    releasing the device before then lets the next start fail as busy.
+    Returns the processes still alive afterwards (normally none).
+    """
+    procs = [p for p in processes if p is not None]
+    # Noted before signalling: once a leader has exited, its group can no
+    # longer be looked up from it, though its children may still be running.
+    leaders = {p.pid for p in procs if p.poll() is None and _leads_group(p)}
+    for process in procs:
+        if process.poll() is None:
+            _signal_process(process, signal.SIGTERM, process.pid in leaders)
+
+    deadline = time.monotonic() + timeout
+    for process in procs:
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            process.wait(timeout=max(0.0, deadline - time.monotonic()))
+
+    stubborn = [p for p in procs if p.poll() is None]
+    for process in stubborn:
+        _signal_process(process, signal.SIGKILL, process.pid in leaders)
+    # A leader that obeyed SIGTERM can leave children that did not
+    for pgid in leaders:
+        with contextlib.suppress(ProcessLookupError, OSError):
+            os.killpg(pgid, signal.SIGKILL)
+    deadline = time.monotonic() + kill_timeout
+    for process in stubborn:
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            process.wait(timeout=max(0.0, deadline - time.monotonic()))
+
+    for process in procs:
+        close_process_pipes(process)
+        unregister_process(process)
+    survivors = [p for p in procs if p.poll() is None]
+    for process in survivors:
+        logger.warning(f"Process {process.pid} did not exit after SIGKILL (stuck in the kernel, e.g. on USB)")
+    return survivors
+
+
 # Register cleanup handlers
 atexit.register(cleanup_all_processes)
 

@@ -78,14 +78,36 @@ const InterceptTime = (function() {
         'US/Pacific': 'PT',
     };
 
-    let _timezone = localStorage.getItem('interceptTimezone') || 'US/Eastern';
-    let _hour12 = (localStorage.getItem('interceptHour12') || 'true') === 'true';
+    // Until the operator chooses otherwise, show the browser's own time zone
+    // and clock format: the machine running the browser is where they are.
+    let _timezone = localStorage.getItem('interceptTimezone') || 'local';
+    const _storedHour12 = localStorage.getItem('interceptHour12');
+    let _hour12 = _storedHour12 === null ? _browserHour12() : _storedHour12 === 'true';
     const _listeners = [];
+
+    function _browserHour12() {
+        try {
+            return !!new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions().hour12;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /** The browser's own zone abbreviation, e.g. "BST" or "GMT+2". */
+    function _browserZoneLabel() {
+        try {
+            const part = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+                .formatToParts(new Date()).find((p) => p.type === 'timeZoneName');
+            return part ? part.value : '';
+        } catch (e) {
+            return '';
+        }
+    }
 
     function getTimezone() { return _timezone; }
     function getHour12() { return _hour12; }
     function getIANA() { return TZ_MAP[_timezone]; }
-    function getLabel() { return TZ_LABELS[_timezone] || ''; }
+    function getLabel() { return _timezone === 'local' ? _browserZoneLabel() : (TZ_LABELS[_timezone] || ''); }
 
     function setTimezone(tz) {
         if (!TZ_MAP.hasOwnProperty(tz)) return;

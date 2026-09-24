@@ -15,6 +15,8 @@
 const WiFiMode = (function() {
     'use strict';
 
+    const LOCATE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z"/></svg>';
+
     // ==========================================================================
     // Configuration
     // ==========================================================================
@@ -1207,6 +1209,8 @@ const WiFiMode = (function() {
                     <div class="row-badges">
                         <span class="badge ${badgeClass}">${escapeHtml(security)}</span>
                         ${hiddenTag}
+                        <button type="button" class="locate-action" title="Locate this network"
+                                onclick="event.stopPropagation(); WiFiMode.locateNetwork(this.closest('.network-row').dataset.bssid)">${LOCATE_ICON}Locate</button>
                     </div>
                 </div>
                 <div class="row-bottom">
@@ -1230,6 +1234,23 @@ const WiFiMode = (function() {
             table: true,
             detail: selectedBssid === network.bssid,
         });
+    }
+
+    /**
+     * Hand a network to WiFi Locate and start locating it at once.
+     * Defaults to the selected network.
+     */
+    function locateNetwork(bssid) {
+        bssid = bssid || selectedBssid;
+        if (!bssid) return;
+        const network = networks.get(bssid) || {};
+        const payload = { bssid, ssid: network.essid || network.display_name || null };
+        const go = () => Promise.resolve(WiFiLocate.handoff(payload)).then(() => WiFiLocate.start());
+        if (typeof WiFiLocate !== 'undefined') {
+            go();
+        } else if (typeof switchMode === 'function') {
+            switchMode('wifi_locate').then(() => { if (typeof WiFiLocate !== 'undefined') go(); });
+        }
     }
 
     function selectNetwork(bssid) {
@@ -1849,6 +1870,7 @@ const WiFiMode = (function() {
         startDeepScan,
         stopScan,
         selectNetwork,
+        locateNetwork,
         closeDetail,
         setFilter: setNetworkFilter,
         exportData,

@@ -37,7 +37,7 @@ AIRTAG_SAMPLES = [
         "address": "11:22:33:44:55:66",
         "address_type": "rpa",
         "manufacturer_id": APPLE_COMPANY_ID,
-        "manufacturer_data": bytes.fromhex("1219abcdef1234567890"),
+        "manufacturer_data": bytes.fromhex("12191bcdef1234567890"),  # status 0x1b: bits 4-5 = 1, AirTag
         "service_uuids": [],
         "expected_type": TrackerType.AIRTAG,
         "expected_confidence": TrackerConfidence.MEDIUM,
@@ -119,6 +119,42 @@ SAMSUNG_SAMPLES = [
 
 # Non-tracker devices (should NOT be detected as trackers)
 NON_TRACKER_SAMPLES = [
+    {
+        "name": "iPhone separated from its owner - Offline Finding, status says Apple device",
+        "address": "4A:11:22:33:44:55",
+        "address_type": "random",
+        "manufacturer_id": APPLE_COMPANY_ID,
+        "manufacturer_data": bytes.fromhex("1219" + "04" + "ab" * 23),  # status bits 4-5 = 0
+        "service_uuids": [],
+        "expected_tracker": False,
+    },
+    {
+        "name": "AirPods proximity pairing (0x07), not Offline Finding",
+        "address": "5B:11:22:33:44:55",
+        "address_type": "random",
+        "manufacturer_id": APPLE_COMPANY_ID,
+        "manufacturer_data": bytes.fromhex("0719" + "01" + "ab" * 22),
+        "service_uuids": [],
+        "expected_tracker": False,
+    },
+    {
+        "name": "Galaxy phone - Samsung company ID alone",
+        "address": "6C:11:22:33:44:55",
+        "address_type": "random",
+        "manufacturer_id": 0x0075,
+        "manufacturer_data": bytes.fromhex("420901" + "ab" * 20),
+        "service_uuids": [],
+        "expected_tracker": False,
+    },
+    {
+        "name": "Android phone with Exposure Notification (fd6f)",
+        "address": "7D:11:22:33:44:55",
+        "address_type": "random",
+        "manufacturer_id": None,
+        "manufacturer_data": None,
+        "service_uuids": ["fd6f"],
+        "expected_tracker": False,
+    },
     {
         "name": "Apple AirPods - should not be tracker",
         "address": "AA:BB:CC:DD:EE:00",
@@ -455,3 +491,44 @@ def test_api_backwards_compatibility():
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+class TestAppleOfflineFindingKinds:
+    """Every Find My device sends the same Offline Finding advertisement;
+    the status byte says which kind sent it. Only an AirTag is an AirTag."""
+
+    @pytest.mark.parametrize(
+        "status,expected",
+        [
+            (0x10, TrackerType.AIRTAG),
+            (0x20, TrackerType.FINDMY_ACCESSORY),  # AirPods
+            (0x30, TrackerType.FINDMY_ACCESSORY),  # third-party Find My accessory
+        ],
+    )
+    def test_status_byte_decides_the_type(self, status, expected):
+        result = TrackerSignatureEngine().detect_tracker(
+            address="4A:00:00:00:00:01",
+            address_type="random",
+            manufacturer_id=APPLE_COMPANY_ID,
+            manufacturer_data=bytes([0x12, 0x19, status]) + bytes(23),
+        )
+        assert result.is_tracker and result.tracker_type == expected
+
+    def test_airpods_are_named_as_airpods(self):
+        result = TrackerSignatureEngine().detect_tracker(
+            address="4A:00:00:00:00:02",
+            address_type="random",
+            manufacturer_id=APPLE_COMPANY_ID,
+            manufacturer_data=bytes([0x12, 0x19, 0x20]) + bytes(23),
+        )
+        assert result.tracker_name == "AirPods (Find My)"
+
+    def test_samsung_smarttag_still_detected_by_its_service(self):
+        result = TrackerSignatureEngine().detect_tracker(
+            address="6C:00:00:00:00:01",
+            address_type="random",
+            manufacturer_id=0x0075,
+            manufacturer_data=bytes.fromhex("420901"),
+            service_uuids=["fd5a"],
+        )
+        assert result.is_tracker and result.tracker_type == TrackerType.SAMSUNG_SMARTTAG

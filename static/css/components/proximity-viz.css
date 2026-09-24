@@ -7,9 +7,80 @@
    PROXIMITY RADAR
    ============================================ */
 
+#btProximityRadar {
+    flex-direction: column;
+    align-items: center;
+}
+
 .proximity-radar-svg {
     display: block;
+    width: 100%;
+    max-width: 380px;
+    height: auto;
     margin: 0 auto;
+    overflow: visible;
+}
+
+.proximity-radar-svg .pr-face {
+    stroke: none;
+}
+
+.proximity-radar-svg .pr-ring {
+    fill: none;
+    stroke: var(--accent-cyan);
+    stroke-opacity: 0.16;
+    stroke-width: 1;
+}
+
+.proximity-radar-svg .pr-ring.outer {
+    stroke-opacity: 0.35;
+}
+
+.proximity-radar-svg .pr-axis {
+    stroke: var(--accent-cyan);
+    stroke-opacity: 0.08;
+    stroke-width: 1;
+}
+
+.proximity-radar-svg .pr-tick {
+    stroke: var(--accent-cyan);
+    stroke-opacity: 0.25;
+    stroke-width: 1;
+}
+
+.proximity-radar-svg .pr-tick.major {
+    stroke-opacity: 0.5;
+}
+
+.proximity-radar-svg .pr-ring-label {
+    fill: var(--text-dim, #6b7280);
+    font-family: var(--font-mono, monospace);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+}
+
+.proximity-radar-svg .pr-sweep-edge {
+    stroke: var(--accent-cyan);
+    stroke-width: 1.5;
+    stroke-opacity: 0.85;
+    stroke-linecap: round;
+}
+
+.proximity-radar-svg .pr-you {
+    fill: var(--accent-cyan);
+}
+
+.proximity-radar-svg .pr-ripple {
+    fill: none;
+    stroke: var(--accent-cyan);
+    stroke-width: 1;
+}
+
+.pr-caption {
+    margin-top: 6px;
+    color: var(--text-dim, #6b7280);
+    font-size: 10px;
+    text-align: center;
 }
 
 .radar-device {

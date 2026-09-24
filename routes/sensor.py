@@ -17,7 +17,7 @@ import app as app_module
 from utils.dependencies import install_hint
 from utils.logging import sensor_logger as logger
 from utils.observations import emit_observation
-from utils.process import register_process, unregister_process
+from utils.process import register_process, terminate_together, unregister_process
 from utils.responses import api_error, api_success
 from utils.sdr import SDRFactory, SDRType
 from utils.sdr.device_config import apply_device_defaults
@@ -317,11 +317,8 @@ def stop_sensor() -> Response:
 
     with app_module.sensor_lock:
         if app_module.sensor_process:
-            app_module.sensor_process.terminate()
-            try:
-                app_module.sensor_process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                app_module.sensor_process.kill()
+            # Waits until rtl_433 has exited, so the SDR is free when released
+            terminate_together([app_module.sensor_process])
             app_module.sensor_process = None
 
             # Release device from registry

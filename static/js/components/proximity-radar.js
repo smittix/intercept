@@ -1,9 +1,10 @@
 /**
  * Proximity Radar Component
  *
- * SVG-based circular radar visualization for Bluetooth device proximity.
- * Displays devices positioned by estimated distance with concentric rings
- * for proximity bands.
+ * SVG radar for Bluetooth devices: nearer the centre means a stronger
+ * signal. It is not a distance: a single receiver cannot measure one, and
+ * a weak transmitter nearby reads the same as a strong one behind a wall.
+ * The rings are labelled by signal band for that reason.
  */
 
 const ProximityRadar = (function() {
@@ -11,16 +12,19 @@ const ProximityRadar = (function() {
 
     // Configuration
     const CONFIG = {
-        size: 280,
-        padding: 20,
-        centerRadius: 8,
+        size: 400,          // viewBox units; the SVG scales to its panel
+        padding: 22,
+        centerRadius: 5,
+        // Band boundaries as a fraction of the radius; devices sit inside
+        // them (see calculateDevicePosition).
         rings: [
-            { band: 'immediate', radius: 0.25, color: '#22c55e', label: '< 1m' },
-            { band: 'near', radius: 0.5, color: '#eab308', label: '1-3m' },
-            { band: 'far', radius: 0.85, color: '#ef4444', label: '3-10m' },
+            { radius: 0.28, label: 'STRONG' },
+            { radius: 0.55, label: 'MEDIUM' },
+            { radius: 0.82, label: 'WEAK' },
         ],
+        sweepSeconds: 4,
         dotMinSize: 4,
-        dotMaxSize: 12,
+        dotMaxSize: 9,
         pulseAnimationDuration: 2000,
         newDeviceThreshold: 30, // seconds
     };
@@ -61,70 +65,78 @@ const ProximityRadar = (function() {
      */
     function createSVG() {
         const size = CONFIG.size;
-        const center = size / 2;
+        const c = size / 2;
+        const R = c - CONFIG.padding;
+        const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // Bearing ticks every 10 degrees, longer every 30
+        const ticks = Array.from({ length: 36 }, (_, i) => {
+            const a = (i * 10) * Math.PI / 180;
+            const len = i % 3 === 0 ? 8 : 4;
+            const x1 = c + Math.sin(a) * R, y1 = c - Math.cos(a) * R;
+            const x2 = c + Math.sin(a) * (R - len), y2 = c - Math.cos(a) * (R - len);
+            return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+                          class="pr-tick${i % 3 === 0 ? ' major' : ''}"/>`;
+        }).join('');
+
+        // Sweep: a wedge of thin slices fading behind the leading edge
+        const slices = 24, wedge = 60;
+        const sweep = Array.from({ length: slices }, (_, i) => {
+            const a0 = (-(i + 1) * wedge / slices) * Math.PI / 180;
+            const a1 = (-i * wedge / slices) * Math.PI / 180;
+            const p0 = `${(c + Math.sin(a0) * R).toFixed(1)},${(c - Math.cos(a0) * R).toFixed(1)}`;
+            const p1 = `${(c + Math.sin(a1) * R).toFixed(1)},${(c - Math.cos(a1) * R).toFixed(1)}`;
+            const opacity = (0.22 * Math.pow(1 - i / slices, 2)).toFixed(3);
+            return `<path d="M${c},${c} L${p0} A${R},${R} 0 0,1 ${p1} Z" fill="var(--accent-cyan)" fill-opacity="${opacity}"/>`;
+        }).join('');
+        const spin = reduceMotion ? '' : `<animateTransform attributeName="transform" type="rotate"
+                     from="0 ${c} ${c}" to="360 ${c} ${c}" dur="${CONFIG.sweepSeconds}s" repeatCount="indefinite"/>`;
 
         container.innerHTML = `
-            <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" class="proximity-radar-svg">
+            <svg viewBox="0 0 ${size} ${size}" class="proximity-radar-svg" role="img"
+                 aria-label="Bluetooth devices by signal strength">
                 <defs>
-                    <radialGradient id="radarGradient" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" style="stop-color:var(--accent-cyan);stop-opacity:0.1" />
-                        <stop offset="100%" style="stop-color:var(--accent-cyan);stop-opacity:0" />
+                    <radialGradient id="pr-bg" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="var(--accent-cyan)" stop-opacity="0.10"/>
+                        <stop offset="70%" stop-color="var(--accent-cyan)" stop-opacity="0.03"/>
+                        <stop offset="100%" stop-color="var(--accent-cyan)" stop-opacity="0"/>
                     </radialGradient>
-                    <filter id="glow">
-                        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                        <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
+                    <filter id="pr-glow" x="-100%" y="-100%" width="300%" height="300%">
+                        <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
                     </filter>
-                    <clipPath id="radarClip">
-                        <circle cx="${center}" cy="${center}" r="${center - CONFIG.padding}"/>
-                    </clipPath>
                 </defs>
 
-                <!-- Background gradient -->
-                <circle cx="${center}" cy="${center}" r="${center - CONFIG.padding}"
-                        fill="url(#radarGradient)" />
+                <circle cx="${c}" cy="${c}" r="${R}" class="pr-face" fill="url(#pr-bg)"/>
 
-                <!-- Proximity rings -->
                 <g class="radar-rings">
-                    ${CONFIG.rings.map((ring, i) => {
-                        const r = ring.radius * (center - CONFIG.padding);
-                        return `
-                            <circle cx="${center}" cy="${center}" r="${r}"
-                                    fill="none" stroke="${ring.color}" stroke-opacity="0.3"
-                                    stroke-width="1" stroke-dasharray="4,4" />
-                            <text x="${center}" y="${center - r + 12}"
-                                  text-anchor="middle" fill="${ring.color}" fill-opacity="0.6"
-                                  font-size="9" font-family="monospace">${ring.label}</text>
-                        `;
-                    }).join('')}
+                    ${CONFIG.rings.map((ring) => `
+                        <circle cx="${c}" cy="${c}" r="${(ring.radius * R).toFixed(1)}" class="pr-ring"/>
+                        <text x="${c + 5}" y="${(c - ring.radius * R + 12).toFixed(1)}" class="pr-ring-label">${ring.label}</text>
+                    `).join('')}
+                    <circle cx="${c}" cy="${c}" r="${R}" class="pr-ring outer"/>
+                    <line x1="${c - R}" y1="${c}" x2="${c + R}" y2="${c}" class="pr-axis"/>
+                    <line x1="${c}" y1="${c - R}" x2="${c}" y2="${c + R}" class="pr-axis"/>
+                    ${ticks}
                 </g>
 
-                <!-- CSS-animated sweep group: trailing arcs + sweep line -->
-                <g class="bt-radar-sweep" clip-path="url(#radarClip)">
-                    <path d="M${center},${center} L${center},${CONFIG.padding} A${center - CONFIG.padding},${center - CONFIG.padding} 0 0,1 ${center + (center - CONFIG.padding)},${center} Z"
-                          style="fill:var(--accent-cyan)" opacity="0.035"/>
-                    <path d="M${center},${center} L${center},${CONFIG.padding} A${center - CONFIG.padding},${center - CONFIG.padding} 0 0,1 ${Math.round(center + (center - CONFIG.padding) * Math.sin(Math.PI / 3))},${Math.round(center + (center - CONFIG.padding) * (1 - Math.cos(Math.PI / 3)))} Z"
-                          style="fill:var(--accent-cyan)" opacity="0.07"/>
-                    <line x1="${center}" y1="${center}" x2="${center}" y2="${CONFIG.padding}"
-                          style="stroke:var(--accent-cyan)" stroke-width="1.5" opacity="0.75"/>
+                <g class="pr-sweep">
+                    ${sweep}
+                    <line x1="${c}" y1="${c}" x2="${c}" y2="${CONFIG.padding}" class="pr-sweep-edge" filter="url(#pr-glow)"/>
+                    ${spin}
                 </g>
 
-                <!-- Center point -->
-                <circle cx="${center}" cy="${center}" r="${CONFIG.centerRadius}"
-                        style="fill:var(--accent-cyan)" filter="url(#glow)" />
+                <g class="pr-center">
+                    ${reduceMotion ? '' : `<circle cx="${c}" cy="${c}" r="${CONFIG.centerRadius}" class="pr-ripple">
+                        <animate attributeName="r" from="${CONFIG.centerRadius}" to="${CONFIG.centerRadius * 5}" dur="2.4s" repeatCount="indefinite"/>
+                        <animate attributeName="stroke-opacity" from="0.6" to="0" dur="2.4s" repeatCount="indefinite"/>
+                    </circle>`}
+                    <circle cx="${c}" cy="${c}" r="${CONFIG.centerRadius}" class="pr-you" filter="url(#pr-glow)"/>
+                </g>
 
-                <!-- Device dots container -->
                 <g class="radar-devices"></g>
-
-                <!-- Legend -->
-                <g class="radar-legend" transform="translate(${size - 70}, ${size - 55})">
-                    <text x="0" y="0" fill="#666" font-size="8">PROXIMITY</text>
-                    <text x="0" y="0" fill="#666" font-size="7" font-style="italic"
-                          transform="translate(0, 10)">(signal strength)</text>
-                </g>
             </svg>
+            <div class="pr-caption">Nearer the centre = stronger signal. Not a distance.</div>
         `;
 
         svg = container.querySelector('svg');
@@ -305,6 +317,7 @@ const ProximityRadar = (function() {
 
                 const dot = document.createElementNS(ns, 'circle');
                 dot.classList.add('radar-dot');
+                dot.setAttribute('filter', 'url(#pr-glow)');
                 dot.setAttribute('r', dotSize);
                 dot.setAttribute('fill', color);
                 dot.setAttribute('fill-opacity', isSelected ? 1 : 0.4 + confidence * 0.5);
@@ -451,11 +464,13 @@ const ProximityRadar = (function() {
      * Get color for proximity band
      */
     function getBandColor(band) {
+        const css = getComputedStyle(document.documentElement);
+        const token = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
         switch (band) {
-            case 'immediate': return '#22c55e';
-            case 'near': return '#eab308';
-            case 'far': return '#ef4444';
-            default: return '#6b7280';
+            case 'immediate': return token('--accent-green', '#38c180');
+            case 'near': return token('--accent-amber', '#d6a85e');
+            case 'far': return token('--accent-red', '#e25d5d');
+            default: return token('--text-dim', '#6b7280');
         }
     }
 
@@ -472,8 +487,9 @@ const ProximityRadar = (function() {
      */
     function setPaused(paused) {
         isPaused = paused;
-        const sweep = svg?.querySelector('.bt-radar-sweep');
-        if (sweep) sweep.style.animationPlayState = paused ? 'paused' : 'running';
+        if (svg && svg.pauseAnimations) {
+            if (paused) svg.pauseAnimations(); else svg.unpauseAnimations();
+        }
     }
 
     /**

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import math
 import threading
 import time
@@ -355,6 +356,30 @@ def _start_satellite_tracker():
 
 
 _TLE_REFRESH_INTERVAL_SECONDS = 24 * 60 * 60  # 24 hours
+# CelesTrak blocks addresses that download the same data too often (403
+# Forbidden for everything from that IP); it asks for no more than one
+# download every two hours. A fetch at every start broke that with a few
+# restarts, so the schedule is kept across restarts.
+_TLE_MIN_RETRY_SECONDS = 2 * 60 * 60
+
+
+def _tle_startup_delay(now: float | None = None) -> float:
+    """Seconds until the next TLE fetch is due: 24 hours after the last one
+    that succeeded, and never within two hours of the last attempt."""
+    from utils.database import get_setting
+
+    now = time.time() if now is None else now
+    due = 0.0
+    try:
+        last_success = float(get_setting("tle.last_fetch_success") or 0)
+        last_attempt = float(get_setting("tle.last_fetch_attempt") or 0)
+    except (TypeError, ValueError):
+        return 2.0
+    if last_success:
+        due = max(due, last_success + _TLE_REFRESH_INTERVAL_SECONDS)
+    if last_attempt:
+        due = max(due, last_attempt + _TLE_MIN_RETRY_SECONDS)
+    return max(2.0, min(due - now, _TLE_REFRESH_INTERVAL_SECONDS))
 
 
 def init_tle_auto_refresh():
@@ -377,9 +402,10 @@ def init_tle_auto_refresh():
             # Schedule next refresh regardless of success/failure
             _schedule_next_tle_refresh()
 
-    # First refresh 2 seconds after startup, then every 24 hours
-    threading.Timer(2.0, _auto_refresh_tle).start()
-    logger.info("TLE auto-refresh scheduled (24h interval)")
+    # First refresh when due (2 seconds after startup if never fetched), then every 24 hours
+    delay = _tle_startup_delay()
+    threading.Timer(delay, _auto_refresh_tle).start()
+    logger.info(f"TLE auto-refresh scheduled (24h interval, next in {delay / 3600:.1f} h)")
 
     # Start live position tracker thread
     tracker_thread = threading.Thread(
@@ -838,9 +864,14 @@ def refresh_tle_data() -> list:
         "METEOR-M2 4": "METEOR-M2-4",
     }
 
+    from utils.database import set_setting
+
     updated = []
     new_entries: dict = {}
     current = _get_tle_cache()
+    fetched_any = False
+    with contextlib.suppress(Exception):
+        set_setting("tle.last_fetch_attempt", time.time())
 
     for group in ["stations", "weather", "noaa"]:
         url = f"https://celestrak.org/NORAD/elements/gp.php?GROUP={group}&FORMAT=tle"
@@ -848,6 +879,7 @@ def refresh_tle_data() -> list:
             with urllib.request.urlopen(url, timeout=15) as response:
                 content = response.read().decode("utf-8")
                 lines = content.strip().split("\n")
+                fetched_any = True
 
                 i = 0
                 while i + 2 < len(lines):
@@ -873,6 +905,9 @@ def refresh_tle_data() -> list:
 
     if new_entries:
         tle_store.update(new_entries)
+    if fetched_any:
+        with contextlib.suppress(Exception):
+            set_setting("tle.last_fetch_success", time.time())
 
     return updated
 

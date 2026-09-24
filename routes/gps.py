@@ -9,9 +9,11 @@ from flask import Blueprint, Response, jsonify
 from utils.gps import (
     GPSPosition,
     GPSSkyData,
+    add_device_to_gpsd,
     detect_gps_devices,
     get_current_position,
     get_gps_reader,
+    gpsd_devices,
     is_gpsd_running,
     start_gpsd,
     start_gpsd_daemon,
@@ -102,6 +104,23 @@ def auto_connect_gps():
                 }
             )
         logger.info(f"Auto-started gpsd on {device_path}")
+    elif gpsd_devices(host, port) == []:
+        # A gpsd with no receiver: systemd's gpsd.socket starts one at boot,
+        # before anything tells it where the GPS is. Connecting to it would
+        # wait for ever, so give it the receiver we can see, or say why not.
+        devices = detect_gps_devices()
+        if not devices:
+            return jsonify({"status": "unavailable", "message": "gpsd is running but no GPS receiver is attached"})
+        device_path = devices[0]["path"]
+        added, msg = add_device_to_gpsd(device_path, host, port)
+        print(f"[GPS] gpsd had no receiver; {msg}", flush=True)
+        if not added:
+            hint = (
+                f"gpsd is running with no GPS receiver, and {msg}. Run: sudo gpsdctl add {device_path} "
+                f'(or set DEVICES="{device_path}" in /etc/default/gpsd and restart gpsd)'
+            )
+            logger.warning(hint)
+            return jsonify({"status": "unavailable", "message": hint, "devices": devices})
 
     # Clear the queue
     while not _gps_queue.empty():

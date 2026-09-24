@@ -65,7 +65,7 @@ from utils.constants import (
 from utils.event_pipeline import process_event, submit
 from utils.flight_correlator import get_flight_correlator
 from utils.logging import adsb_logger as logger
-from utils.process import cleanup_stale_dump1090, clear_dump1090_pid, write_dump1090_pid
+from utils.process import cleanup_stale_dump1090, clear_dump1090_pid, terminate_together, write_dump1090_pid
 from utils.sdr import SDRFactory, SDRType
 from utils.sdr.device_config import apply_device_defaults
 from utils.sse import format_sse
@@ -1255,18 +1255,9 @@ def stop_adsb():
 
     with app_module.adsb_lock:
         if app_module.adsb_process:
-            try:
-                # Kill the entire process group to ensure all child processes are terminated
-                pgid = os.getpgid(app_module.adsb_process.pid)
-                os.killpg(pgid, 15)  # SIGTERM
-                app_module.adsb_process.wait(timeout=ADSB_TERMINATE_TIMEOUT)
-            except (subprocess.TimeoutExpired, ProcessLookupError, OSError):
-                try:
-                    # Force kill if terminate didn't work
-                    pgid = os.getpgid(app_module.adsb_process.pid)
-                    os.killpg(pgid, 9)  # SIGKILL
-                except (ProcessLookupError, OSError):
-                    pass
+            # The whole process group, and waited for: dump1090 must have let
+            # go of the dongle before bias-T is switched off and it is released.
+            terminate_together([app_module.adsb_process], timeout=ADSB_TERMINATE_TIMEOUT)
             app_module.adsb_process = None
             clear_dump1090_pid()
             logger.info("ADS-B process stopped")
