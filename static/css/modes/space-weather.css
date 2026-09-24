@@ -468,3 +468,129 @@
         font-size: 14px;
     }
 }
+
+/* Gauges: Kp, solar wind speed, Bz */
+.sw-gauges {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.sw-gauge-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 10px 12px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    min-height: 150px;
+}
+
+.sw-gauge-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+}
+
+.sw-gauge-svg {
+    width: 100%;
+    max-width: 150px;
+    height: auto;
+    overflow: visible;
+}
+
+.sw-gauge-track,
+.sw-gauge-fill {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+}
+
+.sw-gauge-track {
+    stroke: rgba(255, 255, 255, 0.07);
+}
+
+.sw-gauge-fill {
+    filter: drop-shadow(0 0 3px currentColor);
+}
+
+.sw-gauge-value {
+    font-family: var(--font-mono, monospace);
+    font-size: 22px;
+    font-weight: 700;
+    text-anchor: middle;
+}
+
+.sw-gauge-unit {
+    fill: var(--text-dim);
+    font-family: var(--font-mono, monospace);
+    font-size: 8px;
+    text-anchor: middle;
+}
+
+.sw-gauge-status {
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.sw-bz-value {
+    margin: 10px 0 8px;
+    font-family: var(--font-mono, monospace);
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.sw-bz-value span {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.sw-bz-bar {
+    position: relative;
+    width: 100%;
+    max-width: 200px;
+    height: 10px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.sw-bz-zero {
+    position: absolute;
+    left: 50%;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--text-secondary);
+}
+
+.sw-bz-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 5px;
+    box-shadow: 0 0 6px currentColor;
+}
+
+.sw-bz-scale {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 200px;
+    margin: 3px 0 6px;
+    font-family: var(--font-mono, monospace);
+    font-size: 9px;
+    color: var(--text-dim);
+}
+
+@media (max-width: 700px) {
+    .sw-gauges {
+        grid-template-columns: 1fr;
+    }
+}
