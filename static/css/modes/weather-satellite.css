@@ -1394,3 +1394,22 @@
 [data-theme="light"] .wxsat-console-entry.wxsat-log-warning { border-left-color: var(--accent-orange); color: var(--accent-orange); }
 [data-theme="light"] .wxsat-pass-mode.lrpt { color: var(--accent-green); }
 [data-theme="light"] .wxsat-pass-quality.excellent { color: var(--accent-green); }
+
+/* One pass's images, under a header (groupByPass in weather-satellite.js) */
+.wxsat-pass-header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 6px 10px;
+    border-left: 3px solid var(--accent-cyan);
+    border-radius: 4px;
+    background: rgba(var(--accent-cyan-rgb), 0.06);
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.wxsat-pass-header b {
+    color: var(--text-primary);
+    letter-spacing: 0.04em;
+}

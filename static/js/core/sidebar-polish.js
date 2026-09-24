@@ -55,6 +55,7 @@
 
     let health = null;
     let introShown = false;
+    const HELP_TITLE = /getting started|about|guide|help|resources|reference|how to/i;
 
     // Modes whose start/stop buttons are not .run-btn / .stop-btn in their panel
     const ACTION_IDS = {
@@ -143,8 +144,10 @@
         const sections = ownSections(mode);
         if (!sections.length) return;
         const open = readOpen(mode);
-        sections.forEach((section, i) => {
-            const shouldOpen = open ? open.includes(titleOf(section)) : i === 0;
+        // By default, the first section you can operate: not a guide or an explainer
+        const firstUseful = sections.find((section) => !HELP_TITLE.test(titleOf(section))) || sections[0];
+        sections.forEach((section) => {
+            const shouldOpen = open ? open.includes(titleOf(section)) : section === firstUseful;
             section.classList.toggle('collapsed', !shouldOpen);
         });
     }
