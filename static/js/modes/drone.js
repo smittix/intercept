@@ -40,7 +40,11 @@ var DroneMode = (function () {
         if (_map) return;
         var mapEl = document.getElementById('droneMainMap');
         if (!mapEl || typeof L === 'undefined') return;
-        _map = L.map('droneMainMap', { zoomControl: true }).setView([20, 0], 2);
+        // Open on the observer, not the whole world: contacts are local.
+        // 0,0 is the unset default (DEFAULT_LAT/LON), not a place to look.
+        var home = typeof ObserverLocation !== 'undefined' && ObserverLocation.getShared ? ObserverLocation.getShared() : null;
+        if (home && home.lat === 0 && home.lon === 0) home = null;
+        _map = L.map('droneMainMap', { zoomControl: true }).setView(home ? [home.lat, home.lon] : [20, 0], home ? 12 : 2);
 
         var hasSettings = typeof Settings !== 'undefined' && Settings.createTileLayer;
         if (hasSettings && Settings._initialized) {
@@ -99,9 +103,7 @@ var DroneMode = (function () {
 
     function _upsertCard(contact) {
         var listEl = document.getElementById('droneContactList');
-        var emptyEl = document.getElementById('droneContactEmpty');
         if (!listEl) return;
-        if (emptyEl) emptyEl.style.display = 'none';
         var card = document.getElementById('drone-card-' + contact.id);
         if (!card) {
             card = document.createElement('div');
@@ -148,6 +150,8 @@ var DroneMode = (function () {
             _markers[contact.id] = L.marker([lat, lon], { icon: icon })
                 .addTo(_map)
                 .bindPopup('<b>' + (contact.serial_number || contact.id) + '</b><br>Risk: ' + contact.risk_level);
+            var waiting = document.getElementById('droneMapWaiting');
+            if (waiting) waiting.hidden = true;
         }
         var trailPoints = (contact.position_history || []).map(function (p) {
             return [p.lat, p.lon];

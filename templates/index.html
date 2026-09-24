@@ -2064,6 +2064,10 @@
                     </div>
                     <div class="btl-map-container" style="flex: 1; min-height: 250px; position: relative; overflow: hidden;">
                         <div id="btLocateMap" style="position: absolute; inset: 0;"></div>
+                        <div id="btLocateMapWaiting" class="map-waiting">
+                            <strong>No sightings yet</strong>
+                            <span>Each sighting of the target is plotted here as a trail around your position.</span>
+                        </div>
                         <div id="btLocateCrosshairOverlay" class="btl-crosshair-overlay" aria-hidden="true">
                             <div class="btl-crosshair-line btl-crosshair-vertical"></div>
                             <div class="btl-crosshair-line btl-crosshair-horizontal"></div>
@@ -2241,11 +2245,13 @@
                     <div class="drone-visuals-body">
                         <div class="drone-contact-panel">
                             <div id="droneContactList"></div>
-                            <div id="droneContactEmpty" class="drone-empty-state">
-                                No contacts detected — start detection to begin scanning.
+                        </div>
+                        <div id="droneMainMap" class="drone-main-map">
+                            <div id="droneMapWaiting" class="map-waiting">
+                                <strong>No positions yet</strong>
+                                <span>Drones that report a position (Remote ID) appear here, around you.</span>
                             </div>
                         </div>
-                        <div id="droneMainMap" class="drone-main-map"></div>
                     </div>
                 </div>
 
