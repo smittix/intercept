@@ -94,6 +94,7 @@
             aprs: "{{ url_for('static', filename='css/modes/aprs.css') }}",
             tscm: "{{ url_for('static', filename='css/modes/tscm.css') }}",
             tscmsurvey: "{{ url_for('static', filename='css/modes/tscm-survey.css') }}",
+            activity: "{{ url_for('static', filename='css/modes/activity.css') }}",
             spystations: "{{ url_for('static', filename='css/modes/spy-stations.css') }}",
             meshtastic: "{{ url_for('static', filename='css/modes/meshtastic.css') }}",
             meshcore: "{{ url_for('static', filename='css/modes/meshcore.css') }}",
@@ -181,6 +182,7 @@
             wifi: "{{ url_for('static', filename='js/modes/wifi.js') }}",
             spystations: "{{ url_for('static', filename='js/modes/spy-stations.js') }}",
             tscmsurvey: "{{ url_for('static', filename='js/modes/tscm-survey.js') }}",
+            activity: "{{ url_for('static', filename='js/modes/activity.js') }}",
             meshtastic: "{{ url_for('static', filename='js/modes/meshtastic.js') }}",
             meshcore: "{{ url_for('static', filename='js/modes/meshcore.js') }}",
             sstv: "{{ url_for('static', filename='js/modes/sstv.js') }}",
@@ -456,6 +458,10 @@
                             <button class="mode-card mode-card-sm" onclick="selectMode('tscmsurvey')">
                                 <span class="mode-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg></span>
                                 <span class="mode-name">TSCM Survey</span>
+                            </button>
+                            <button class="mode-card mode-card-sm" onclick="selectMode('activity')">
+                                <span class="mode-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></span>
+                                <span class="mode-name">Activity</span>
                             </button>
                             <button class="mode-card mode-card-sm" onclick="selectMode('spystations')">
                                 <span class="mode-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><circle cx="12" cy="12" r="2"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg></span>
@@ -786,6 +792,7 @@
                 {% include 'partials/modes/tscm.html' %}
 
                 {% include 'partials/modes/tscm-survey.html' %}
+                {% include 'partials/modes/activity.html' %}
 
                 {% include 'partials/modes/drone.html' %}
 
@@ -1500,6 +1507,9 @@
                 <!-- TSCM Dashboard -->
                 <!-- TSCM Survey workspace (rendered and shown by TscmSurvey) -->
                 <div id="tscmSurveyVisuals" class="tscm-survey-container" style="display: none;"></div>
+
+                <!-- Activity feed (rendered and shown by Activity) -->
+                <div id="activityVisuals" class="activity-container" style="display: none;"></div>
 
                 <div id="tscmVisuals" class="tscm-dashboard" style="display: none; padding: 16px;">
                     <!-- Legal Disclaimer Banner -->
@@ -4943,7 +4953,7 @@
             const reconBtn = document.getElementById('reconBtn');
             const intelBtn = document.querySelector('[onclick="exportDeviceDB()"]');
             const reconPanel = document.getElementById('reconPanel');
-            const hideRecon = ['satellite', 'sstv', 'weathersat', 'sstv_general', 'wefax', 'gps', 'aprs', 'tscm', 'tscmsurvey', 'spystations', 'meshtastic', 'meshcore', 'websdr', 'subghz', 'spaceweather', 'waterfall', 'meteor', 'system'].includes(mode);
+            const hideRecon = ['satellite', 'sstv', 'weathersat', 'sstv_general', 'wefax', 'gps', 'aprs', 'tscm', 'tscmsurvey', 'activity', 'spystations', 'meshtastic', 'meshcore', 'websdr', 'subghz', 'spaceweather', 'waterfall', 'meteor', 'system'].includes(mode);
             if (reconPanel) reconPanel.style.display = (!hideRecon && reconEnabled) ? 'block' : 'none';
             if (reconBtn) reconBtn.style.display = hideRecon ? 'none' : 'inline-block';
             if (intelBtn) intelBtn.style.display = hideRecon ? 'none' : 'inline-block';

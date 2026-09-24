@@ -238,6 +238,15 @@ window.INTERCEPT_MODES = {
             TscmSurvey.init();
         },
     },
+    activity: {
+        label: 'Activity', indicator: 'ACTIVITY', outputTitle: 'Activity Feed', group: 'intel',
+        elementId: 'activityMode',
+        visuals: true,
+        module: 'Activity',
+        init: () => {
+            Activity.init();
+        },
+    },
     drone: {
         label: 'Drone Intel', indicator: 'DRONE', outputTitle: 'Drone Intelligence', group: 'intel',
         elementId: 'droneMode',
