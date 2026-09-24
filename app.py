@@ -977,6 +977,68 @@ def _get_wifi_health() -> tuple[bool, int, int]:
     )
 
 
+# Each mode's start and stop routes, so the live views can say how long a
+# decoder has run or why it failed to start. Keys match /health "processes".
+_MODE_LIFECYCLE_PATHS: dict[str, tuple[str, str]] = {
+    path: (mode, action)
+    for mode, start, stop in (
+        ("pager", "/start", "/stop"),
+        ("sensor", "/start_sensor", "/stop_sensor"),
+        ("rtlamr", "/start_rtlamr", "/stop_rtlamr"),
+        ("adsb", "/adsb/start", "/adsb/stop"),
+        ("ais", "/ais/start", "/ais/stop"),
+        ("acars", "/acars/start", "/acars/stop"),
+        ("vdl2", "/vdl2/start", "/vdl2/stop"),
+        ("aprs", "/aprs/start", "/aprs/stop"),
+        ("dsc", "/dsc/start", "/dsc/stop"),
+        ("radiosonde", "/radiosonde/start", "/radiosonde/stop"),
+        ("morse", "/morse/start", "/morse/stop"),
+        ("ook", "/ook/start", "/ook/stop"),
+        ("sstv", "/sstv/start", "/sstv/stop"),
+        ("sstv_general", "/sstv-general/start", "/sstv-general/stop"),
+        ("weathersat", "/weather-sat/start", "/weather-sat/stop"),
+        ("wefax", "/wefax/start", "/wefax/stop"),
+        ("wifi", "/wifi/v2/scan/start", "/wifi/v2/scan/stop"),
+        ("bluetooth", "/api/bluetooth/scan/start", "/api/bluetooth/scan/stop"),
+        ("meshtastic", "/meshtastic/start", "/meshtastic/stop"),
+        ("drone", "/drone/start", "/drone/stop"),
+    )
+    for path, action in ((start, "start"), (stop, "stop"))
+}
+_mode_lifecycle: dict[str, dict] = {}
+
+
+@app.after_request
+def _record_mode_lifecycle(response: Response) -> Response:
+    """Remember when each mode last started, and why its last start failed."""
+    if request.method != "POST":
+        return response
+    entry = _MODE_LIFECYCLE_PATHS.get(request.path)
+    if not entry:
+        return response
+    mode, action = entry
+    state = _mode_lifecycle.setdefault(mode, {"started_at": None, "error": None})
+    if action == "stop":
+        state["started_at"] = None
+    elif response.status_code < 400:
+        state.update(started_at=_time.time(), error=None)
+    else:
+        # An "already running" refusal must not erase the running start's time.
+        data = response.get_json(silent=True) if response.is_json else None
+        message = (data or {}).get("message") or f"HTTP {response.status_code}"
+        state["error"] = {"message": str(message)[:300], "at": _time.time()}
+    return response
+
+
+def _get_drone_running() -> bool:
+    try:
+        from routes import drone
+
+        return bool(drone._drone_running)
+    except Exception:
+        return False
+
+
 @app.route("/health")
 def health_check() -> Response:
     """Health check endpoint for monitoring."""
@@ -1046,7 +1108,10 @@ def health_check() -> Response:
                 "tscm": _get_tscm_active(),
                 "gps": _get_singleton_running("utils.gps", "get_gps_reader", "is_running"),
                 "bt_locate": _get_singleton_running("utils.bt_locate", "get_locate_session", "is_active"),
+                "ook": ook_process is not None and (ook_process.poll() is None if ook_process else False),
+                "drone": _get_drone_running(),
             },
+            "lifecycle": _mode_lifecycle,
             "data": {
                 "aircraft_count": len(adsb_aircraft),
                 "vessel_count": len(ais_vessels),
