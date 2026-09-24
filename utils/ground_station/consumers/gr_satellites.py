@@ -66,7 +66,7 @@ class GrSatConsumer:
         if not shutil.which(GR_SATELLITES_BIN):
             logger.info(
                 "gr_satellites not found — GrSatConsumer disabled. "
-                "Install via: pip install gr-satellites or apt install python3-gr-satellites"
+                "See https://gr-satellites.readthedocs.io/en/latest/installation.html"
             )
             self._enabled = False
             return

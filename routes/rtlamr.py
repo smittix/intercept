@@ -13,6 +13,7 @@ from datetime import datetime
 from flask import Blueprint, Response, jsonify, request
 
 import app as app_module
+from utils.dependencies import install_hint
 from utils.event_pipeline import process_event
 from utils.logging import sensor_logger as logger
 from utils.process import register_process, unregister_process
@@ -171,7 +172,7 @@ def start_rtlamr() -> Response:
                         app_module.release_sdr_device(rtlamr_active_device, rtlamr_active_sdr_type)
                         rtlamr_active_device = None
                     if isinstance(e, FileNotFoundError):
-                        return api_error("rtl_tcp not found. Install the rtl-sdr tools.", 400)
+                        return api_error(f"rtl_tcp not found. {install_hint('rtl_tcp')}", 400)
                     return api_error(f"Failed to start rtl_tcp: {e}", 500)
 
         # Wait for rtl_tcp to start outside lock

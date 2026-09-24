@@ -20,7 +20,7 @@ from typing import Any
 from flask import Blueprint, Response, jsonify, request
 
 import app as app_module
-from utils.dependencies import get_tool_path
+from utils.dependencies import get_tool_path, install_hint
 from utils.event_pipeline import process_event
 from utils.logging import pager_logger as logger
 from utils.process import register_process, unregister_process
@@ -383,7 +383,7 @@ def start_decoding() -> Response:
             if pager_active_device is not None:
                 app_module.release_sdr_device(pager_active_device, pager_active_sdr_type or "rtlsdr")
                 pager_active_device = None
-            return api_error("multimon-ng not found. Install multimon-ng to decode pagers.", 400)
+            return api_error(f"multimon-ng not found. {install_hint('multimon-ng')}", 400)
         multimon_cmd = [multimon_path, "-t", "raw"] + decoders + ["-f", "alpha", "-"]
 
         full_cmd = " ".join(rtl_cmd) + " | " + " ".join(multimon_cmd)

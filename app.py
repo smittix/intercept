@@ -758,18 +758,18 @@ def get_devices_debug() -> Response:
 @app.route("/dependencies")
 def get_dependencies() -> Response:
     """Get status of all tool dependencies."""
+    from utils.dependencies import install_hints, package_manager
+
     results = check_all_dependencies()
-
-    # Determine OS for install instructions
-    system = platform.system().lower()
-    if system == "darwin":
-        pkg_manager = "brew"
-    elif system == "linux":
-        pkg_manager = "apt"
-    else:
-        pkg_manager = "manual"
-
-    return jsonify({"status": "success", "os": system, "pkg_manager": pkg_manager, "modes": results})
+    return jsonify(
+        {
+            "status": "success",
+            "os": platform.system().lower(),
+            "pkg_manager": package_manager(),
+            "install_hints": install_hints(),
+            "modes": results,
+        }
+    )
 
 
 @app.route("/export/aircraft", methods=["GET"])

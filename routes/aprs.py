@@ -28,6 +28,7 @@ from utils.constants import (
     SSE_KEEPALIVE_INTERVAL,
     SSE_QUEUE_TIMEOUT,
 )
+from utils.dependencies import install_hint
 from utils.event_pipeline import process_event
 from utils.logging import sensor_logger as logger
 from utils.responses import api_error, api_success
@@ -1755,7 +1756,7 @@ def start_aprs() -> Response:
 
     if sdr_type == SDRType.RTL_SDR:
         if find_rtl_fm() is None:
-            return api_error("rtl_fm not found. Install with: sudo apt install rtl-sdr", 400)
+            return api_error(f"rtl_fm not found. {install_hint('rtl_fm')}", 400)
     else:
         if find_rx_fm() is None:
             return api_error(f"rx_fm not found. Install SoapySDR tools for {sdr_type.value}.", 400)
@@ -2072,7 +2073,7 @@ def scan_aprs_spectrum() -> Response:
     """
     rtl_power_path = find_rtl_power()
     if not rtl_power_path:
-        return api_error("rtl_power not found. Install with: sudo apt install rtl-sdr", 400)
+        return api_error(f"rtl_power not found. {install_hint('rtl_power')}", 400)
 
     # Get parameters from JSON body or query args
     if request.is_json:

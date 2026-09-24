@@ -2214,8 +2214,8 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                 <details style="font-size: 11px;">
                     <summary style="cursor: pointer; margin-bottom: 8px;">Installation Instructions</summary>
                     <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 4px; margin-top: 5px;">
-                        <code style="display: block; white-space: pre-wrap; font-family: var(--font-mono); font-size: 10px;">sudo apt install build-essential libsoapysdr-dev librtlsdr-dev
-git clone https://github.com/wiedehopf/readsb.git
+                        <div style="margin-bottom: 6px;">Install a C toolchain and the SoapySDR and librtlsdr development packages for your system, then:</div>
+                        <code style="display: block; white-space: pre-wrap; font-family: var(--font-mono); font-size: 10px;">git clone https://github.com/wiedehopf/readsb.git
 cd readsb
 make HAVE_SOAPYSDR=1
 sudo make install</code>
@@ -3807,12 +3807,24 @@ sudo make install</code>
             warning.innerHTML = `
                 <div style="font-weight: bold; margin-bottom: 6px;">⚠️ Airband Listen Unavailable</div>
                 <div>Missing required tools: <strong>${toolList}</strong></div>
-                <div style="margin-top: 8px; font-size: 10px; opacity: 0.9;">
-                    Install with: <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">sudo apt install rtl-sdr ffmpeg</code> (Debian) or <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">brew install librtlsdr ffmpeg</code> (macOS)
-                </div>
+                <div class="airband-install-hints" style="margin-top: 8px; font-size: 10px; opacity: 0.9;"></div>
                 <button onclick="this.parentElement.remove()" style="position: absolute; top: 5px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 14px;">×</button>
             `;
             document.body.appendChild(warning);
+            // Install advice for this platform, from the dependency map.
+            fetch('/dependencies')
+                .then(r => r.json())
+                .then(data => {
+                    const hints = (data && data.install_hints) || {};
+                    const box = warning.querySelector('.airband-install-hints');
+                    if (!box) return;
+                    missingTools.forEach(tool => {
+                        const line = document.createElement('div');
+                        line.textContent = `${tool}: ${hints[tool] || `install ${tool} with your system's package manager.`}`;
+                        box.appendChild(line);
+                    });
+                })
+                .catch(() => {});
 
             // Auto-dismiss after 15 seconds
             setTimeout(() => {

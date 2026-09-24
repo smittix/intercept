@@ -25,6 +25,7 @@ from utils.constants import (
     SSE_KEEPALIVE_INTERVAL,
     SSE_QUEUE_TIMEOUT,
 )
+from utils.dependencies import install_hint
 from utils.event_pipeline import process_event
 from utils.flight_correlator import get_flight_correlator
 from utils.logging import sensor_logger as logger
@@ -216,7 +217,7 @@ def start_acars() -> Response:
     # Check for acarsdec
     acarsdec_path = find_acarsdec()
     if not acarsdec_path:
-        return api_error("acarsdec not found. Install with: sudo apt install acarsdec", 400)
+        return api_error(f"acarsdec not found. {install_hint('acarsdec')}", 400)
 
     data = request.json or {}
     data = apply_device_defaults(data)
