@@ -698,7 +698,7 @@
                         </select>
                     </div>
                     <div id="deviceCapabilities" class="info-text"
-                        style="font-size: 11px; margin-bottom: 8px; padding: 6px; background: #0a0a1a; border-radius: 4px;">
+                        style="font-size: 11px; margin-bottom: 8px; padding: 6px; background: var(--surface-sunken); border-radius: 4px;">
                         <div style="display: grid; grid-template-columns: auto 1fr; gap: 2px 8px;">
                             <span style="color: #888;">Freq:</span><span id="capFreqRange">24-1766 MHz</span>
                             <span style="color: #888;">Gain:</span><span id="capGainRange">0-50 dB</span>
@@ -1384,7 +1384,7 @@
                             style="color: var(--accent-orange); text-shadow: 0 0 10px var(--accent-orange); margin-bottom: 8px;">
                             PACKET LOG</h5>
                         <div id="aprsPacketLog"
-                            style="flex: 1; overflow-y: auto; font-family: var(--font-mono); font-size: 10px; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">
+                            style="flex: 1; overflow-y: auto; font-family: var(--font-mono); font-size: 10px; background: var(--surface-sunken); padding: 8px; border-radius: 4px;">
                             <div style="color: var(--text-muted);">Waiting for packets...</div>
                         </div>
                     </div>
@@ -1481,7 +1481,7 @@
                 <div id="tscmVisuals" class="tscm-dashboard" style="display: none; padding: 16px;">
                     <!-- Legal Disclaimer Banner -->
                     <div class="tscm-legal-banner"
-                        style="margin-bottom: 12px; padding: 8px 12px; background: rgba(var(--accent-cyan-rgb), 0.1); border: 1px solid rgba(var(--accent-cyan-rgb), 0.3); border-radius: 4px; font-size: 10px; color: #ffffff;">
+                        style="margin-bottom: 12px; padding: 8px 12px; background: rgba(var(--accent-cyan-rgb), 0.1); border: 1px solid rgba(var(--accent-cyan-rgb), 0.3); border-radius: 4px; font-size: 10px; color: var(--text-primary);">
                         <strong>TSCM Screening Tool:</strong> This system identifies wireless and RF anomalies.
                         Findings are indicators, NOT confirmed surveillance devices.
                         No content is intercepted or decoded. Professional verification required.
@@ -2492,7 +2492,7 @@
 
                     <!-- Signal Scope -->
                     <div id="sstvScopePanel" style="display: none; margin-bottom: 12px;">
-                        <div style="background: #0a0a0a; border: 1px solid #1e1a2e; border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
                                 <span>Audio Waveform</span>
                                 <div style="display: flex; gap: 14px;">
@@ -2838,7 +2838,7 @@
 
                     <!-- Signal Scope -->
                     <div id="sstvGeneralScopePanel" style="display: none; margin-bottom: 12px;">
-                        <div style="background: #0a0a0a; border: 1px solid #1e1a2e; border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
                                 <span>Audio Waveform</span>
                                 <div style="display: flex; gap: 14px;">
@@ -2966,7 +2966,7 @@
 
                     <!-- Audio Waveform Scope -->
                     <div id="wefaxScopePanel" style="display: none;">
-                        <div style="background: #0a0a0a; border: 1px solid #2e2a1a; border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
                                 <span>Audio Waveform</span>
                                 <div style="display: flex; gap: 14px;">
@@ -3343,7 +3343,7 @@
 
                 <!-- Pager Signal Scope -->
                 <div id="pagerScopePanel" style="display: none; margin-bottom: 12px;">
-                    <div style="background: #0a0a0a; border: 1px solid #1a1a2e; border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
                             <span>Audio Waveform</span>
                             <div style="display: flex; gap: 14px;">
@@ -3369,7 +3369,7 @@
 
                 <!-- Morse Signal Scope -->
                 <div id="morseScopePanel" style="display: none; margin-bottom: 12px;">
-                    <div style="background: #0a0a0a; border: 1px solid #1a2e1a; border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
                             <span>CW Tone Detection</span>
                             <div style="display: flex; gap: 14px;">
@@ -3389,7 +3389,7 @@
 
                 <!-- Morse Decoded Output -->
                 <div id="morseOutputPanel" style="display: none; margin-bottom: 12px;">
-                    <div style="background: #0a0a0a; border: 1px solid #1a2e1a; border-radius: 6px; padding: 8px 10px;">
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
                             <span>Decoded Text</span>
                             <div style="display: flex; gap: 6px;">
@@ -3572,7 +3572,7 @@
                 <!-- OOK Decoder Output Panel -->
                 <div id="ookOutputPanel" style="display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; padding: 10px;">
                     <div id="ookPulseTrain" class="ook-pulse"></div>
-                    <div style="background: #0a0a0a; border: 1px solid #1a2e1a; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; flex: 1; min-height: 0;">
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; flex: 1; min-height: 0;">
                         <!-- Toolbar row 1: bit order -->
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
                             <span>Decoded Frames <span id="ookStatusBarFrames" style="color: var(--text-dim);">0 frames</span></span>
@@ -3594,7 +3594,7 @@
                             <input type="text" id="ookPatternFilter"
                                    placeholder="Filter hex or ASCII..."
                                    oninput="OokMode.filterFrames(this.value)"
-                                   style="width: 100%; background: #111; border: 1px solid #222; border-radius: 3px; color: var(--text-dim); font-family: var(--font-mono); font-size: 10px; padding: 3px 6px; box-sizing: border-box;">
+                                   style="width: 100%; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 3px; color: var(--text-primary); font-family: var(--font-mono); font-size: 10px; padding: 3px 6px; box-sizing: border-box;">
                         </div>
                         <div id="ookOutput" style="flex: 1; min-height: 0; overflow-y: auto; font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);"></div>
                     </div>
@@ -6943,7 +6943,7 @@
 
             const infoEl = document.createElement('div');
             infoEl.className = 'info-msg';
-            infoEl.style.cssText = 'padding: 12px 15px; margin-bottom: 8px; background: #0a0a0a; border: 1px solid #1a1a1a; border-left: 2px solid #00d4ff; font-family: "Roboto Condensed", "Arial Narrow", sans-serif; font-size: 11px; color: #888; word-break: break-all;';
+            infoEl.style.cssText = 'padding: 12px 15px; margin-bottom: 8px; background: var(--bg-card); border: 1px solid var(--border-color); border-left: 2px solid var(--accent-cyan); font-family: "Roboto Condensed", "Arial Narrow", sans-serif; font-size: 11px; color: var(--text-secondary); word-break: break-all;';
             infoEl.textContent = text;
             output.insertBefore(infoEl, output.firstChild);
         }

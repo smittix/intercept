@@ -2227,7 +2227,7 @@ body {
     color: var(--text-inverse);
 }
 
-html[data-ui-tier="enhanced"] .strip-btn.primary {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .strip-btn.primary {
     background: linear-gradient(135deg, rgba(46, 125, 138, 0.85) 0%, rgba(20, 88, 100, 0.80) 100%);
 }
 
@@ -2468,7 +2468,7 @@ html[data-ui-tier="enhanced"] .strip-btn.primary {
 /* ============================================
    ENHANCED TIER — signals teal console
    ============================================ */
-html[data-ui-tier="enhanced"] {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) {
     --bg-dark: #000000;
     --bg-panel: #020404;
     --bg-card: #020404;

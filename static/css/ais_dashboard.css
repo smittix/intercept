@@ -1377,7 +1377,7 @@ body {
 /* ============================================
    ENHANCED TIER — signals teal console
    ============================================ */
-html[data-ui-tier="enhanced"] {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) {
     --bg-dark: #000000;
     --bg-panel: #020404;
     --bg-card: #020404;

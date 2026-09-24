@@ -7665,72 +7665,72 @@ html[data-ui-tier="lean"][data-theme="light"] body {
    Replaces hardcoded cool-dark navy gradients
    with warm near-black amber equivalents.
    ============================================ */
-html[data-ui-tier="enhanced"] {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) {
     --visual-edge-cyan: rgba(46, 125, 138, 0.30);
     --visual-glow-cyan: 0 0 24px rgba(46, 125, 138, 0.12);
     --visual-surface-soft: linear-gradient(180deg, rgba(6, 10, 10, 0.9) 0%, rgba(3, 5, 5, 0.95) 100%);
     --visual-surface-panel: linear-gradient(160deg, rgba(6, 10, 10, 0.95) 0%, rgba(2, 4, 4, 0.96) 100%);
 }
 
-html[data-ui-tier="enhanced"] .mode-nav {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .mode-nav {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.96) 0%, rgba(2, 4, 4, 0.98) 100%);
 }
 
-html[data-ui-tier="enhanced"] .mode-nav-dropdown-menu {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .mode-nav-dropdown-menu {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.98) 0%, rgba(2, 4, 4, 0.99) 100%);
     border-color: rgba(46, 125, 138, 0.20);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(46, 125, 138, 0.09);
 }
 
-html[data-ui-tier="enhanced"] .run-state-strip {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-strip {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.96) 0%, rgba(2, 4, 4, 0.97) 100%);
 }
 
-html[data-ui-tier="enhanced"] .section h3 {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .section h3 {
     background: linear-gradient(180deg, rgba(6, 10, 10, 1) 0%, rgba(4, 8, 8, 1) 100%);
 }
 
-html[data-ui-tier="enhanced"] .section h3::after {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .section h3::after {
     background: rgba(2, 4, 4, 0.9);
 }
 
-html[data-ui-tier="enhanced"] .form-group input,
-html[data-ui-tier="enhanced"] .form-group select {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .form-group input,
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .form-group select {
     background: rgba(2, 4, 4, 0.72);
 }
 
-html[data-ui-tier="enhanced"] .preset-btn,
-html[data-ui-tier="enhanced"] .control-btn,
-html[data-ui-tier="enhanced"] .clear-btn {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .preset-btn,
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .control-btn,
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .clear-btn {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.88) 0%, rgba(2, 4, 4, 0.9) 100%);
 }
 
-html[data-ui-tier="enhanced"] .output-panel {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .output-panel {
     background: linear-gradient(180deg, rgba(2, 4, 4, 0.98) 0%, rgba(1, 2, 2, 0.99) 100%);
 }
 
-html[data-ui-tier="enhanced"] .output-header {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .output-header {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.95) 0%, rgba(2, 4, 4, 0.98) 100%);
 }
 
-html[data-ui-tier="enhanced"] .output-content {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .output-content {
     background: linear-gradient(180deg, rgba(2, 4, 4, 0.6) 0%, rgba(2, 4, 4, 0.9) 100%);
 }
 
-html[data-ui-tier="enhanced"] .stats > div {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .stats > div {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.8) 0%, rgba(2, 4, 4, 0.82) 100%);
 }
 
-html[data-ui-tier="enhanced"] .message {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .message {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.8) 0%, rgba(2, 4, 4, 0.82) 100%);
 }
 
-html[data-ui-tier="enhanced"] .status-bar {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .status-bar {
     background: linear-gradient(180deg, rgba(3, 6, 6, 0.96) 0%, rgba(2, 4, 4, 0.97) 100%);
 }
 
-html[data-ui-tier="enhanced"] .status-indicator,
-html[data-ui-tier="enhanced"] .control-group {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .status-indicator,
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .control-group {
     background: linear-gradient(180deg, rgba(3, 6, 6, 0.78) 0%, rgba(2, 4, 4, 0.8) 100%);
 }
 

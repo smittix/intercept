@@ -1208,8 +1208,8 @@ textarea:focus {
 /* ============================================
    ENHANCED TIER — signals teal card accents
    ============================================ */
-[data-ui-tier="enhanced"] .stat-card,
-[data-ui-tier="enhanced"] .data-card {
+[data-ui-tier="enhanced"]:not([data-theme="light"]) .stat-card,
+[data-ui-tier="enhanced"]:not([data-theme="light"]) .data-card {
     border-left: 2px solid var(--accent-cyan);
     background: rgba(46, 125, 138, 0.03);
 }
@@ -1220,8 +1220,8 @@ textarea:focus {
     color: var(--accent-cyan);
 }
 
-[data-ui-tier="enhanced"] .stat-label,
-[data-ui-tier="enhanced"] .data-label {
+[data-ui-tier="enhanced"]:not([data-theme="light"]) .stat-label,
+[data-ui-tier="enhanced"]:not([data-theme="light"]) .data-label {
     font-family: var(--font-mono);
     letter-spacing: 2px;
     text-transform: uppercase;
@@ -1229,7 +1229,7 @@ textarea:focus {
     color: rgba(46, 125, 138, 0.55);
 }
 
-html[data-ui-tier="enhanced"] .card-header,
-html[data-ui-tier="enhanced"] .panel-header {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .card-header,
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .panel-header {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.88) 0%, rgba(2, 4, 4, 0.9) 100%);
 }

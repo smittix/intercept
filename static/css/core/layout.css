@@ -1126,9 +1126,16 @@ a.nav-dashboard-btn:hover {
 
 [data-theme="light"] .mode-nav-dropdown.has-active .mode-nav-dropdown-btn {
     background: rgba(31, 95, 168, 0.06);
+    color: var(--text-primary);
     border-left: 2px solid var(--accent-cyan);
     box-shadow: -2px 0 6px rgba(31, 95, 168, 0.12);
     padding-left: 12px;
+}
+
+/* index.css darkens the active group's icon for its filled button; not here */
+[data-theme="light"] .mode-nav-dropdown.has-active .mode-nav-dropdown-btn .nav-icon {
+    filter: none;
+    color: var(--accent-cyan);
 }
 
 [data-theme="light"] .mode-nav-dropdown-menu {
@@ -1209,7 +1216,7 @@ a.nav-dashboard-btn:hover {
 /* ============================================
    ENHANCED TIER — signals teal console nav framing
    ============================================ */
-[data-ui-tier="enhanced"] .mode-nav {
+[data-ui-tier="enhanced"]:not([data-theme="light"]) .mode-nav {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.95), rgba(2, 4, 4, 0.92));
 }
 
@@ -1219,7 +1226,7 @@ a.nav-dashboard-btn:hover {
     background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
 }
 
-[data-ui-tier="enhanced"] .mode-nav-btn.active {
+[data-ui-tier="enhanced"]:not([data-theme="light"]) .mode-nav-btn.active {
     background: rgba(46, 125, 138, 0.08);
     color: var(--accent-cyan);
     border-left: 2px solid var(--accent-cyan);
@@ -1254,7 +1261,7 @@ a.nav-dashboard-btn:hover {
 [data-ui-tier="enhanced"] .nav-tier-btn .icon-tier-enhanced { display: flex; }
 
 /* Enhanced tier toggle button styling */
-[data-ui-tier="enhanced"] .nav-tier-btn {
+[data-ui-tier="enhanced"]:not([data-theme="light"]) .nav-tier-btn {
     background: rgba(46, 125, 138, 0.10);
     border-color: rgba(46, 125, 138, 0.38);
     color: #2e7d8a;
@@ -1262,7 +1269,7 @@ a.nav-dashboard-btn:hover {
     text-shadow: 0 0 6px rgba(46, 125, 138, 0.25);
 }
 
-[data-ui-tier="enhanced"] .nav-tier-btn:hover {
+[data-ui-tier="enhanced"]:not([data-theme="light"]) .nav-tier-btn:hover {
     background: rgba(46, 125, 138, 0.16);
     border-color: rgba(46, 125, 138, 0.55);
 }

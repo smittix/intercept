@@ -542,7 +542,7 @@ html[data-ui-tier="lean"] .leaflet-container::after {
 }
 
 /* Enhanced tier: signals teal map tint overrides — global (all Leaflet maps) */
-html[data-ui-tier="enhanced"] .leaflet-container {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .leaflet-container {
     background: #000000;
 }
 
@@ -555,7 +555,7 @@ html[data-ui-tier="enhanced"] .leaflet-tile-pane {
 }
 
 /* Narrower overrides for cyber-specific classes (same filter, kept for !important precedence) */
-html[data-ui-tier="enhanced"] .leaflet-container.map-theme-cyber {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .leaflet-container.map-theme-cyber {
     background: #000000;
 }
 
@@ -567,7 +567,7 @@ html[data-ui-tier="enhanced"] .leaflet-container.map-theme-cyber .leaflet-tile-p
     filter: sepia(0.85) hue-rotate(150deg) saturate(1.35) brightness(0.78) contrast(1.08);
 }
 
-html[data-ui-tier="enhanced"].map-cyber-enabled .leaflet-container {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]).map-cyber-enabled .leaflet-container {
     background: #000000;
 }
 
@@ -579,7 +579,7 @@ html[data-ui-tier="enhanced"].map-cyber-enabled .leaflet-container::before {
     background: none;
 }
 
-html[data-ui-tier="enhanced"].map-cyber-enabled .leaflet-container::after {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]).map-cyber-enabled .leaflet-container::after {
     background-image:
         linear-gradient(rgba(46, 125, 138, 0.1) 1px, transparent 1px),
         linear-gradient(90deg, rgba(46, 125, 138, 0.1) 1px, transparent 1px);

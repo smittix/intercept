@@ -8,7 +8,7 @@
     justify-content: center;
     padding: 8px;
     border-radius: 6px;
-    background: rgba(0,0,0,0.3);
+    background: var(--surface-sunken);
     border: 1px solid var(--border-color);
 }
 .threat-card .count {
@@ -44,7 +44,7 @@
     align-items: center;
     gap: 16px;
     padding: 12px 16px;
-    background: rgba(0,0,0,0.3);
+    background: var(--surface-sunken);
     border: 1px solid var(--border-color);
     border-radius: 8px;
 }
@@ -135,7 +135,7 @@
     gap: 16px;
 }
 .tscm-panel {
-    background: rgba(0,0,0,0.3);
+    background: var(--surface-sunken);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     display: flex;
@@ -146,7 +146,7 @@
 }
 .tscm-panel-header {
     padding: 10px 12px;
-    background: rgba(0,0,0,0.3);
+    background: var(--surface-sunken);
     border-bottom: 1px solid var(--border-color);
     font-weight: 600;
     font-size: 12px;
@@ -171,7 +171,7 @@
     padding: 8px 10px;
     border-radius: 4px;
     margin-bottom: 6px;
-    background: rgba(0,0,0,0.2);
+    background: var(--surface-sunken-soft);
     border-left: 3px solid var(--border-color);
     cursor: pointer;
     transition: background 0.2s;
@@ -241,7 +241,7 @@
     font-family: var(--font-mono);
     font-size: 10px;
     color: var(--accent-cyan);
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--surface-sunken);
     padding: 4px 8px;
     border-radius: 3px;
 }
@@ -414,7 +414,7 @@
 .correlation-item {
     padding: 8px;
     margin-bottom: 6px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 4px;
     font-size: 11px;
 }
@@ -433,7 +433,7 @@
     flex: 1;
     min-width: 100px;
     padding: 12px;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--surface-sunken);
     border-radius: 6px;
     text-align: center;
 }
@@ -475,7 +475,7 @@
     color: var(--text-muted);
     font-style: italic;
     padding: 8px 12px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 4px;
     margin-top: 8px;
 }
@@ -629,7 +629,7 @@
     display: flex;
     gap: 10px;
     padding: 8px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 4px;
     font-size: 11px;
 }
@@ -733,7 +733,7 @@
 }
 .correlation-detail-item {
     padding: 12px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 6px;
     margin-bottom: 8px;
 }
@@ -745,7 +745,7 @@
 .tscm-threat-item {
     padding: 10px 12px;
     border-radius: 6px;
-    background: rgba(0,0,0,0.2);
+    background: var(--surface-sunken-soft);
     border: 1px solid;
 }
 .tscm-threat-item.critical { border-color: var(--severity-critical); background: rgba(255,51,102,0.1); }
@@ -950,7 +950,7 @@
     gap: 16px;
     padding: 8px 12px;
     margin-bottom: 12px;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--surface-sunken);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     font-size: 11px;
@@ -1001,7 +1001,7 @@
     gap: 8px;
     padding: 6px 12px;
     margin-bottom: 12px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 4px;
     font-size: 11px;
 }
@@ -1044,7 +1044,7 @@
     gap: 8px;
     padding: 8px 12px;
     margin-bottom: 12px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 4px;
     align-items: flex-end;
 }
@@ -1060,7 +1060,7 @@
     letter-spacing: 0.6px;
 }
 .tscm-filter-group select {
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--bg-primary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -1108,7 +1108,7 @@
 .cap-detail-item {
     padding: 10px;
     margin-bottom: 8px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 4px;
     border-left: 3px solid var(--border-color);
 }
@@ -1146,7 +1146,7 @@
 .known-device-item {
     padding: 10px;
     margin-bottom: 6px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 4px;
     border-left: 3px solid var(--accent-green);
     display: flex;
@@ -1188,7 +1188,7 @@
 .case-item {
     padding: 12px;
     margin-bottom: 8px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 6px;
     border-left: 3px solid var(--primary-color);
     cursor: pointer;
@@ -1229,7 +1229,7 @@
 .playbook-item {
     padding: 12px;
     margin-bottom: 8px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 6px;
     border-left: 3px solid var(--severity-high);
 }
@@ -1263,7 +1263,7 @@
 .playbook-step {
     padding: 6px 8px;
     margin-bottom: 4px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 3px;
 }
 .playbook-step-num {
@@ -1275,7 +1275,7 @@
 /* Timeline Styles */
 .timeline-container {
     padding: 12px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border-radius: 6px;
 }
 .timeline-header {
@@ -1296,7 +1296,7 @@
 }
 .timeline-metric {
     padding: 8px;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--surface-sunken);
     border-radius: 4px;
     text-align: center;
 }
@@ -1312,7 +1312,7 @@
 }
 .timeline-chart {
     height: 60px;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--surface-sunken);
     border-radius: 4px;
     position: relative;
     overflow: hidden;
@@ -1702,7 +1702,7 @@
 .tscm-schedule-item {
     padding: 10px;
     border-radius: 6px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border: 1px solid var(--border-color);
 }
 .tscm-schedule-item.enabled {
@@ -1742,7 +1742,7 @@
 }
 .tscm-summary-item {
     padding: 8px 10px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border: 1px solid var(--border-color);
     border-radius: 6px;
 }
@@ -1765,7 +1765,7 @@
 }
 .tscm-case-note {
     padding: 8px 10px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--surface-sunken-soft);
     border: 1px solid var(--border-color);
     border-radius: 6px;
 }

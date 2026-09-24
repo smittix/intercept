@@ -1184,7 +1184,7 @@
 
 /* ---- Enhanced tier: replace blue palette with signals teal ---- */
 
-html[data-ui-tier="enhanced"] .wf-container {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-container {
     --wf-border: rgba(46, 125, 138, 0.22);
     --wf-surface: linear-gradient(180deg, rgba(2, 6, 6, 0.97) 0%, rgba(1, 3, 3, 0.98) 100%);
     background: radial-gradient(circle at 14% -18%, rgba(46, 125, 138, 0.08) 0%, rgba(46, 125, 138, 0) 38%),
@@ -1192,24 +1192,24 @@ html[data-ui-tier="enhanced"] .wf-container {
         #000202;
 }
 
-html[data-ui-tier="enhanced"] .wf-headline {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-headline {
     background: rgba(2, 6, 6, 0.86);
 }
 
-html[data-ui-tier="enhanced"] .wf-headline-tag {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-headline-tag {
     color: rgba(70, 185, 200, 0.90);
 }
 
-html[data-ui-tier="enhanced"] .wf-rx-vfo {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-rx-vfo {
     border-color: rgba(46, 125, 138, 0.25);
     background: linear-gradient(180deg, rgba(3, 8, 8, 0.92) 0%, rgba(1, 4, 4, 0.95) 100%);
 }
 
-html[data-ui-tier="enhanced"] .wf-rx-vfo-status {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-rx-vfo-status {
     color: rgba(65, 175, 192, 0.88);
 }
 
-html[data-ui-tier="enhanced"] .wf-rx-vfo-readout {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-rx-vfo-readout {
     color: rgba(80, 190, 205, 0.92);
 }
 
@@ -1217,104 +1217,104 @@ html[data-ui-tier="enhanced"] #wfRxFreqReadout {
     text-shadow: 0 0 16px rgba(46, 125, 138, 0.25);
 }
 
-html[data-ui-tier="enhanced"] .wf-rx-modebank {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-rx-modebank {
     border-color: rgba(46, 125, 138, 0.22);
     background: rgba(1, 4, 4, 0.86);
 }
 
-html[data-ui-tier="enhanced"] .wf-mode-btn {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-mode-btn {
     border-color: rgba(46, 125, 138, 0.24);
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.95) 0%, rgba(2, 5, 5, 0.95) 100%);
     color: rgba(65, 175, 192, 0.90);
 }
 
-html[data-ui-tier="enhanced"] .wf-mode-btn:hover {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-mode-btn:hover {
     border-color: rgba(46, 125, 138, 0.48);
 }
 
-html[data-ui-tier="enhanced"] .wf-mode-btn.is-active,
-html[data-ui-tier="enhanced"] .wf-mode-btn.active {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-mode-btn.is-active,
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-mode-btn.active {
     border-color: rgba(46, 125, 138, 0.62);
     background: linear-gradient(180deg, rgba(6, 16, 18, 0.92) 0%, rgba(4, 12, 14, 0.95) 100%);
     color: rgba(100, 210, 222, 0.96);
     box-shadow: 0 0 14px rgba(46, 125, 138, 0.22);
 }
 
-html[data-ui-tier="enhanced"] .wf-rx-levels,
-html[data-ui-tier="enhanced"] .wf-rx-meter-wrap,
-html[data-ui-tier="enhanced"] .wf-rx-actions {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-rx-levels,
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-rx-meter-wrap,
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-rx-actions {
     border-color: rgba(46, 125, 138, 0.20);
     background: rgba(1, 4, 4, 0.85);
 }
 
-html[data-ui-tier="enhanced"] .wf-monitor-select {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-monitor-select {
     border-color: rgba(46, 125, 138, 0.25);
     background: rgba(1, 3, 3, 0.8);
 }
 
-html[data-ui-tier="enhanced"] .wf-rx-smeter-fill {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-rx-smeter-fill {
     box-shadow: 0 0 10px rgba(46, 125, 138, 0.22);
 }
 
-html[data-ui-tier="enhanced"] .wf-monitor-btn-secondary {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-monitor-btn-secondary {
     border-color: rgba(46, 125, 138, 0.45);
     background: linear-gradient(180deg, rgba(4, 12, 14, 0.95) 0%, rgba(2, 8, 10, 0.95) 100%);
     color: rgba(80, 190, 205, 0.90);
 }
 
-html[data-ui-tier="enhanced"] .wf-freq-bar {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-freq-bar {
     background: rgba(2, 6, 6, 0.78);
 }
 
-html[data-ui-tier="enhanced"] .wf-spectrum-canvas-wrap {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-spectrum-canvas-wrap {
     background: radial-gradient(circle at 50% -120%, rgba(46, 125, 138, 0.06) 0%, rgba(46, 125, 138, 0) 65%);
 }
 
-html[data-ui-tier="enhanced"] .wf-band-strip {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-band-strip {
     background: linear-gradient(180deg, rgba(2, 6, 6, 0.96) 0%, rgba(1, 3, 3, 0.98) 100%);
 }
 
-html[data-ui-tier="enhanced"] .wf-band-block {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-band-block {
     border-color: rgba(46, 125, 138, 0.42);
     color: rgba(80, 190, 205, 0.92);
 }
 
-html[data-ui-tier="enhanced"] .wf-band-edge {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-band-edge {
     color: rgba(65, 175, 192, 0.88);
 }
 
-html[data-ui-tier="enhanced"] .wf-band-marker::before {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-band-marker::before {
     background: rgba(46, 125, 138, 0.58);
     box-shadow: 0 0 5px rgba(46, 125, 138, 0.30);
 }
 
-html[data-ui-tier="enhanced"] .wf-band-marker-label {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-band-marker-label {
     border-color: rgba(46, 125, 138, 0.48);
     background: rgba(2, 5, 5, 0.95);
     color: rgba(80, 190, 205, 0.90);
 }
 
-html[data-ui-tier="enhanced"] .wf-tune-line {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-tune-line {
     background: rgba(46, 125, 138, 0.72);
 }
 
-html[data-ui-tier="enhanced"] .wf-freq-axis {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-freq-axis {
     background: rgba(2, 6, 6, 0.86);
 }
 
-html[data-ui-tier="enhanced"] .wf-side .section.wf-side-hero {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-side .section.wf-side-hero {
     background: linear-gradient(180deg, rgba(3, 8, 8, 0.95) 0%, rgba(1, 4, 4, 0.97) 100%);
     border-color: rgba(46, 125, 138, 0.30);
     box-shadow: 0 8px 24px rgba(0, 8, 10, 0.30), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
-html[data-ui-tier="enhanced"] .wf-side-chip {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-side-chip {
     color: rgba(65, 175, 192, 0.88);
     border-color: rgba(46, 125, 138, 0.32);
     background: rgba(6, 16, 18, 0.30);
 }
 
-html[data-ui-tier="enhanced"] .wf-side-stat {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .wf-side-stat {
     border-color: rgba(46, 125, 138, 0.20);
 }
 

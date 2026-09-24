@@ -457,37 +457,37 @@
 }
 
 /* ---- Enhanced tier overrides ---- */
-html[data-ui-tier="enhanced"] .run-state-strip {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-strip {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.96), rgba(2, 4, 4, 0.97));
     border-color: rgba(46, 125, 138, 0.28);
 }
 
-html[data-ui-tier="enhanced"] .run-state-chip {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-chip {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.82), rgba(2, 4, 4, 0.84));
     border-color: rgba(46, 125, 138, 0.22);
 }
 
-html[data-ui-tier="enhanced"] .run-state-chip.active {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-chip.active {
     border-color: rgba(46, 125, 138, 0.60);
     box-shadow: inset 0 0 0 1px rgba(46, 125, 138, 0.16);
 }
 
-html[data-ui-tier="enhanced"] .run-state-chip .dot {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-chip .dot {
     background: rgba(46, 125, 138, 0.40);
     box-shadow: none;
 }
 
-html[data-ui-tier="enhanced"] .run-state-chip.running .dot {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-chip.running .dot {
     background: var(--accent-green, #38c180);
     box-shadow: 0 0 0 4px rgba(56, 193, 128, 0.16), 0 0 12px rgba(56, 193, 128, 0.35);
 }
 
-html[data-ui-tier="enhanced"] .run-state-btn {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-btn {
     background: linear-gradient(180deg, rgba(4, 8, 8, 0.9), rgba(2, 4, 4, 0.92));
     border-color: rgba(46, 125, 138, 0.40);
 }
 
-html[data-ui-tier="enhanced"] .run-state-btn:hover {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-btn:hover {
     background: rgba(46, 125, 138, 0.12);
     border-color: rgba(46, 125, 138, 0.65);
 }
