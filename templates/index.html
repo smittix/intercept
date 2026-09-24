@@ -1064,8 +1064,8 @@
                                     </div>
 
                                     <div class="wifi-detail-actions">
-                                        <button class="wfl-locate-btn" title="Locate this AP"
-                                            onclick="(function(){ var p={bssid: document.getElementById('wifiDetailBssid')?.textContent, ssid: document.getElementById('wifiDetailEssid')?.textContent}; if(typeof WiFiLocate!=='undefined'){WiFiLocate.handoff(p);return;} if(typeof switchMode==='function'){switchMode('wifi_locate').then(function(){if(typeof WiFiLocate!=='undefined')WiFiLocate.handoff(p);});} })()">
+                                        <button class="wfl-locate-btn locate-action locate-action-lg" title="Locate this AP"
+                                            onclick="WiFiMode.locateNetwork()">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                 <circle cx="12" cy="10" r="3"/>
                                                 <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z"/>
@@ -1179,7 +1179,7 @@
                                         </div>
                                         <button class="bt-detail-btn" id="btDetailWatchBtn" onclick="BluetoothMode.toggleWatchlist()">Watchlist</button>
                                         <button class="bt-detail-btn" id="btDetailCopyBtn" onclick="BluetoothMode.copyAddress()">Copy</button>
-                                        <button class="bt-detail-btn bt-locate-btn" id="btDetailLocateBtn" onclick="BluetoothMode.locateDevice()">Locate</button>
+                                        <button class="bt-detail-btn bt-locate-btn locate-action locate-action-lg" id="btDetailLocateBtn" onclick="BluetoothMode.locateDevice()" title="Locate this device">Locate</button>
                                     </div>
                                 </div>
                             </div>

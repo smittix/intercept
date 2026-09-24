@@ -526,10 +526,14 @@ const WiFiLocate = (function() {
         if (nameEl) nameEl.textContent = info.ssid || 'Hidden Network';
         if (metaEl) metaEl.textContent = info.bssid || '';
 
-        // Switch to WiFi Locate mode
-        if (typeof switchMode === 'function') {
-            switchMode('wifi_locate');
+        // Switch to WiFi Locate mode, unless already there: a switch from
+        // wifi_locate to itself is not a Wi-Fi transition, and stops the scan
+        // this mode reads from. Resolves when the switch is done.
+        const alreadyHere = typeof currentMode !== 'undefined' && currentMode === 'wifi_locate';
+        if (!alreadyHere && typeof switchMode === 'function') {
+            return switchMode('wifi_locate');
         }
+        return Promise.resolve();
     }
 
     function clearHandoff() {

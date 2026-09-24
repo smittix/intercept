@@ -7742,3 +7742,50 @@ html[data-ui-tier="enhanced"] .status-indicator,
 html[data-ui-tier="enhanced"] .control-group {
     background: linear-gradient(180deg, rgba(3, 6, 6, 0.78) 0%, rgba(2, 4, 4, 0.8) 100%);
 }
+
+/* Locate: hand a Bluetooth device or Wi-Fi network to its Locate mode.
+   Styled here, not in the Locate modes' own CSS, which loads only once
+   those modes have been visited. */
+.locate-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border: 1px solid var(--accent-cyan);
+    border-radius: 4px;
+    background: var(--accent-cyan-dim, rgba(74, 163, 255, 0.12));
+    color: var(--accent-cyan);
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.4;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.locate-action svg {
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+}
+
+.locate-action:hover,
+.locate-action:focus-visible {
+    background: var(--accent-cyan);
+    color: var(--bg-primary, #0b0f14);
+}
+
+.locate-action.locate-action-lg {
+    justify-content: center;
+    margin-left: 0;
+    padding: 6px 14px;
+    font-size: 11px;
+}
+
+.locate-action.locate-action-lg svg {
+    width: 13px;
+    height: 13px;
+}
