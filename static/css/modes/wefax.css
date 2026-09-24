@@ -8,7 +8,8 @@
 #wefaxMode.active {
     order: -1;
 }
-.sidebar:has(#wefaxMode.active) > .sidebar-collapse-btn {
+.sidebar:has(#wefaxMode.active) > .sidebar-collapse-btn,
+.sidebar:has(#wefaxMode.active) > .sb-status {
     order: -2;
 }
 

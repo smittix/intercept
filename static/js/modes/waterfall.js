@@ -866,6 +866,9 @@ const Waterfall = (function () {
         const stopBtn = document.getElementById('wfStopBtn');
         if (startBtn) startBtn.style.display = _running ? 'none' : '';
         if (stopBtn) stopBtn.style.display = _running ? '' : 'none';
+        // The idle note goes for good once the waterfall has drawn something
+        const note = document.getElementById('wfIdleNote');
+        if (note && _running) note.hidden = true;
         _updateScanButtons();
     }
 

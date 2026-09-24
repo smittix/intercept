@@ -1603,6 +1603,8 @@
     <!-- Agent Manager -->
     <script src="{{ url_for('static', filename='js/core/agents.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/global-nav.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/strip-spark.js') }}"></script>
+    <script>StripSpark.attach('stripVesselsNow', { title: 'Vessels in view, over the last 15 minutes' });</script>
     <script>
         // AIS-specific agent integration
         let aisCurrentAgent = 'local';

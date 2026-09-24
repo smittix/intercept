@@ -83,6 +83,12 @@ async function initWebSDR() {
     setupWebsdrResizeHandling(mapEl);
     if (websdrReceivers.length > 0) {
         plotReceiversOnMap(websdrReceivers);
+    } else {
+        // Fill the globe on first visit rather than leave it empty until
+        // "Find Receivers"; the server caches the list for an hour.
+        const listEl = document.getElementById('websdrReceiverList');
+        if (listEl) listEl.innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: 16px;">Loading receivers…</div>';
+        searchReceivers(false);
     }
     [100, 300, 600, 1000].forEach(delay => {
         setTimeout(invalidateWebSDRViewport, delay);

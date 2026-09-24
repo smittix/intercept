@@ -9,6 +9,9 @@
  * - Sections were all collapsed on every visit. Now the sections you open in
  *   a mode are remembered for that mode, and a mode you have not arranged
  *   opens its first section.
+ * - A mode's opening section that only describes it (a heading and a
+ *   paragraph, no controls) is folded behind an (i) on the status card, so
+ *   the sidebar starts with something you can set.
  *
  * Reads the page as it is (the mode panels, #deviceSelect, the health
  * record RunState shares as 'intercept:health'); nothing here drives a mode.
@@ -49,6 +52,7 @@
     ];
 
     let health = null;
+    let introShown = false;
 
     function currentModeName() {
         try { return currentMode; } catch (err) { return null; }  // eslint-disable-line no-undef
@@ -82,7 +86,32 @@
 
     function ownSections(mode) {
         const panel = modePanel(mode);
-        return panel ? Array.from(panel.querySelectorAll(':scope > .section')).filter((s) => s.querySelector(':scope > h3')) : [];
+        return panel ? Array.from(panel.querySelectorAll(':scope > .section'))
+            .filter((s) => s.querySelector(':scope > h3') && !s.classList.contains('sb-intro')) : [];
+    }
+
+    // ------------------------------------------------------------ intro
+
+    // The first section, if it has a heading, some text and nothing to operate
+    function markIntro(mode) {
+        const panel = modePanel(mode);
+        if (!panel) return null;
+        let intro = panel.querySelector(':scope > .section.sb-intro');
+        if (intro) return intro;
+        const first = panel.querySelector(':scope > .section');
+        if (!first || !first.querySelector(':scope > h3')) return null;
+        if (first.querySelector('input, select, button, textarea, a, canvas, [id]')) return null;
+        first.classList.add('sb-intro');
+        return first;
+    }
+
+    function syncIntro(mode) {
+        const intro = markIntro(mode);
+        if (intro) {
+            intro.classList.toggle('sb-intro-open', introShown);
+            intro.classList.remove('collapsed');
+        }
+        return intro;
     }
 
     function titleOf(section) {
@@ -191,6 +220,19 @@
         stateEl.className = 'sb-status-state';
         stateEl.textContent = state;
         top.append(light, name, stateEl);
+        if (syncIntro(mode)) {
+            const info = document.createElement('button');
+            info.type = 'button';
+            info.className = 'sb-status-info' + (introShown ? ' on' : '');
+            info.title = introShown ? 'Hide the description' : 'About this mode';
+            info.setAttribute('aria-expanded', String(introShown));
+            info.textContent = 'i';
+            info.addEventListener('click', () => {
+                introShown = !introShown;
+                renderCard();
+            });
+            top.append(info);
+        }
 
         const rows = [];
         const sdr = document.getElementById('rtlDeviceSection');

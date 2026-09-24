@@ -722,7 +722,7 @@ body {
     }
 }
 
-html[data-ui-tier="enhanced"] {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) {
     --accent-cyan: #2e7d8a;
     --accent-cyan-rgb: 46, 125, 138;
     --border-color: rgba(46, 125, 138, 0.18);
@@ -733,11 +733,11 @@ html[data-ui-tier="enhanced"] {
     --bg-card: #020404;
 }
 
-html[data-ui-tier="enhanced"] body {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) body {
     background: #000000;
 }
 
-html[data-ui-tier="enhanced"] .session-strip {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .session-strip {
     background: linear-gradient(120deg, rgba(4, 8, 8, 0.95), rgba(6, 10, 10, 0.95));
 }
 

@@ -5,6 +5,9 @@
  */
 
 :root {
+    /* A panel set into the page: darker in the dark theme, a faint tint in light */
+    --surface-sunken: rgba(0, 0, 0, 0.3);
+    --surface-sunken-soft: rgba(0, 0, 0, 0.2);
     /* ============================================
        COLOR PALETTE - Dark Theme (Default)
        ============================================ */
@@ -269,6 +272,8 @@ html[data-ui-tier="enhanced"] {
    (specificity 0,1,1) beats both tier selectors when active.
    ============================================ */
 html[data-theme="light"] {
+    --surface-sunken: rgba(12, 18, 24, 0.04);
+    --surface-sunken-soft: rgba(12, 18, 24, 0.03);
     --bg-primary: #f4f7fb;
     --bg-secondary: #e9eef5;
     --bg-tertiary: #dde5f0;

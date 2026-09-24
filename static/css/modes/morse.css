@@ -129,16 +129,16 @@
 .morse-raw-panel {
     margin-top: 8px;
     padding: 8px;
-    border: 1px solid #1a1a2e;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
-    background: #080812;
+    background: var(--surface-sunken);
 }
 
 .morse-raw-label {
     font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #667;
+    color: var(--text-dim);
     margin-bottom: 4px;
 }
 
@@ -148,7 +148,7 @@
     overflow-y: auto;
     font-family: var(--font-mono);
     font-size: 11px;
-    color: #8fd0ff;
+    color: var(--accent-cyan);
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -159,14 +159,14 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
     font-size: 10px;
-    color: #7a8694;
+    color: var(--text-secondary);
 }
 
 .morse-metrics-panel span {
     padding: 4px 6px;
     border-radius: 4px;
-    border: 1px solid #1a1a2e;
-    background: #080811;
+    border: 1px solid var(--border-color);
+    background: var(--surface-sunken);
     font-family: var(--font-mono);
 }
 
@@ -200,16 +200,16 @@
     }
 }
 
-html[data-ui-tier="enhanced"] .morse-raw-panel {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .morse-raw-panel {
     border-color: rgba(46, 125, 138, 0.18);
     background: rgba(1, 4, 4, 0.9);
 }
 
-html[data-ui-tier="enhanced"] .morse-raw-text {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .morse-raw-text {
     color: rgba(70, 180, 200, 0.90);
 }
 
-html[data-ui-tier="enhanced"] .morse-metrics-panel span {
+html[data-ui-tier="enhanced"]:not([data-theme="light"]) .morse-metrics-panel span {
     border-color: rgba(46, 125, 138, 0.18);
     background: rgba(1, 4, 4, 0.88);
 }

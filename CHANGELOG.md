@@ -2,6 +2,30 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.22] - 2026-09-24
+
+Polish round 3.
+
+### Changed
+
+- **Light theme**: with the Enhanced interface tier (the default), the light theme left the sidebar, section headers, output panel, nav and many panels near-black. Enhanced-tier colour rules now apply only in the dark theme; panels set into the page use a new `--surface-sunken` colour that suits both themes; inline dark panel colours use the theme's. Scopes, waterfalls and maps stay dark as displays.
+- **Sidebar**: a mode's description-only opening section folds behind an (i) on the status card, so the sidebar opens on a section you can set (17 modes).
+- **Sidebar**: the red "Kill All Processes" button goes; it duplicated "Stop all running processes" (⊗) in the toolbar.
+- **Bottom bar** (Recon, Mute, Auto-scroll, export, Clear) shows only for Pager, 433 MHz, Meters and OOK, the modes whose feed it acts on.
+- **Waterfall**: an idle note explains what will appear and how to tune; the mode buttons wrap instead of clipping LSB.
+- **WebSDR**: receivers load on first visit (the server caches the list for an hour).
+- **ADS-B and AIS dashboards**: a trend line of the live count over the last 15 minutes.
+- **Phone**: the welcome page lists modes first; the bottom bar is one row that scrolls sideways.
+
+### Fixed
+
+- Firefox showed white scrollbars on the dashboards, ADS-B history and network monitor.
+- The WeFax sidebar status card sat below five sections.
+- The light theme's active nav group had an invisible label.
+- The Settings tabs left About alone on a second row.
+
+---
+
 ## [2.33.21] - 2026-09-24
 
 A second polish pass: cleaner, more consistent, and less space spent on nothing.
