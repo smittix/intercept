@@ -1206,6 +1206,14 @@ class MeetingWindowSummary:
         }
 
 
+def _stored_as_local(value: str) -> datetime:
+    """A stored timestamp as naive local time; a naive value is UTC."""
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone().replace(tzinfo=None)
+
+
 def generate_meeting_summary(
     meeting_window: dict, device_timelines: list[DeviceTimeline], device_profiles: list[dict]
 ) -> MeetingWindowSummary:
@@ -1229,17 +1237,13 @@ def generate_meeting_summary(
     start_str = meeting_window.get("start_time")
     end_str = meeting_window.get("end_time")
 
+    # Stored times are UTC (SQLite CURRENT_TIMESTAMP, no offset); device
+    # observations are local. Compare them on the local clock.
     if start_str:
-        if isinstance(start_str, str):
-            summary.start_time = datetime.fromisoformat(start_str.replace("Z", "+00:00")).replace(tzinfo=None)
-        else:
-            summary.start_time = start_str
+        summary.start_time = _stored_as_local(start_str) if isinstance(start_str, str) else start_str
 
     if end_str:
-        if isinstance(end_str, str):
-            summary.end_time = datetime.fromisoformat(end_str.replace("Z", "+00:00")).replace(tzinfo=None)
-        else:
-            summary.end_time = end_str
+        summary.end_time = _stored_as_local(end_str) if isinstance(end_str, str) else end_str
 
     if summary.start_time and summary.end_time:
         summary.duration_minutes = (summary.end_time - summary.start_time).total_seconds() / 60

@@ -287,6 +287,10 @@ def _build_report():
         generate_meeting_summary(window, timeline_objects, profiles).to_dict()
         for window in get_meeting_windows(sweep_id)
     ]
+    for meeting in meetings:  # local ISO times, to the minute, as the rest of the report shows them
+        for key in ("start_time", "end_time"):
+            if meeting.get(key):
+                meeting[key] = meeting[key][:16].replace("T", " ")
 
     report = generate_report(
         sweep_id=sweep_id,

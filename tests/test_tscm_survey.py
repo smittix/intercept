@@ -241,3 +241,32 @@ def test_past_sweeps_are_listed_newest_first_with_what_they_detected(client, db)
 
     assert [s["id"] for s in client.get("/tscm/sweeps?limit=1").get_json()["sweeps"]] == [running]
     assert len(client.get("/tscm/sweeps?limit=0").get_json()["sweeps"]) == 1  # clamped to at least one
+
+
+def test_meeting_windows_are_compared_on_the_local_clock(monkeypatch):
+    """Defect: meeting windows are stored in UTC and device observations in
+    local time, and the two were compared directly. Outside UTC, a device
+    seen during the meeting was counted as outside it."""
+    import time
+    from datetime import datetime
+
+    from utils.tscm.advanced import DeviceObservation, DeviceTimeline, generate_meeting_summary
+
+    monkeypatch.setenv("TZ", "Europe/London")  # BST in September: UTC+1
+    time.tzset()
+    try:
+        seen = datetime(2026, 9, 24, 13, 30)  # local, as observations are recorded
+        timeline = DeviceTimeline(
+            identifier="AA:BB:CC:DD:EE:01",
+            protocol="bluetooth",
+            observations=[DeviceObservation(timestamp=seen)],
+            first_seen=seen,
+            last_seen=seen,
+        )
+        window = {"id": 1, "name": "Board", "start_time": "2026-09-24 12:00:00", "end_time": "2026-09-24 13:00:00"}
+        summary = generate_meeting_summary(window, [timeline], []).to_dict()
+    finally:
+        monkeypatch.undo()
+        time.tzset()
+    assert summary["start_time"] == "2026-09-24T13:00:00"
+    assert summary["summary"]["total_devices_active"] == 1
