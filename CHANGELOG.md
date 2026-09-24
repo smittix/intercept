@@ -2,6 +2,36 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.21] - 2026-09-24
+
+A second polish pass: cleaner, more consistent, and less space spent on nothing.
+
+### Changed
+
+- **Sidebar**: a status card at the top says, for the mode in view, whether it is running and for how long, and which SDR, frequency and gain it will use. Section headers get icons. The sections you open are remembered per mode; a mode you have not arranged opens its first section.
+- **Header**: the Run State strip sits in the header row instead of taking a row of its own.
+- **Signal bars** use the same colours everywhere.
+- **Pop-ups**: the ADS-B dashboard's five differently styled banners (airband tools, aircraft database, readsb, DVB drivers, alerts) are now the app's toasts, top right, clear of the controls. The Agents page uses them too.
+- **Welcome page**: a Live card shows what is running (each a link back to it), the SDRs attached and in use, and the last 24 hours of observations by source. Mode tiles whose decoder is running get a light.
+- **System Health**: temperatures as a heat grid of tiles, RAM and swap as gauges, and CPU and RAM history lines.
+- **TSCM**: a threat gauge (No data, Low, Elevated, High) leads the banner, with the counts as neutral tiles beside it. The sweep panels say whether the sweep is stopped, listening, or failed to start.
+- **433 MHz**: the "Audio Waveform" was a sine wave synthesised from each packet's level; it is replaced by a plot of the packets over the last minute, each as tall as its level, coloured by SNR and labelled with its device, over the noise floor. The server no longer builds the waveform or sends `scope` events.
+- **OOK**: the latest frame is drawn as a pulse train with its bytes beneath, and the panel shows while idle.
+- **Morse** and **Meteor**: idle views show what they will show (a keyed "CQ" envelope; the odd faint meteor streak) instead of an empty box.
+- **Mode timelines** (433 MHz, pager, TSCM) say "No activity in this window" on one line, instead of a large block repeating the empty state below.
+- **ADS-B history**: sparklines on the Messages, Snapshots and Aircraft totals, and a Traffic strip of aircraft per hour. `GET /adsb/history/traffic` returns the per-bucket counts.
+- **Radiosonde**: each sonde card has an ascent profile (temperature against altitude), and says Ascending, or Descending with the burst altitude.
+- **BT Locate** and **drone detection** maps open on your location instead of the whole world, with a note until something is plotted.
+- **Agents**: health rings (response time), what each agent is running, a compact header and summary line, and the register form folds away once there are agents.
+
+### Fixed
+
+- The live empty state stayed visible above items in lists that append (OOK's frame log).
+- Selected toggles in OOK and Morse (PWM/PPM/Manchester, MSB/LSB, CW Tone) were black text on nothing: `--accent` was never defined.
+- Firefox showed a white default scrollbar beside every scrolling panel on the main page.
+
+---
+
 ## [2.33.20] - 2026-09-24
 
 ### Changed
