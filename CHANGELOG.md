@@ -2,6 +2,21 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.14] - 2026-09-24
+
+### Added
+
+- **Activity feed** (Intel > Activity). One reverse-chronological stream of sightings from every mode that reports them, colour-coded by source. Filter by source, time window (15 minutes to 24 hours) or a single device; pause to read without losing anything, since new sightings are held and shown on resume. A Bluetooth address the TSCM identity engine has grouped under MAC randomisation shows that grouping, labelled as the engine's judgement. The feed says what the data supports: sightings close together were seen in the same window, nothing more.
+- **Observations.** A sighting is recorded as `{ts, source, identifier, entity, rssi, lat, lon, summary, raw}`. Every mode that already passed events through the event pipeline records them with no change of its own; 433 MHz and Wi-Fi record where their data is ingested, so they record whether or not a page is open. `GET /observations` filters by source, identifier (or resolved identity) and time window; `/observations/stream` tails them live; `/observations/stats` shows per-source counts and the policy below.
+- **Volume and retention are part of it.** Each device is recorded at most once per interval (15 s for aircraft and vessels, 10 s for Wi-Fi and Bluetooth, 5 s otherwise) and each source at 5 a second after a burst of 20, so a busy ADS-B feed cannot swamp the feed or the table. Writes are batched. Sightings older than 24 hours, and the oldest beyond 100,000, are deleted by the cleanup manager (`INTERCEPT_OBSERVATION_RETENTION_HOURS`, `INTERCEPT_OBSERVATION_MAX_ROWS`).
+
+### Fixed
+
+- **The test suite wrote to the real database.** Tests that did not set up their own now use a temporary one.
+- **A WeFax scheduler test failed between about 12:20 and 13:00 UTC**, when its fixed broadcast time had already passed.
+
+---
+
 ## [2.33.13] - 2026-09-24
 
 ### Added
