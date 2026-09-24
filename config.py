@@ -7,10 +7,19 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.17"
+VERSION = "2.33.18"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.18",
+        "date": "September 2026",
+        "highlights": [
+            "Stop now stops: pager, 433 MHz and ADS-B end their decoders together and wait until they are gone, and the page says so if one survives.",
+            "Times follow your browser's time zone; ESRI World Imagery is the default map; Locate is on every Bluetooth and Wi-Fi row and starts at once.",
+            "Fix: Bluetooth labelled phones, earbuds and appliances as AirTags and SmartTags; space weather lost its solar wind, Kp and flux data; waterfall clicks replayed in order.",
+        ],
+    },
     {
         "version": "2.33.17",
         "date": "September 2026",

@@ -2,6 +2,26 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.18] - 2026-09-24
+
+### Changed
+
+- **Times follow your browser.** With no time zone chosen in Settings, times read US Eastern. They now use the browser's own zone and clock format. A zone you chose is kept.
+- **ESRI World Imagery is the default map.** CARTO's dark tiles now carry an "API KEY REQUIRED" watermark without a key. A map you chose is kept.
+- **Locate is obvious and starts at once.** Every Bluetooth device and Wi-Fi network row has a Locate button, and pressing it starts locating; it used to wait for Start to be pressed again.
+- **A polished Bluetooth radar**, labelled Strong / Medium / Weak rather than in metres, which signal strength cannot give. Bluetooth rows no longer show a distance for the same reason.
+
+### Fixed
+
+- **Stop could be slow or not stop at all** (pager, 433 MHz, ADS-B). Processes are now stopped together and waited for until gone, so the SDR is free when released. The pager's rtl_fm no longer blocks for two seconds on every stop. If a decoder survives, the page shows it running and points to Kill All; the ADS-B dashboard shows STOPPING while it works.
+- **Bluetooth labelled most devices AirTags or Samsung SmartTags.** Samsung's company ID alone counted as a SmartTag, every Apple device away from its owner as an AirTag, and the COVID exposure-notification service as Find My. Apple's Find My status byte now decides between AirTag, AirPods and other accessories, and iPhones, iPads and Macs are not trackers.
+- **Space weather was missing solar wind, Kp and flux data.** NOAA retired the solar wind feeds and changed the format of others; the new feeds are read, and flare probabilities show the latest days.
+- **Waterfall clicks were tuned one after another.** Clicking faster than the SDR restarts now goes straight to the last frequency.
+- **GPS waited silently on a gpsd with no receiver**, as the gpsd package starts one at boot. The detected receiver is now handed to gpsd, or the fix is named.
+- **Satellite data downloads were blocked (403).** Every start fetched TLEs from CelesTrak, which blocks addresses that download too often. The schedule now survives restarts: at most daily, and never retried within two hours.
+
+---
+
 ## [2.33.17] - 2026-09-24
 
 ### Fixed
