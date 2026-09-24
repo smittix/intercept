@@ -2,6 +2,29 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.12] - 2026-09-24
+
+A lifecycle contract now runs against every mode: start, stop and start again without restarting iNTERCEPT, with the tool missing, twice in a row, and with garbage on the decoder's output. These are what it found.
+
+### Fixed
+
+- **Stopping Morse or OOK could hang indefinitely.** Both closed the decoder's pipes before terminating it. `close()` waits for a reader thread blocked in `read()`, which only returns when the process exits, so the stop request never completed. The same happened to a Morse start whose first attempt received no samples. The process is now terminated first.
+- **A pager start without `multimon-ng` left the SDR marked busy.** The device was claimed before the tool check and not released, so every later start of any mode on it failed with "device busy" until restart.
+- **One corrupt byte ended the receiver waterfall.** `rtl_power` output was decoded strictly, and an invalid byte raised inside the read loop. The Bluetooth scanners (`hcitool`, `bluetoothctl`, Ubertooth) had the same weakness, and their output includes device names chosen by whoever owns the device, so any nearby device could stop a scan.
+- **Drone detection could leave `rtl_433` running after stop.** A worker still starting when stop ran kept its process, holding the SDR.
+- **Meshtastic with no USB device reported itself running**, and with more than one serial port the library called `sys.exit()`. The port is now chosen before connecting, with a clear error for none or several.
+- **A missing tool gave a vague 500** in SSTV, general SSTV, WeFax, the receiver's audio and rtlamr ("Failed to start decoder"). They now return 400 naming the tool.
+- **ADS-B returned HTTP 200 for a failed start** (device busy, dump1090 exiting), so the history page's start button never showed the failure.
+- **Stopping ACARS, VDL2 or APRS when not running returned an error**; it is now a no-op, like every other mode.
+- **Weather satellite needed a restart after installing SatDump**; a missing decoder is now checked again.
+
+### Tests
+
+- `tests/test_mode_lifecycle.py` applies the contract to every mode, and to the agent, faking decoders with real OS pipes so reader threads block as they do in production. Modes it cannot cover are listed with the reason.
+- The suite now fails if peak memory passes 1 GB; a full run peaks near 350 MB. A 16 GB leak previously went unnoticed for months.
+
+---
+
 ## [2.33.11] - 2026-09-24
 
 ### Added

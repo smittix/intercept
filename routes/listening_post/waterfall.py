@@ -295,6 +295,9 @@ def _waterfall_loop_rtl_power():
             stderr=subprocess.PIPE,
             bufsize=1,
             text=True,
+            # One corrupt byte must not end the waterfall: with strict decoding
+            # it raised inside the read loop and tore the capture down.
+            errors="replace",
         )
 
         # Detect immediate startup failures (e.g. device busy / no device).

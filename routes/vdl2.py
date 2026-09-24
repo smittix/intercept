@@ -344,7 +344,7 @@ def stop_vdl2() -> Response:
 
     with app_module.vdl2_lock:
         if not app_module.vdl2_process:
-            return api_error("VDL2 decoder not running", 400)
+            return jsonify({"status": "not_running"})
 
         try:
             app_module.vdl2_process.terminate()

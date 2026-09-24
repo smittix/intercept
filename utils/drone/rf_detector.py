@@ -108,8 +108,15 @@ class RFDetector:
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
             register_process(proc)
+            # stop() may have run while this thread was starting; it only
+            # terminates processes already published under the lock.
             with self._proc_lock:
-                self._rtl_proc = proc
+                stopped = self._stop_event.is_set()
+                if not stopped:
+                    self._rtl_proc = proc
+            if stopped:
+                safe_terminate(proc)
+                return
             for raw_line in iter(proc.stdout.readline, b""):
                 if self._stop_event.is_set():
                     break
@@ -127,8 +134,15 @@ class RFDetector:
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
             register_process(proc)
+            # stop() may have run while this thread was starting; it only
+            # terminates processes already published under the lock.
             with self._proc_lock:
-                self._hackrf_proc = proc
+                stopped = self._stop_event.is_set()
+                if not stopped:
+                    self._hackrf_proc = proc
+            if stopped:
+                safe_terminate(proc)
+                return
             for raw_line in iter(proc.stdout.readline, b""):
                 if self._stop_event.is_set():
                     break

@@ -170,6 +170,8 @@ def start_rtlamr() -> Response:
                     if rtlamr_active_device is not None:
                         app_module.release_sdr_device(rtlamr_active_device, rtlamr_active_sdr_type)
                         rtlamr_active_device = None
+                    if isinstance(e, FileNotFoundError):
+                        return api_error("rtl_tcp not found. Install the rtl-sdr tools.", 400)
                     return api_error(f"Failed to start rtl_tcp: {e}", 500)
 
         # Wait for rtl_tcp to start outside lock

@@ -33,6 +33,7 @@ try:
     import meshtastic
     import meshtastic.serial_interface
     import meshtastic.tcp_interface
+    import meshtastic.util
     from meshtastic import BROADCAST_ADDR
     from pubsub import pub
 
@@ -420,8 +421,19 @@ class MeshtasticClient:
                     new_interface = meshtastic.serial_interface.SerialInterface(device)
                     new_device_path = device
                 else:
-                    new_interface = meshtastic.serial_interface.SerialInterface()
-                    new_device_path = "auto"
+                    # Choose the port here. Left to itself the library prints
+                    # "attempting TCP connection" and returns a half-built,
+                    # unconnected interface when no port exists, and calls
+                    # sys.exit() when several do.
+                    ports = meshtastic.util.findPorts(True)
+                    if not ports:
+                        raise ConnectionError("No Meshtastic device found on USB. Connect one, or use a TCP connection.")
+                    if len(ports) > 1:
+                        raise ConnectionError(
+                            f"Several serial ports found ({', '.join(ports)}). Choose the Meshtastic device."
+                        )
+                    new_interface = meshtastic.serial_interface.SerialInterface(ports[0])
+                    new_device_path = ports[0]
                 new_connection_type = "serial"
                 logger.info(f"Connected to Meshtastic device via serial: {new_device_path}")
         except Exception as e:

@@ -373,7 +373,7 @@ def stop_acars() -> Response:
 
     with app_module.acars_lock:
         if not app_module.acars_process:
-            return api_error("ACARS decoder not running", 400)
+            return jsonify({"status": "not_running"})
 
         try:
             app_module.acars_process.terminate()

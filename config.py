@@ -7,10 +7,20 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.11"
+VERSION = "2.33.12"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.12",
+        "date": "September 2026",
+        "highlights": [
+            "Fix: stopping Morse or OOK could hang indefinitely, and a failed pager start left the SDR marked busy until restart.",
+            "Fix: one corrupt byte ended the receiver waterfall; Bluetooth scanners could be stopped by a nearby device's name.",
+            "Fix: several modes reported a missing tool as a vague server error, or a failed start as success; they now name the tool.",
+            "Fix: Meshtastic with no USB device reported itself running, and with two serial ports could shut the server down.",
+        ],
+    },
     {
         "version": "2.33.11",
         "date": "September 2026",

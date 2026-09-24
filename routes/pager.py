@@ -378,7 +378,12 @@ def start_decoding() -> Response:
 
         multimon_path = get_tool_path("multimon-ng")
         if not multimon_path:
-            return api_error("multimon-ng not found", 400)
+            # The device was claimed above; a failed start must hand it back
+            # or every later start reports it busy.
+            if pager_active_device is not None:
+                app_module.release_sdr_device(pager_active_device, pager_active_sdr_type or "rtlsdr")
+                pager_active_device = None
+            return api_error("multimon-ng not found. Install multimon-ng to decode pagers.", 400)
         multimon_cmd = [multimon_path, "-t", "raw"] + decoders + ["-f", "alpha", "-"]
 
         full_cmd = " ".join(rtl_cmd) + " | " + " ".join(multimon_cmd)

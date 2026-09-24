@@ -409,7 +409,11 @@ class BLEScanner:
                 logger.info("Trying hcitool lescan...")
                 # Start lescan in background
                 process = subprocess.Popen(
-                    ["hcitool", "lescan", "--duplicates"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+                    ["hcitool", "lescan", "--duplicates"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    errors="replace",
                 )
 
                 import time

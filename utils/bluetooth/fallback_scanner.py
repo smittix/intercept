@@ -218,6 +218,7 @@ class HcitoolScanner:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                errors="replace",
             )
 
             self._stop_event.clear()
@@ -325,7 +326,12 @@ class BluetoothctlScanner:
                 return True
 
             self._process = subprocess.Popen(
-                ["bluetoothctl"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+                ["bluetoothctl"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                errors="replace",
             )
 
             self._stop_event.clear()

@@ -141,6 +141,7 @@ class SSTVDecoder:
     DOPPLER_UPDATE_INTERVAL = 5
 
     def __init__(self, output_dir: str | Path | None = None, url_prefix: str = "/sstv"):
+        self.last_start_error: BaseException | None = None
         self._rtl_process = None
         self._running = False
         self._lock = threading.Lock()
@@ -239,6 +240,7 @@ class SSTVDecoder:
 
             except Exception as e:
                 self._running = False
+                self.last_start_error = e
                 logger.error(f"Failed to start SSTV decoder: {e}")
                 self._emit_progress(DecodeProgress(status="error", message=str(e)))
                 return False

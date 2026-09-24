@@ -9,6 +9,7 @@ This package splits the listening post into sub-modules:
 
 from __future__ import annotations
 
+import errno
 import os
 import queue
 import shutil
@@ -54,6 +55,7 @@ audio_lock = threading.Lock()
 audio_start_lock = threading.Lock()
 audio_running = False
 audio_frequency = 0.0
+audio_start_error: BaseException | None = None  # why the last start failed, for the route
 audio_modulation = "fm"
 audio_source = "process"
 audio_start_token = 0
@@ -202,7 +204,8 @@ def _start_audio_stream(
     bias_t: bool | None = None,
 ):
     """Start audio streaming at given frequency."""
-    global audio_process, audio_rtl_process, audio_running, audio_frequency, audio_modulation
+    global audio_process, audio_rtl_process, audio_running, audio_frequency, audio_modulation, audio_start_error
+    audio_start_error = None
 
     # Stop existing stream and snapshot config under lock
     with audio_lock:
@@ -211,6 +214,7 @@ def _start_audio_stream(
         ffmpeg_path = find_ffmpeg()
         if not ffmpeg_path:
             logger.error("ffmpeg not found")
+            audio_start_error = FileNotFoundError(errno.ENOENT, "not found", "ffmpeg")
             return
 
         # Snapshot runtime tuning config so the spawned demod command cannot
@@ -243,6 +247,7 @@ def _start_audio_stream(
         rtl_fm_path = find_rtl_fm()
         if not rtl_fm_path:
             logger.error("rtl_fm not found")
+            audio_start_error = FileNotFoundError(errno.ENOENT, "not found", "rtl_fm")
             return
 
         freq_hz = int(frequency * 1e6)
@@ -269,6 +274,7 @@ def _start_audio_stream(
         rx_fm_path = find_rx_fm()
         if not rx_fm_path:
             logger.error(f"rx_fm not found - required for {resolved_sdr_type.value}. Install SoapySDR utilities.")
+            audio_start_error = FileNotFoundError(errno.ENOENT, "not found", "rx_fm")
             return
 
         sdr_device = SDRFactory.create_default_device(resolved_sdr_type, index=device_index)
@@ -444,6 +450,7 @@ def _start_audio_stream(
 
     except Exception as e:
         logger.error(f"Failed to start audio stream: {e}")
+        audio_start_error = e
 
 
 def _stop_audio_stream():
