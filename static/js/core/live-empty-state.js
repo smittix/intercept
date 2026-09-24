@@ -152,6 +152,7 @@ const LiveEmptyState = (function () {
     const STYLE = '.live-empty-state{display:flex;align-items:center;justify-content:center;gap:14px;padding:16px 18px;' +
         'margin:8px;border:1px dashed var(--border-color,#263246);border-radius:8px;color:var(--text-secondary,#9fb0c7);' +
         'font-size:12px;text-align:left;grid-column:1/-1}' +
+        '.live-empty-state[hidden]{display:none}' +
         '.live-empty-state .les-text{display:flex;flex-direction:column;gap:2px;min-width:0}' +
         '.live-empty-state .les-headline{font-size:11px;letter-spacing:.12em;text-transform:uppercase}' +
         '.live-empty-state .les-detail{overflow-wrap:anywhere}' +
