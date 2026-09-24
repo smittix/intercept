@@ -15,8 +15,7 @@ TSCM Sweep Report - Head Office, 3rd floor boardroom
 Conducted: 2026-09-24 10:00
 Duration: 90 minutes
 
-OVERALL ASSESSMENT: ELEVATED
-Multiple indicators warrant further investigation.
+OVERALL ASSESSMENT: 2 devices require investigation, 2 devices require review.
 
 SCAN STATISTICS:
   - Total devices scanned: 50
@@ -44,32 +43,28 @@ HIGH INTEREST FINDINGS
 1. 4C:E6:76:12:34:56
    Protocol: BLUETOOTH
    Identifier: 4C:E6:76:12:34:56
-   Risk Score: <flagged>
-   Signal: <flagged>
-   Assessment: <flagged>
-   Interpretation: <flagged>
+   Signal: -48 dBm, observed for 80 minutes (40 sightings)
+   Assessment: Pattern consistent with an Apple AirTag (+2 further indicators)
    Indicators:
      - airtag_detected: Apple AirTag advertisement
      - persistent: Present for most of the sweep
      - meeting_correlated: First seen during the board meeting
    Recommended Action: investigate
    Reference: PB-001 (Tracker Detection)
-   Note: <flagged>
+   Note: Signal strength is affected by environmental factors including walls, interference, and device orientation
 
 2. 433.92 MHz carrier
    Protocol: RF
    Identifier: 433.920
-   Risk Score: <flagged>
-   Signal: <flagged>
-   Assessment: <flagged>
-   Interpretation: <flagged>
+   Signal: -61 dBm, observed for 85 minutes (30 sightings)
+   Assessment: Narrowband emission (+2 further indicators)
    Indicators:
      - narrowband_signal: Narrowband emission
      - always_on_carrier: Carrier present throughout
      - persistent: Present for most of the sweep
    Recommended Action: investigate
    Reference: PB-002 (Suspicious Device)
-   Note: <flagged>
+   Note: Signal strength is affected by environmental factors including walls, interference, and device orientation
 
 ----------------------------------------------------------------------
 FINDINGS REQUIRING REVIEW
@@ -78,10 +73,8 @@ FINDINGS REQUIRING REVIEW
 1. JBL Flip 5
    Protocol: BLUETOOTH
    Identifier: F0:12:34:AB:CD:EF
-   Risk Score: <flagged>
-   Signal: <flagged>
-   Assessment: <flagged>
-   Interpretation: <flagged>
+   Signal: -74 dBm, observed for 2 minutes (2 sightings)
+   Assessment: Audio-capable device (+1 further indicator)
    Indicators:
      - audio_capable: Advertises an audio service
      - unknown_device: Not in the baseline
@@ -91,10 +84,8 @@ FINDINGS REQUIRING REVIEW
 2. 02:11:22:33:44:55
    Protocol: WIFI
    Identifier: 02:11:22:33:44:55
-   Risk Score: <flagged>
-   Signal: <flagged>
-   Assessment: <flagged>
-   Interpretation: <flagged>
+   Signal: -66 dBm, observed for 60 minutes (12 sightings)
+   Assessment: Concealed identity (hidden name or SSID) (+1 further indicator)
    Indicators:
      - hidden_identity: Hidden SSID
      - unknown_device: Not in the baseline

@@ -240,7 +240,7 @@
   "findings": {
     "high_interest": [
       {
-        "description": "<flagged>",
+        "description": "Pattern consistent with an Apple AirTag (+2 further indicators)",
         "identifier": "4C:E6:76:12:34:56",
         "indicators": [
           {
@@ -266,7 +266,7 @@
         "signal_classification": "<flagged>"
       },
       {
-        "description": "<flagged>",
+        "description": "Narrowband emission (+2 further indicators)",
         "identifier": "433.920",
         "indicators": [
           {
@@ -294,7 +294,7 @@
     ],
     "needs_review": [
       {
-        "description": "<flagged>",
+        "description": "Audio-capable device (+1 further indicator)",
         "identifier": "F0:12:34:AB:CD:EF",
         "indicators": [
           {
@@ -314,7 +314,7 @@
         "signal_classification": "<flagged>"
       },
       {
-        "description": "<flagged>",
+        "description": "Concealed identity (hidden name or SSID) (+1 further indicator)",
         "identifier": "02:11:22:33:44:55",
         "indicators": [
           {

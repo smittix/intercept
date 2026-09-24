@@ -7,7 +7,7 @@ F0:12:34:AB:CD:EF,bluetooth,JBL Flip 5,needs_review,<flagged>,2026-09-24T10:05:0
 
 --- FINDINGS SUMMARY ---
 identifier,protocol,risk_level,risk_score,signal_strength,signal_confidence,description,interpretation,recommended_action
-4C:E6:76:12:34:56,bluetooth,high_interest,<flagged>,<flagged>,<flagged>,<flagged>,<flagged>,investigate
-433.920,rf,high_interest,<flagged>,<flagged>,<flagged>,<flagged>,<flagged>,investigate
-F0:12:34:AB:CD:EF,bluetooth,needs_review,<flagged>,<flagged>,<flagged>,<flagged>,<flagged>,review
-02:11:22:33:44:55,wifi,needs_review,<flagged>,<flagged>,<flagged>,<flagged>,<flagged>,review
+4C:E6:76:12:34:56,bluetooth,high_interest,<flagged>,<flagged>,<flagged>,Pattern consistent with an Apple AirTag (+2 further indicators),<flagged>,investigate
+433.920,rf,high_interest,<flagged>,<flagged>,<flagged>,Narrowband emission (+2 further indicators),<flagged>,investigate
+F0:12:34:AB:CD:EF,bluetooth,needs_review,<flagged>,<flagged>,<flagged>,Audio-capable device (+1 further indicator),<flagged>,review
+02:11:22:33:44:55,wifi,needs_review,<flagged>,<flagged>,<flagged>,Concealed identity (hidden name or SSID) (+1 further indicator),<flagged>,review
