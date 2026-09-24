@@ -29,7 +29,7 @@ const SignalCards = (function() {
                 description: 'Near minimum observable level',
                 interpretation: 'background activity or a distant source',
                 confidence: 'low',
-                color: '#888888',
+                color: 'var(--text-dim, #6b7280)',
                 icon: 'signal-0',
                 bars: 1
             },
@@ -38,7 +38,7 @@ const SignalCards = (function() {
                 description: 'Low-level signal present',
                 interpretation: 'a distant or partially obstructed source',
                 confidence: 'low',
-                color: '#6baed6',
+                color: 'var(--accent-red, #e25d5d)',
                 icon: 'signal-1',
                 bars: 2
             },
@@ -47,7 +47,7 @@ const SignalCards = (function() {
                 description: 'Consistent signal presence',
                 interpretation: 'a source in proximity',
                 confidence: 'medium',
-                color: '#3182bd',
+                color: 'var(--accent-amber, #d6a85e)',
                 icon: 'signal-2',
                 bars: 3
             },
@@ -56,7 +56,7 @@ const SignalCards = (function() {
                 description: 'Clear, consistent signal',
                 interpretation: 'a source in relatively close proximity',
                 confidence: 'medium',
-                color: '#fd8d3c',
+                color: 'var(--accent-green, #38c180)',
                 icon: 'signal-3',
                 bars: 4
             },
@@ -65,7 +65,7 @@ const SignalCards = (function() {
                 description: 'Elevated signal level',
                 interpretation: 'a nearby source',
                 confidence: 'high',
-                color: '#e6550d',
+                color: 'var(--accent-green, #38c180)',
                 icon: 'signal-4',
                 bars: 5
             }
@@ -426,15 +426,17 @@ const SignalCards = (function() {
         const showTooltip = options.showTooltip !== false;
         const compact = options.compact === true;
 
-        // Create signal bars SVG
+        // Signal bars, coloured by the same bands as the radars and lists
+        // (strong green, moderate amber, weak red), unlit bars faint
         const bars = info.bars;
+        const unlit = 'rgba(255, 255, 255, 0.12)';
         const barsSvg = `
             <svg class="signal-strength-bars" viewBox="0 0 20 16" width="${compact ? 16 : 20}" height="${compact ? 12 : 16}">
-                <rect x="0" y="12" width="3" height="4" fill="${bars >= 1 ? info.color : '#444'}"/>
-                <rect x="4" y="9" width="3" height="7" fill="${bars >= 2 ? info.color : '#444'}"/>
-                <rect x="8" y="6" width="3" height="10" fill="${bars >= 3 ? info.color : '#444'}"/>
-                <rect x="12" y="3" width="3" height="13" fill="${bars >= 4 ? info.color : '#444'}"/>
-                <rect x="16" y="0" width="3" height="16" fill="${bars >= 5 ? info.color : '#444'}"/>
+                <rect x="0" y="12" width="3" height="4" rx="1" fill="${bars >= 1 ? info.color : unlit}"/>
+                <rect x="4" y="9" width="3" height="7" rx="1" fill="${bars >= 2 ? info.color : unlit}"/>
+                <rect x="8" y="6" width="3" height="10" rx="1" fill="${bars >= 3 ? info.color : unlit}"/>
+                <rect x="12" y="3" width="3" height="13" rx="1" fill="${bars >= 4 ? info.color : unlit}"/>
+                <rect x="16" y="0" width="3" height="16" rx="1" fill="${bars >= 5 ? info.color : unlit}"/>
             </svg>
         `;
 
