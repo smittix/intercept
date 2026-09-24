@@ -7,10 +7,20 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.12"
+VERSION = "2.33.13"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.13",
+        "date": "September 2026",
+        "highlights": [
+            'Live lists show elapsed time ("14 s ago"), kept current every second, with the exact time on hover.',
+            'An empty list now says why: "rtl_433 running · 0 readings in 4 s", stopped, or the reason it failed to start.',
+            "Copy buttons on ICAO, MMSI, MAC and node identifiers, and notes and tags on any device, shown wherever it appears.",
+            "Hidden tabs stop their clocks and status polls; install advice matches your platform.",
+        ],
+    },
     {
         "version": "2.33.12",
         "date": "September 2026",

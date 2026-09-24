@@ -1650,8 +1650,8 @@ def get_all_known_devices(location: str | None = None, scope: str | None = None)
                 "last_verified": row["last_verified"],
                 "score_modifier": row["score_modifier"],
                 "metadata": json.loads(row["metadata"]) if row["metadata"] else None,
-            "notes": row["notes"],
-            "tags": json.loads(row["tags"]) if row["tags"] else [],
+                "notes": row["notes"],
+                "tags": json.loads(row["tags"]) if row["tags"] else [],
             }
             for row in cursor
         ]

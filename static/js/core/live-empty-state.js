@@ -6,7 +6,7 @@
  *
  *     rtl_433 running · 0 messages in 32 s
  *     433 MHz is stopped. Start it to see messages here.
- *     Failed to start: rtl_433 not found. Install with: sudo apt install rtl-433
+ *     Failed to start: rtl_433 not found. Install with: …
  *
  * from the server's own record in /health: which decoders are running, when
  * each last started, and why a start last failed (start errors name the
