@@ -814,13 +814,6 @@
                 {% include 'partials/modes/waterfall.html' %}
                 {% include 'partials/modes/meteor.html' %}
                 {% include 'partials/modes/system.html' %}
-
-
-
-                <button class="preset-btn" onclick="killAll()"
-                    style="width: 100%; margin-top: 10px; border-color: #ff3366; color: #ff3366;">
-                    Kill All Processes
-                </button>
             </div>
 
                 <div class="output-panel">
@@ -4621,7 +4614,7 @@
                 return true;
             }
             onStillRunning();
-            showError(`${label} did not stop. Use Kill All Processes to stop it.`);
+            showError(`${label} did not stop. Use "Stop all running processes" (⊗ in the toolbar) to stop it.`);
             return false;
         }
 

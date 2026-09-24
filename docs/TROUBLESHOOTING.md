@@ -144,7 +144,7 @@ See [HARDWARE.md — RTL-SDR Setup](HARDWARE.md#rtl-sdr-setup-linux) for udev ru
 
 ### Device busy error
 
-1. Click "Kill All Processes" in the UI
+1. Click "Stop all running processes" (the ⊗ button in the toolbar)
 2. Unplug and replug the SDR device
 3. Check for other applications: `lsof | grep rtl`
 
@@ -275,7 +275,7 @@ rtl_fm -M am -f 118000000 -s 24000 -r 24000 -g 40 2>/dev/null | \
 | Error | Cause | Solution |
 |-------|-------|----------|
 | `No supported devices found` | SDR not connected | Plug in SDR, check USB |
-| `Device or resource busy` | Another process using SDR | Click "Kill All Processes" |
+| `Device or resource busy` | Another process using SDR | Click "Stop all running processes" (⊗ in the toolbar) |
 | `401 Unauthorized` | Wrong Icecast password | Check password in Icecast config |
 | `Connection refused` | Icecast not running | Start Icecast service |
 | `Encoder libmp3lame not found` | ffmpeg missing codec | Reinstall ffmpeg with codecs |
