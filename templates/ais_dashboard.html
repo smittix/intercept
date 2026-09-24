@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
 <head>
+    <script src="{{ url_for('static', filename='js/core/utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/copy-id.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/device-notes.js') }}"></script>
@@ -1472,13 +1473,8 @@
         }
 
         function formatDscTime(timestamp) {
-            if (!timestamp) return '--:--';
-            try {
-                const d = new Date(timestamp);
-                return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            } catch (e) {
-                return timestamp.slice(11, 19) || '--:--';
-            }
+            // "3 min ago", kept current by the page's relative clock; exact time on hover
+            return (timestamp && InterceptTime.relTimeHtml(timestamp)) || '--:--';
         }
 
         function updateDscAlertSummary() {
