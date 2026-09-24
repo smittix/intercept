@@ -211,3 +211,33 @@ class TestAdoption:
             engine.return_value.get_clusters.return_value = [Cluster()]
             obs = observations.emit_observation("bluetooth", "11:22:33:44:55:66")
         assert obs["entity"] == "ble-cluster-7"
+
+
+class TestHistogram:
+    def test_counts_per_source_per_bucket(self, db):
+        base = 1_900_000_000.0
+        for i, (src, offset) in enumerate([("adsb", 10), ("adsb", 20), ("wifi", 25), ("adsb", 70), ("sensor", 119)]):
+            observations.emit_observation(src, f"id{i}", ts=base + offset)
+        data = observations.histogram(base, base + 120, buckets=4)
+        assert data["bucket_seconds"] == 30
+        assert data["sources"]["adsb"] == [2, 0, 1, 0]
+        assert data["sources"]["wifi"] == [1, 0, 0, 0]
+        assert data["sources"]["sensor"] == [0, 0, 0, 1]
+
+    def test_the_whole_window_is_counted_not_a_page(self, db):
+        base = 1_900_100_000.0
+        for i in range(600):  # more than a page of the list (500)
+            observations.emit_observation("sensor", f"s{i}", ts=base + i * 0.5)
+        data = observations.histogram(base, base + 300, buckets=1)
+        assert sum(data["sources"]["sensor"]) == min(
+            600, int(observations.SOURCE_BURST + 300 * observations.SOURCE_RATE)
+        )
+
+    def test_endpoint_filters_and_validates(self, client, db):
+        now = time.time()
+        observations.emit_observation("adsb", "4CA7B1", ts=now - 30)
+        observations.emit_observation("wifi", "AA:BB:CC:DD:EE:FF", ts=now - 20)
+        data = client.get("/observations/histogram?window_minutes=5&buckets=5&source=adsb").get_json()
+        assert set(data["sources"]) == {"adsb"} and sum(data["sources"]["adsb"]) == 1
+        assert client.get("/observations/histogram?since=10&until=5").status_code == 400
+        assert client.get("/observations/histogram?buckets=many").status_code == 400
