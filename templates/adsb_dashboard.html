@@ -3,6 +3,7 @@
 <head>
     <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/copy-id.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/device-notes.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/live-empty-state.js') }}"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3129,7 +3130,7 @@ sudo make install</code>
             return `
                 <div class="aircraft-header">
                     <span class="aircraft-callsign">${escapeHtml(callsign)}${badge}${acarsIndicator}${agentBadge}</span>
-                    <span class="aircraft-icao">${typeCode ? escapeHtml(typeCode) + ' • ' : ''}${CopyId.html(ac.icao)}</span>
+                    <span class="aircraft-icao">${typeCode ? escapeHtml(typeCode) + ' • ' : ''}${CopyId.html(ac.icao)}${DeviceNotes.html(ac.icao, 'adsb')}</span>
                 </div>
                 <div class="aircraft-details">
                     <div class="aircraft-detail">
@@ -3384,7 +3385,7 @@ sudo make install</code>
                 <div class="telemetry-grid">
                     <div class="telemetry-item">
                         <div class="telemetry-label">ICAO</div>
-                        <div class="telemetry-value">${CopyId.html(ac.icao)}</div>
+                        <div class="telemetry-value">${CopyId.html(ac.icao)}${DeviceNotes.html(ac.icao, 'adsb')}</div>
                     </div>
                     <div class="telemetry-item">
                         <div class="telemetry-label">Squawk</div>

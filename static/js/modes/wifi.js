@@ -1267,7 +1267,7 @@ const WiFiMode = (function() {
             elements.detailEssid.textContent = network.display_name || network.essid || '[Hidden SSID]';
         }
         if (elements.detailBssid) {
-            CopyId.set(elements.detailBssid, network.bssid);
+            elements.detailBssid.innerHTML = CopyId.html(network.bssid) + DeviceNotes.html(network.bssid, 'wifi');
         }
 
         // Update detail stats

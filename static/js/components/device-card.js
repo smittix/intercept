@@ -194,7 +194,7 @@ const DeviceCard = (function() {
         const identityHtml = '<div class="device-identity">' +
             '<div class="device-name">' + escapeHtml(deviceName) + '</div>' +
             '<div class="device-address">' +
-            '<span class="address-value">' + CopyId.html(deviceAddress) + '</span>' +
+            '<span class="address-value">' + CopyId.html(deviceAddress) + DeviceNotes.html(device.address, 'bluetooth') + '</span>' +
             '<span class="address-type">(' + escapeHtml(addressType) + ')</span>' +
             '</div></div>';
 
@@ -238,7 +238,7 @@ const DeviceCard = (function() {
                     <div class="signal-advanced-grid">
                         <div class="signal-advanced-item">
                             <span class="signal-advanced-label">Address</span>
-                            <span class="signal-advanced-value">${CopyId.html(device.address)}</span>
+                            <span class="signal-advanced-value">${CopyId.html(device.address)}${DeviceNotes.html(device.address, 'bluetooth')}</span>
                         </div>
                         <div class="signal-advanced-item">
                             <span class="signal-advanced-label">Address Type</span>

@@ -414,7 +414,10 @@ const Meshtastic = (function() {
 
         // Update sidebar
         if (nameEl) nameEl.textContent = nodeName;
-        if (idEl) CopyId.set(idEl, nodeId === '--' ? '' : nodeId, nodeId);
+        if (idEl) {
+            idEl.innerHTML = CopyId.html(nodeId === '--' ? '' : nodeId, nodeId) +
+                (nodeId === '--' ? '' : DeviceNotes.html(nodeId, 'meshtastic'));
+        }
         if (modelEl) modelEl.textContent = hwModel;
 
         // Update strip
@@ -771,7 +774,7 @@ const Meshtastic = (function() {
         const popupContent = `
             <div style="min-width: 150px;">
                 <strong style="color: var(--accent-cyan);">${node.long_name || shortName}</strong><br>
-                <span style="color: var(--text-dim);">ID:</span> ${CopyId.html(nodeId)}<br>
+                <span style="color: var(--text-dim);">ID:</span> ${CopyId.html(nodeId)}${DeviceNotes.html(nodeId, 'meshtastic')}<br>
                 <span style="color: var(--text-dim);">Model:</span> ${node.hw_model || 'Unknown'}<br>
                 <span style="color: var(--text-dim);">Position:</span> ${node.latitude.toFixed(5)}, ${node.longitude.toFixed(5)}<br>
                 ${node.altitude ? `<span style="color: var(--text-dim);">Altitude:</span> ${node.altitude}m<br>` : ''}

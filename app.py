@@ -21,6 +21,7 @@ import logging
 import os
 import platform
 import queue
+import re
 import subprocess
 import threading
 from pathlib import Path
@@ -624,6 +625,69 @@ def pwa_manifest() -> Response:
 def get_devices() -> Response:
     """Get all detected SDR devices with hardware type info."""
     return jsonify(describe_devices(SDRFactory.detect_devices()))
+
+
+_NOTE_PROTOCOLS = {"bluetooth", "wifi", "rf", "adsb", "ais", "dsc", "aprs", "meshtastic", "meshcore", "other"}
+_NOTE_IDENTIFIER = re.compile(r"^[A-Za-z0-9:._!-]{1,64}$")
+
+
+def _clean_note(notes) -> str | None:
+    if notes is None:
+        return None
+    if not isinstance(notes, str):
+        raise ValueError("notes must be text")
+    notes = notes.strip()
+    if len(notes) > 2000:
+        raise ValueError("notes must be at most 2000 characters")
+    if any(ord(c) < 32 and c not in "\n\t" for c in notes):
+        raise ValueError("notes must not contain control characters")
+    return notes or None
+
+
+def _clean_tags(tags) -> list[str]:
+    if tags is None:
+        return []
+    if not isinstance(tags, list) or len(tags) > 10:
+        raise ValueError("tags must be a list of at most 10")
+    cleaned = []
+    for tag in tags:
+        if not isinstance(tag, str) or not re.fullmatch(r"[\w .-]{1,32}", tag.strip()):
+            raise ValueError("each tag must be 1-32 letters, digits, spaces, dots or dashes")
+        if tag.strip() not in cleaned:
+            cleaned.append(tag.strip())
+    return cleaned
+
+
+@app.route("/device-notes")
+def list_device_notes() -> Response:
+    """Every device an operator has noted or tagged, by identifier."""
+    from utils.database import get_device_annotations
+
+    return jsonify({"status": "success", "devices": get_device_annotations()})
+
+
+@app.route("/device-notes/<identifier>", methods=["PUT", "DELETE"])
+@(csrf.exempt if csrf else lambda f: f)  # fetch() JSON API, like the blueprints
+def update_device_notes(identifier: str) -> Response:
+    """Set or clear an operator's note and tags on an observed device.
+
+    Shown wherever the device appears. A note does not make a device
+    known-good; that stays a separate, deliberate step.
+    """
+    from utils.database import set_device_annotation
+
+    if not _NOTE_IDENTIFIER.match(identifier):
+        return jsonify({"status": "error", "message": "Invalid device identifier"}), 400
+    data = {} if request.method == "DELETE" else (request.get_json(silent=True) or {})
+    protocol = data.get("protocol") or "other"
+    if protocol not in _NOTE_PROTOCOLS:
+        return jsonify({"status": "error", "message": "Unknown protocol"}), 400
+    try:
+        notes = _clean_note(data.get("notes"))
+        tags = _clean_tags(data.get("tags"))
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+    return jsonify({"status": "success", "device": set_device_annotation(identifier, protocol, notes, tags)})
 
 
 @app.route("/devices/config/<key>", methods=["PUT", "DELETE"])

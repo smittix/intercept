@@ -115,6 +115,11 @@ const TscmSurvey = (function () {
         return items.length ? el('ul', { class: 'tscm-survey-indicators' }, items) : null;
     }
 
+    /** The operator's note and tags on a device (filled in by DeviceNotes). */
+    function notesFor(identifier, protocol) {
+        return el('span', { class: 'device-notes', 'data-dn-id': identifier, 'data-dn-protocol': protocol || 'other' });
+    }
+
     function openTscmMode() {
         if (typeof switchMode === 'function') switchMode('tscm');
     }
@@ -225,7 +230,7 @@ const TscmSurvey = (function () {
         const { diff } = await api(`/tscm/baseline/diff/${baselineId}/${sweepId}`);
         const s = diff.summary || {};
         const deviceRows = (devices, withKnown) => devices.map((d) => el('tr', {},
-            el('td', {}, el('code', {}, d.identifier)),
+            el('td', {}, el('code', {}, d.identifier), notesFor(d.identifier, d.protocol)),
             el('td', {}, d.protocol),
             el('td', {}, d.description || d.change_type || ''),
             el('td', {}, withKnown ? markKnownButton(d.identifier, d.protocol, (d.details || {}).name || (d.details || {}).ssid) : null)));
@@ -262,7 +267,7 @@ const TscmSurvey = (function () {
         const profiles = ['high_interest', 'needs_review', 'informational'].flatMap((risk) => byRisk[risk] || []);
 
         const deviceRows = profiles.map((p) => el('tr', {},
-            el('td', {}, el('code', {}, p.identifier), p.name ? el('div', { class: 'tscm-survey-dim' }, p.name) : null),
+            el('td', {}, el('code', {}, p.identifier), notesFor(p.identifier, p.protocol), p.name ? el('div', { class: 'tscm-survey-dim' }, p.name) : null),
             el('td', {}, p.protocol),
             el('td', {}, p.risk_level.replace('_', ' ')),
             el('td', {}, `score ${p.total_score}`, indicatorList(p.indicators, p.score_modifier)),
@@ -271,7 +276,7 @@ const TscmSurvey = (function () {
                 : markKnownButton(p.identifier, p.protocol, p.name))));
 
         const registryRows = (registry.devices || []).map((d) => el('tr', {},
-            el('td', {}, el('code', {}, d.identifier)),
+            el('td', {}, el('code', {}, d.identifier), notesFor(d.identifier, d.protocol)),
             el('td', {}, d.name || '—'),
             el('td', {}, d.protocol),
             el('td', {}, `${d.scope || 'global'}${d.location ? ` (${d.location})` : ''}`),
@@ -385,7 +390,7 @@ const TscmSurvey = (function () {
                 more.replaceChildren(el('h5', {}, title), ...[].concat(await fn()));
             });
             return el('div', { class: 'tscm-survey-card' },
-                el('div', {}, el('code', {}, d.identifier), ` ${d.protocol}`, d.name ? ` · ${d.name}` : ''),
+                el('div', {}, el('code', {}, d.identifier), notesFor(d.identifier, d.protocol), ` ${d.protocol}`, d.name ? ` · ${d.name}` : ''),
                 el('div', {}, `score ${d.total_score}`), indicatorList(d.indicators, d.score_modifier),
                 el('div', { class: 'tscm-survey-actions' },
                     button('Playbook', loadInto('Playbook', async () => {
