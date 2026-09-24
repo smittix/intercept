@@ -87,6 +87,30 @@ except ImportError:
         return f"Install {tool} with your system's package manager."
 
 
+# Advice for tools the shared dependency map does not list
+_UNMAPPED_HINTS = {
+    "rtlamr": "Install from https://github.com/bemasher/rtlamr",
+    "rtl_tcp": "It is part of the rtl-sdr package.",
+    "nmcli": "Install NetworkManager.",
+}
+
+
+def _hint(tool: str) -> str:
+    return _UNMAPPED_HINTS.get(tool) or _install_hint(tool)
+
+
+def _tool_missing(tool: str) -> dict:
+    """The error for a missing executable: its name, and how to install it here."""
+    return {"status": "error", "message": f"{tool} not found. {_hint(tool)}"}
+
+
+def _error_result(error: Exception) -> dict:
+    """An error result; a missing executable is named, with install advice."""
+    if isinstance(error, FileNotFoundError) and error.filename:
+        return _tool_missing(os.path.basename(str(error.filename)))
+    return {"status": "error", "message": str(error)}
+
+
 # Modes that tune an SDR and so take its PPM, gain and bias-T defaults
 SDR_MODES = {"sensor", "adsb", "pager", "ais", "acars", "aprs", "rtlamr", "dsc", "listening_post"}
 
@@ -560,6 +584,27 @@ class ModeManager:
                     return mode
         return None
 
+    @staticmethod
+    def _unavailable(mode: str, caps: dict) -> dict:
+        """Why a mode cannot start here: disabled, or which tools are missing."""
+        if not config.modes_enabled.get(mode, True):
+            return {"status": "error", "message": f"{mode} is disabled in this agent's configuration"}
+        missing = caps.get("tool_details", {}).get(mode, {}).get("missing_required") or []
+        if not missing and HAS_CAPABILITIES_MODULE:
+            # modes the dependency map does not cover list their tools here
+            from utils.capabilities import EXTRA_MODE_TOOLS, FALLBACK_TOOL_CHECKS
+            from utils.dependencies import check_tool
+
+            tools = EXTRA_MODE_TOOLS.get(mode) or FALLBACK_TOOL_CHECKS.get(mode) or []
+            missing = [tool for tool in tools if not check_tool(tool)]
+        if missing:
+            hints = " ".join(_hint(tool) for tool in missing)
+            return {"status": "error", "message": f"{mode} is not available: {', '.join(missing)} not found. {hints}"}
+        return {
+            "status": "error",
+            "message": f"{mode} is not available on this agent (a required tool is not installed)",
+        }
+
     def start_mode(self, mode: str, params: dict) -> dict:
         """Start a mode with given parameters."""
         if mode in self.running_modes:
@@ -567,7 +612,7 @@ class ModeManager:
 
         caps = self.detect_capabilities()
         if not caps["modes"].get(mode, False):
-            return {"status": "error", "message": f"{mode} not available (missing tools)"}
+            return self._unavailable(mode, caps)
 
         # Check SDR device conflicts for SDR-based modes
         if mode in self.SDR_MODES:
@@ -599,7 +644,7 @@ class ModeManager:
                 return result
             except Exception as e:
                 logger.exception(f"Error starting {mode}")
-                return {"status": "error", "message": str(e)}
+                return _error_result(e)
 
     def stop_mode(self, mode: str) -> dict:
         """Stop a running mode."""
@@ -617,7 +662,7 @@ class ModeManager:
                 return result
             except Exception as e:
                 logger.exception(f"Error stopping {mode}")
-                return {"status": "error", "message": str(e)}
+                return _error_result(e)
 
     def get_mode_status(self, mode: str) -> dict:
         """Get status of a specific mode."""
@@ -819,7 +864,7 @@ class ModeManager:
 
                 except Exception as e:
                     logger.error(f"Error enabling monitor mode: {e}")
-                    return {"status": "error", "message": str(e)}
+                    return _error_result(e)
 
             elif iw_path:
                 try:
@@ -830,7 +875,7 @@ class ModeManager:
                     self._capabilities = None  # Invalidate cache
                     return {"status": "success", "monitor_interface": interface}
                 except Exception as e:
-                    return {"status": "error", "message": str(e)}
+                    return _error_result(e)
             else:
                 return {"status": "error", "message": "No monitor mode tools available (airmon-ng or iw)"}
 
@@ -843,7 +888,7 @@ class ModeManager:
                     self._capabilities = None  # Invalidate cache
                     return {"status": "success", "message": "Monitor mode disabled"}
                 except Exception as e:
-                    return {"status": "error", "message": str(e)}
+                    return _error_result(e)
             elif iw_path:
                 try:
                     subprocess.run(["ip", "link", "set", current_iface, "down"], capture_output=True)
@@ -853,7 +898,7 @@ class ModeManager:
                     self._capabilities = None  # Invalidate cache
                     return {"status": "success", "message": "Monitor mode disabled"}
                 except Exception as e:
-                    return {"status": "error", "message": str(e)}
+                    return _error_result(e)
 
         return {"status": "error", "message": "Unknown action"}
 
@@ -871,7 +916,7 @@ class ModeManager:
                 if "gain" in params:
                     validate_gain(params["gain"])
             except ValueError as e:
-                return {"status": "error", "message": str(e)}
+                return _error_result(e)
 
         logger.info(f"Starting mode {mode} with params: {params}")
 
@@ -1089,9 +1134,9 @@ class ModeManager:
             }
 
         except FileNotFoundError:
-            return {"status": "error", "message": f"rtl_433 not found. {_install_hint('rtl_433')}"}
+            return _tool_missing("rtl_433")
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _build_sensor_command_fallback(self, freq, gain, device, ppm) -> list:
         """Build rtl_433 command without SDR abstraction."""
@@ -1210,7 +1255,7 @@ class ModeManager:
             # Fallback: find dump1090 manually and build command
             dump1090_path = self._find_dump1090()
             if not dump1090_path:
-                return {"status": "error", "message": f"dump1090 not found. {_install_hint('dump1090')}"}
+                return _tool_missing("dump1090")
 
             cmd = [dump1090_path, "--net", "--quiet"]
             if gain:
@@ -1237,9 +1282,9 @@ class ModeManager:
             return self._start_adsb_sbs_connection("localhost", 30003)
 
         except FileNotFoundError:
-            return {"status": "error", "message": "dump1090 not found"}
+            return _tool_missing("dump1090")
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _find_dump1090(self) -> str | None:
         """Find dump1090 binary using Intercept's dependency module or fallback."""
@@ -1474,7 +1519,7 @@ class ModeManager:
             return self._start_wifi_fallback(interface, channel, band, channels)
         except Exception as e:
             logger.error(f"WiFi scanner error: {e}")
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _wifi_data_sync(self, scanner):
         """Sync WiFi scanner data to agent's data structures."""
@@ -1535,7 +1580,7 @@ class ModeManager:
 
         airodump_path = self._get_tool_path("airodump-ng")
         if not airodump_path:
-            return {"status": "error", "message": "airodump-ng not found"}
+            return _tool_missing("airodump-ng")
 
         output_formats = "csv,gps" if gps_manager.is_running else "csv"
         cmd = [airodump_path, "-w", csv_path, "--output-format", output_formats, "--band", band]
@@ -1575,7 +1620,7 @@ class ModeManager:
 
             return {"status": "started", "mode": "wifi", "interface": interface, "gps_enabled": gps_manager.is_running}
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _wifi_quick_scan(self, interface: str | None) -> dict:
         """
@@ -1619,13 +1664,13 @@ class ModeManager:
             return self._wifi_quick_scan_fallback(interface)
         except Exception as e:
             logger.exception("Quick WiFi scan failed")
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _wifi_quick_scan_fallback(self, interface: str | None) -> dict:
         """Fallback quick scan using nmcli directly."""
         nmcli_path = shutil.which("nmcli")
         if not nmcli_path:
-            return {"status": "error", "message": "nmcli not found. Install NetworkManager."}
+            return _tool_missing("nmcli")
 
         try:
             # Trigger rescan
@@ -1674,7 +1719,7 @@ class ModeManager:
         except subprocess.TimeoutExpired:
             return {"status": "error", "message": "nmcli scan timed out"}
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _wifi_csv_reader(self, csv_path: str):
         """Periodically parse airodump-ng CSV and GPS output."""
@@ -1903,7 +1948,7 @@ class ModeManager:
             return self._start_bluetooth_fallback(adapter)
         except Exception as e:
             logger.error(f"Bluetooth scanner error: {e}")
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _bluetooth_data_sync(self, scanner):
         """Sync Bluetooth scanner data to agent's data structures."""
@@ -1935,7 +1980,7 @@ class ModeManager:
     def _start_bluetooth_fallback(self, adapter: str) -> dict:
         """Fallback Bluetooth scanning using bluetoothctl directly."""
         if not shutil.which("bluetoothctl"):
-            return {"status": "error", "message": "bluetoothctl not found"}
+            return _tool_missing("bluetoothctl")
 
         thread = threading.Thread(target=self._bluetooth_scanner_fallback, args=(adapter,), daemon=True)
         thread.start()
@@ -2038,9 +2083,9 @@ class ModeManager:
         rtl_fm_path = self._get_tool_path("rtl_fm")
         multimon_path = self._get_tool_path("multimon-ng")
         if not rtl_fm_path:
-            return {"status": "error", "message": "rtl_fm not found. Install rtl-sdr."}
+            return _tool_missing("rtl_fm")
         if not multimon_path:
-            return {"status": "error", "message": "multimon-ng not found. Install multimon-ng."}
+            return _tool_missing("multimon-ng")
 
         # Build rtl_fm command for FM demodulation at 22050 Hz
         rtl_fm_cmd = [
@@ -2112,9 +2157,9 @@ class ModeManager:
             }
 
         except FileNotFoundError as e:
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _pager_output_reader(self, proc: subprocess.Popen):
         """Read and parse multimon-ng output for pager messages."""
@@ -2231,10 +2276,7 @@ class ModeManager:
         # Find AIS-catcher
         ais_catcher = self._find_ais_catcher()
         if not ais_catcher:
-            return {
-                "status": "error",
-                "message": "AIS-catcher not found. Install from https://github.com/jvde-github/AIS-catcher",
-            }
+            return _tool_missing("AIS-catcher")
 
         # Initialize vessel dict
         if not hasattr(self, "ais_vessels"):
@@ -2279,9 +2321,9 @@ class ModeManager:
             return {"status": "started", "mode": "ais", "tcp_port": 1234, "gps_enabled": gps_manager.is_running}
 
         except FileNotFoundError:
-            return {"status": "error", "message": "AIS-catcher not found"}
+            return _tool_missing("AIS-catcher")
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _find_ais_catcher(self) -> str | None:
         """Find AIS-catcher binary."""
@@ -2442,7 +2484,7 @@ class ModeManager:
 
         acarsdec_path = self._get_tool_path("acarsdec")
         if not acarsdec_path:
-            return {"status": "error", "message": "acarsdec not found. Install acarsdec."}
+            return _tool_missing("acarsdec")
 
         # Detect fork and build appropriate command
         fork_type = self._detect_acarsdec_fork(acarsdec_path)
@@ -2493,9 +2535,9 @@ class ModeManager:
             }
 
         except FileNotFoundError:
-            return {"status": "error", "message": "acarsdec not found"}
+            return _tool_missing("acarsdec")
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _acars_output_reader(self, proc: subprocess.Popen):
         """Read acarsdec JSON output."""
@@ -2553,14 +2595,17 @@ class ModeManager:
 
         rtl_fm_path = self._get_tool_path("rtl_fm")
         if not rtl_fm_path:
-            return {"status": "error", "message": "rtl_fm not found"}
+            return _tool_missing("rtl_fm")
 
         direwolf_path = self._get_tool_path("direwolf")
         multimon_path = self._get_tool_path("multimon-ng")
         decoder_path = direwolf_path or multimon_path
 
         if not decoder_path:
-            return {"status": "error", "message": "direwolf or multimon-ng not found"}
+            return {
+                "status": "error",
+                "message": f"Neither direwolf nor multimon-ng found. {_install_hint('direwolf')}",
+            }
 
         # Initialize state
         if not hasattr(self, "aprs_stations"):
@@ -2642,7 +2687,7 @@ class ModeManager:
             }
 
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _aprs_output_reader(self, proc: subprocess.Popen, is_direwolf: bool):
         """Read and parse APRS packets."""
@@ -2754,9 +2799,9 @@ class ModeManager:
         rtlamr_path = self._get_tool_path("rtlamr")
 
         if not rtl_tcp_path:
-            return {"status": "error", "message": "rtl_tcp not found. Install rtl-sdr."}
+            return _tool_missing("rtl_tcp")
         if not rtlamr_path:
-            return {"status": "error", "message": "rtlamr not found. Install from https://github.com/bemasher/rtlamr"}
+            return _tool_missing("rtlamr")
 
         # Start rtl_tcp server
         rtl_tcp_cmd = [rtl_tcp_path, "-a", "127.0.0.1", "-p", "1234", "-d", str(device)]
@@ -2814,7 +2859,7 @@ class ModeManager:
             }
 
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _rtlamr_output_reader(self, proc: subprocess.Popen):
         """Read rtlamr JSON output."""
@@ -2880,7 +2925,7 @@ class ModeManager:
 
         rtl_fm_path = self._get_tool_path("rtl_fm")
         if not rtl_fm_path:
-            return {"status": "error", "message": "rtl_fm not found"}
+            return _tool_missing("rtl_fm")
 
         # Initialize DSC messages list
         if not hasattr(self, "dsc_messages"):
@@ -2932,7 +2977,7 @@ class ModeManager:
             }
 
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return _error_result(e)
 
     def _dsc_output_reader(self, proc: subprocess.Popen):
         """Read rtl_fm audio and decode DSC using Intercept's DSCDecoder."""
@@ -3426,7 +3471,7 @@ class ModeManager:
 
         rtl_fm_path = self._get_tool_path("rtl_fm")
         if not rtl_fm_path:
-            return {"status": "error", "message": "rtl_fm not found"}
+            return _tool_missing("rtl_fm")
 
         # Quick SDR availability check - try to run rtl_fm briefly
         test_proc = None

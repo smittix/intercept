@@ -428,6 +428,10 @@ class TestAgentLifecycle:
         assert result["status"] == "error"
         assert mode not in agent.running_modes
         assert agent.get_sdr_in_use(0) is None
+        # the missing tool is named, with advice, not a raw OSError
+        message = result["message"]
+        assert "not found" in message and "Errno" not in message, message
+        assert any(w in message for w in ("Install", "install", "See ", "package")), message
 
     def test_start_stop_start(self, agent, mode):
         with _decoders(installed=True):
