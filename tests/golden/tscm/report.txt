@@ -1,0 +1,174 @@
+======================================================================
+TECHNICAL SURVEILLANCE COUNTERMEASURES (TSCM) SWEEP REPORT
+======================================================================
+
+Report ID: TSCM-42-20260924120000
+Generated: 2026-09-24 12:00:00
+Sweep ID: 42
+Site / Location: Head Office, 3rd floor boardroom
+Examiner: A. Examiner
+
+----------------------------------------------------------------------
+EXECUTIVE SUMMARY
+----------------------------------------------------------------------
+TSCM Sweep Report - Head Office, 3rd floor boardroom
+Conducted: 2026-09-24 10:00
+Duration: 90 minutes
+
+OVERALL ASSESSMENT: ELEVATED
+Multiple indicators warrant further investigation.
+
+SCAN STATISTICS:
+  - Total devices scanned: 50
+    - WiFi access points: 14
+    - WiFi clients: 9
+    - Bluetooth devices: 23
+    - RF signals: 4
+
+FINDINGS SUMMARY:
+  - High Interest (require investigation): 2
+  - Needs Review: 2
+  - Informational: 1
+
+MEETING WINDOW ACTIVITY:
+  - Board meeting: 1 new devices, 1 high interest
+
+SWEEP LIMITATIONS:
+  - No coverage above 1.7 GHz
+  - Single-antenna Bluetooth; no direction finding
+
+----------------------------------------------------------------------
+HIGH INTEREST FINDINGS
+======================
+
+1. 4C:E6:76:12:34:56
+   Protocol: BLUETOOTH
+   Identifier: 4C:E6:76:12:34:56
+   Risk Score: <flagged>
+   Signal: <flagged>
+   Assessment: <flagged>
+   Interpretation: <flagged>
+   Indicators:
+     - airtag_detected: Apple AirTag advertisement
+     - persistent: Present for most of the sweep
+     - meeting_correlated: First seen during the board meeting
+   Recommended Action: investigate
+   Reference: PB-001 (Tracker Detection)
+   Note: <flagged>
+
+2. 433.92 MHz carrier
+   Protocol: RF
+   Identifier: 433.920
+   Risk Score: <flagged>
+   Signal: <flagged>
+   Assessment: <flagged>
+   Interpretation: <flagged>
+   Indicators:
+     - narrowband_signal: Narrowband emission
+     - always_on_carrier: Carrier present throughout
+     - persistent: Present for most of the sweep
+   Recommended Action: investigate
+   Reference: PB-002 (Suspicious Device)
+   Note: <flagged>
+
+----------------------------------------------------------------------
+FINDINGS REQUIRING REVIEW
+=========================
+
+1. JBL Flip 5
+   Protocol: BLUETOOTH
+   Identifier: F0:12:34:AB:CD:EF
+   Risk Score: <flagged>
+   Signal: <flagged>
+   Assessment: <flagged>
+   Interpretation: <flagged>
+   Indicators:
+     - audio_capable: Advertises an audio service
+     - unknown_device: Not in the baseline
+   Recommended Action: review
+   Reference: PB-003 (Unknown Device)
+
+2. 02:11:22:33:44:55
+   Protocol: WIFI
+   Identifier: 02:11:22:33:44:55
+   Risk Score: <flagged>
+   Signal: <flagged>
+   Assessment: <flagged>
+   Interpretation: <flagged>
+   Indicators:
+     - hidden_identity: Hidden SSID
+     - unknown_device: Not in the baseline
+   Recommended Action: review
+   Reference: PB-003 (Unknown Device)
+
+----------------------------------------------------------------------
+MEETING WINDOW SUMMARY
+======================
+
+Meeting: Board meeting
+  Time: 2026-09-24T10:30:00 - 2026-09-24T11:15:00
+  Duration: 45 minutes
+  Devices first seen during meeting: 1
+  Behavior changes detected: 0
+  High interest devices active: 1
+  NOTE: Meeting-correlated activity detected - see findings for details
+
+Meeting-correlated activity indicates temporal correlation only.
+Devices appearing during meetings may have legitimate explanations.
+
+----------------------------------------------------------------------
+SWEEP CAPABILITIES & LIMITATIONS
+=================================
+
+Equipment Used:
+  - WiFi: monitor mode
+  - Bluetooth: bluez
+  - RF/SDR: rtlsdr
+
+Limitations:
+  - No coverage above 1.7 GHz
+  - Single-antenna Bluetooth; no direction finding
+
+----------------------------------------------------------------------
+SIGNAL ANALYSIS METHODOLOGY
+===========================
+Signal analysis provides indicators for further investigation and should not be
+interpreted as definitive identification of devices or their purposes. Environmental
+factors such as building materials, electromagnetic interference, multipath
+propagation, and device orientation significantly affect signal measurements.
+All findings represent patterns observed at a specific point in time and location.
+
+----------------------------------------------------------------------
+
+IMPORTANT DISCLAIMER
+
+This report documents the findings of a Technical Surveillance Countermeasures
+(TSCM) sweep conducted using electronic detection equipment. The following
+limitations and considerations apply:
+
+1. DETECTION LIMITATIONS: No TSCM sweep can guarantee detection of all
+   surveillance devices. Sophisticated devices may evade detection.
+
+2. FINDINGS ARE INDICATORS: All findings represent patterns and indicators,
+   NOT confirmed surveillance devices. Each finding requires professional
+   interpretation and may have legitimate explanations.
+
+3. ENVIRONMENTAL FACTORS: Wireless signals are affected by building
+   construction, interference, and other environmental factors that may
+   impact detection accuracy.
+
+4. POINT-IN-TIME ASSESSMENT: This report reflects conditions at the time
+   of the sweep. Conditions may change after the assessment.
+
+5. NOT LEGAL ADVICE: This report does not constitute legal advice. Consult
+   qualified legal counsel for guidance on surveillance-related matters.
+
+6. PRIVACY CONSIDERATIONS: Some detected devices may be legitimate personal
+   devices of authorized individuals.
+
+This report should be treated as confidential and distributed only to
+authorized personnel on a need-to-know basis.
+
+======================================================================
+END OF REPORT
+======================================================================

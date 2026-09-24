@@ -1,0 +1,377 @@
+{
+  "all_indicators": [
+    {
+      "description": "Apple AirTag advertisement",
+      "device": "4C:E6:76:12:34:56",
+      "protocol": "bluetooth",
+      "score": 3,
+      "type": "airtag_detected"
+    },
+    {
+      "description": "Present for most of the sweep",
+      "device": "4C:E6:76:12:34:56",
+      "protocol": "bluetooth",
+      "score": 2,
+      "type": "persistent"
+    },
+    {
+      "description": "First seen during the board meeting",
+      "device": "4C:E6:76:12:34:56",
+      "protocol": "bluetooth",
+      "score": 2,
+      "type": "meeting_correlated"
+    },
+    {
+      "description": "Narrowband emission",
+      "device": "433.920",
+      "protocol": "rf",
+      "score": 2,
+      "type": "narrowband_signal"
+    },
+    {
+      "description": "Carrier present throughout",
+      "device": "433.920",
+      "protocol": "rf",
+      "score": 2,
+      "type": "always_on_carrier"
+    },
+    {
+      "description": "Present for most of the sweep",
+      "device": "433.920",
+      "protocol": "rf",
+      "score": 2,
+      "type": "persistent"
+    },
+    {
+      "description": "Advertises an audio service",
+      "device": "F0:12:34:AB:CD:EF",
+      "protocol": "bluetooth",
+      "score": 2,
+      "type": "audio_capable"
+    },
+    {
+      "description": "Not in the baseline",
+      "device": "F0:12:34:AB:CD:EF",
+      "protocol": "bluetooth",
+      "score": 1,
+      "type": "unknown_device"
+    },
+    {
+      "description": "Hidden SSID",
+      "device": "02:11:22:33:44:55",
+      "protocol": "wifi",
+      "score": 2,
+      "type": "hidden_identity"
+    },
+    {
+      "description": "Not in the baseline",
+      "device": "02:11:22:33:44:55",
+      "protocol": "wifi",
+      "score": 1,
+      "type": "unknown_device"
+    }
+  ],
+  "annex_type": "tscm_technical_annex",
+  "baseline_diff": {
+    "baseline_id": 7,
+    "summary": {
+      "changed_devices": 0,
+      "missing_devices": 1,
+      "new_devices": 3
+    }
+  },
+  "capabilities": {
+    "all_limitations": [
+      "No coverage above 1.7 GHz",
+      "Single-antenna Bluetooth; no direction finding"
+    ],
+    "bluetooth": {
+      "adapter": "hci0",
+      "limitations": [],
+      "mode": "bluez"
+    },
+    "rf": {
+      "available": true,
+      "device_type": "rtlsdr",
+      "limitations": [
+        "No coverage above 1.7 GHz"
+      ]
+    },
+    "wifi": {
+      "interface": "wlan1",
+      "limitations": [],
+      "mode": "monitor"
+    }
+  },
+  "correlations": [],
+  "device_timelines": [
+    {
+      "identifier": "4C:E6:76:12:34:56",
+      "meeting_correlation": {
+        "correlated": true,
+        "observations_during_meeting": 6
+      },
+      "metrics": {
+        "first_seen": "2026-09-24T10:05:00",
+        "last_seen": "2026-09-24T11:25:00",
+        "presence_ratio": 0.9,
+        "total_observations": 40
+      },
+      "movement": {
+        "appears_stationary": true,
+        "pattern": "stationary"
+      },
+      "name": null,
+      "observations": [],
+      "protocol": "bluetooth",
+      "signal": {
+        "rssi_max": -45,
+        "rssi_mean": -48.5,
+        "rssi_min": -52,
+        "stability": 0.8
+      }
+    },
+    {
+      "identifier": "433.920",
+      "meeting_correlation": {
+        "correlated": false,
+        "observations_during_meeting": 0
+      },
+      "metrics": {
+        "first_seen": "2026-09-24T10:05:00",
+        "last_seen": "2026-09-24T11:30:00",
+        "presence_ratio": 0.9,
+        "total_observations": 30
+      },
+      "movement": {
+        "appears_stationary": true,
+        "pattern": "stationary"
+      },
+      "name": "433.92 MHz carrier",
+      "observations": [],
+      "protocol": "rf",
+      "signal": {
+        "rssi_max": -59,
+        "rssi_mean": -61.0,
+        "rssi_min": -63,
+        "stability": 0.8
+      }
+    },
+    {
+      "identifier": "F0:12:34:AB:CD:EF",
+      "meeting_correlation": {
+        "correlated": false,
+        "observations_during_meeting": 0
+      },
+      "metrics": {
+        "first_seen": "2026-09-24T10:05:00",
+        "last_seen": "2026-09-24T10:07:00",
+        "presence_ratio": 0.9,
+        "total_observations": 2
+      },
+      "movement": {
+        "appears_stationary": false,
+        "pattern": "mobile"
+      },
+      "name": "JBL Flip 5",
+      "observations": [],
+      "protocol": "bluetooth",
+      "signal": {
+        "rssi_max": -70,
+        "rssi_mean": -74.0,
+        "rssi_min": -78,
+        "stability": 0.8
+      }
+    },
+    {
+      "identifier": "02:11:22:33:44:55",
+      "meeting_correlation": {
+        "correlated": false,
+        "observations_during_meeting": 0
+      },
+      "metrics": {
+        "first_seen": "2026-09-24T10:05:00",
+        "last_seen": "2026-09-24T11:05:00",
+        "presence_ratio": 0.9,
+        "total_observations": 12
+      },
+      "movement": {
+        "appears_stationary": true,
+        "pattern": "stationary"
+      },
+      "name": null,
+      "observations": [],
+      "protocol": "wifi",
+      "signal": {
+        "rssi_max": -63,
+        "rssi_mean": -66.0,
+        "rssi_min": -69,
+        "stability": 0.8
+      }
+    },
+    {
+      "identifier": "00:1B:A9:77:88:99",
+      "meeting_correlation": {
+        "correlated": false,
+        "observations_during_meeting": 0
+      },
+      "metrics": {
+        "first_seen": "2026-09-24T10:05:00",
+        "last_seen": "2026-09-24T11:30:00",
+        "presence_ratio": 0.9,
+        "total_observations": 50
+      },
+      "movement": {
+        "appears_stationary": true,
+        "pattern": "stationary"
+      },
+      "name": "Office Printer",
+      "observations": [],
+      "protocol": "wifi",
+      "signal": {
+        "rssi_max": -56,
+        "rssi_mean": -58.0,
+        "rssi_min": -60,
+        "stability": 0.8
+      }
+    }
+  ],
+  "disclaimer": "TECHNICAL ANNEX DISCLAIMER\n\nThis annex contains detailed technical data from the TSCM sweep. This data\nis provided for documentation and audit purposes.\n\n- No raw packet captures or intercepted communications are included\n- Device identifiers (MAC addresses) are included for tracking purposes\n- Signal strength values are approximate and environment-dependent\n- Timeline data is time-bucketed to preserve privacy\n- All interpretations require professional TSCM expertise\n\nThis data should be handled according to organizational data protection\npolicies and applicable privacy regulations.",
+  "findings": {
+    "high_interest": [
+      {
+        "description": "<flagged>",
+        "identifier": "4C:E6:76:12:34:56",
+        "indicators": [
+          {
+            "description": "Apple AirTag advertisement",
+            "score": 3,
+            "type": "airtag_detected"
+          },
+          {
+            "description": "Present for most of the sweep",
+            "score": 2,
+            "type": "persistent"
+          },
+          {
+            "description": "First seen during the board meeting",
+            "score": 2,
+            "type": "meeting_correlated"
+          }
+        ],
+        "name": null,
+        "protocol": "bluetooth",
+        "recommended_action": "investigate",
+        "risk_score": "<flagged>",
+        "signal_classification": "<flagged>"
+      },
+      {
+        "description": "<flagged>",
+        "identifier": "433.920",
+        "indicators": [
+          {
+            "description": "Narrowband emission",
+            "score": 2,
+            "type": "narrowband_signal"
+          },
+          {
+            "description": "Carrier present throughout",
+            "score": 2,
+            "type": "always_on_carrier"
+          },
+          {
+            "description": "Present for most of the sweep",
+            "score": 2,
+            "type": "persistent"
+          }
+        ],
+        "name": "433.92 MHz carrier",
+        "protocol": "rf",
+        "recommended_action": "investigate",
+        "risk_score": "<flagged>",
+        "signal_classification": "<flagged>"
+      }
+    ],
+    "needs_review": [
+      {
+        "description": "<flagged>",
+        "identifier": "F0:12:34:AB:CD:EF",
+        "indicators": [
+          {
+            "description": "Advertises an audio service",
+            "score": 2,
+            "type": "audio_capable"
+          },
+          {
+            "description": "Not in the baseline",
+            "score": 1,
+            "type": "unknown_device"
+          }
+        ],
+        "name": "JBL Flip 5",
+        "protocol": "bluetooth",
+        "risk_score": "<flagged>",
+        "signal_classification": "<flagged>"
+      },
+      {
+        "description": "<flagged>",
+        "identifier": "02:11:22:33:44:55",
+        "indicators": [
+          {
+            "description": "Hidden SSID",
+            "score": 2,
+            "type": "hidden_identity"
+          },
+          {
+            "description": "Not in the baseline",
+            "score": 1,
+            "type": "unknown_device"
+          }
+        ],
+        "name": null,
+        "protocol": "wifi",
+        "risk_score": "<flagged>",
+        "signal_classification": "<flagged>"
+      }
+    ]
+  },
+  "generated_at": "2026-09-24T12:00:00",
+  "limitations": [
+    "No coverage above 1.7 GHz",
+    "Single-antenna Bluetooth; no direction finding"
+  ],
+  "meeting_windows": [
+    {
+      "behavior_changes": 0,
+      "devices_first_seen": 1,
+      "duration_minutes": 45,
+      "end_time": "2026-09-24T11:15:00",
+      "high_interest_devices": 1,
+      "name": "Board meeting",
+      "start_time": "2026-09-24T10:30:00"
+    }
+  ],
+  "report_id": "TSCM-42-20260924120000",
+  "statistics": {
+    "bluetooth_devices": 23,
+    "high_interest_count": 2,
+    "informational_count": 1,
+    "missing_devices": 1,
+    "needs_review_count": 2,
+    "new_devices": 3,
+    "rf_signals": 4,
+    "total_devices": 50,
+    "wifi_clients": 9,
+    "wifi_devices": 14
+  },
+  "sweep_details": {
+    "baseline_id": null,
+    "baseline_name": null,
+    "duration_minutes": 90.0,
+    "end_time": "2026-09-24T11:30:00",
+    "location": "Head Office, 3rd floor boardroom",
+    "start_time": "2026-09-24T10:00:00",
+    "type": "standard"
+  },
+  "sweep_id": 42
+}

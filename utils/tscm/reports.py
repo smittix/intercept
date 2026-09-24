@@ -15,7 +15,7 @@ import csv
 import io
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 from utils.tscm.signal_classification import (
     SIGNAL_ANALYSIS_DISCLAIMER,
@@ -502,6 +502,12 @@ def generate_technical_annex_csv(report: TSCMReport) -> str:
     output = io.StringIO()
     writer = csv.writer(output)
 
+    # Timelines carry no risk fields; take them from the device's finding.
+    findings_by_id = {
+        f.identifier: f
+        for f in report.high_interest_findings + report.needs_review_findings + report.informational_findings
+    }
+
     # Header
     writer.writerow(
         [
@@ -525,7 +531,9 @@ def generate_technical_annex_csv(report: TSCMReport) -> str:
 
     # Device data from timelines
     for timeline in report.device_timelines:
-        indicators_str = "; ".join(f"{i.get('type', '')}({i.get('score', 0)})" for i in timeline.get("indicators", []))
+        finding = findings_by_id.get(timeline.get("identifier"))
+        indicators = timeline.get("indicators") or (finding.indicators if finding else [])
+        indicators_str = "; ".join(f"{i.get('type', '')}({i.get('score', 0)})" for i in indicators)
 
         signal = timeline.get("signal", {})
         metrics = timeline.get("metrics", {})
@@ -533,23 +541,25 @@ def generate_technical_annex_csv(report: TSCMReport) -> str:
         meeting = timeline.get("meeting_correlation", {})
 
         writer.writerow(
-            [
-                timeline.get("identifier", ""),
-                timeline.get("protocol", ""),
-                timeline.get("name", ""),
-                timeline.get("risk_level", "informational"),
-                timeline.get("risk_score", 0),
-                metrics.get("first_seen", ""),
-                metrics.get("last_seen", ""),
-                metrics.get("total_observations", 0),
-                signal.get("rssi_min", ""),
-                signal.get("rssi_max", ""),
-                signal.get("rssi_mean", ""),
-                signal.get("stability", ""),
-                movement.get("pattern", ""),
-                meeting.get("correlated", False),
-                indicators_str,
-            ]
+            _formula_safe(
+                [
+                    timeline.get("identifier", ""),
+                    timeline.get("protocol", ""),
+                    timeline.get("name", ""),
+                    timeline.get("risk_level") or (finding.risk_level if finding else "informational"),
+                    timeline.get("risk_score") or (finding.risk_score if finding else 0),
+                    metrics.get("first_seen", ""),
+                    metrics.get("last_seen", ""),
+                    metrics.get("total_observations", 0),
+                    signal.get("rssi_min", ""),
+                    signal.get("rssi_max", ""),
+                    signal.get("rssi_mean", ""),
+                    signal.get("stability", ""),
+                    movement.get("pattern", ""),
+                    meeting.get("correlated", False),
+                    indicators_str,
+                ]
+            )
         )
 
     # Also add findings summary
@@ -573,25 +583,74 @@ def generate_technical_annex_csv(report: TSCMReport) -> str:
 
     for finding in all_findings:
         writer.writerow(
-            [
-                finding.identifier,
-                finding.protocol,
-                finding.risk_level,
-                finding.risk_score,
-                finding.signal_strength or "",
-                finding.signal_confidence or "",
-                finding.description,
-                finding.signal_interpretation or "",
-                finding.recommended_action,
-            ]
+            _formula_safe(
+                [
+                    finding.identifier,
+                    finding.protocol,
+                    finding.risk_level,
+                    finding.risk_score,
+                    finding.signal_strength or "",
+                    finding.signal_confidence or "",
+                    finding.description,
+                    finding.signal_interpretation or "",
+                    finding.recommended_action,
+                ]
+            )
         )
 
     return output.getvalue()
 
 
+def _formula_safe(row: list) -> list:
+    """Stop text cells being read as spreadsheet formulas.
+
+    Device names are chosen by whoever owns the device (anyone can advertise
+    a Bluetooth name), and the client opens the annex in Excel or
+    LibreOffice. A leading apostrophe makes the cell literal text.
+    """
+    return ["'" + v if isinstance(v, str) and v.startswith(("=", "+", "-", "@", "\t", "\r")) else v for v in row]
+
+
 # =============================================================================
 # Report Builder
 # =============================================================================
+
+
+def _number(value) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _signal_inputs(profile: dict) -> tuple[float | None, float | None, int]:
+    """RSSI, observed duration and sighting count for assess_signal().
+
+    Correlation-engine profiles, which is what the report routes pass, carry
+    rssi_current, detection_count and first_seen/last_seen. The summarised
+    names (rssi_mean, observation_count, observation_duration_seconds) are
+    preferred when a caller provides them.
+    """
+    rssi = next(
+        (n for n in (_number(profile.get(k)) for k in ("rssi_mean", "rssi", "rssi_current")) if n is not None),
+        None,
+    )
+
+    duration = _number(profile.get("observation_duration_seconds"))
+    if duration is None:
+        try:
+            first = datetime.fromisoformat(profile["first_seen"])
+            last = datetime.fromisoformat(profile["last_seen"])
+            duration = max(0.0, (last - first).total_seconds())
+        except (KeyError, TypeError, ValueError):
+            duration = None
+
+    count = _number(profile.get("observation_count"))
+    if count is None:
+        count = _number(profile.get("detection_count"))
+    return rssi, duration, max(1, int(count or 1))
 
 
 class TSCMReportBuilder:
@@ -659,11 +718,11 @@ class TSCMReportBuilder:
             signal_data = self._classify_finding_signal(profile)
 
             finding = ReportFinding(
-                identifier=profile.get("identifier", ""),
-                protocol=profile.get("protocol", ""),
+                identifier=profile.get("identifier") or "",
+                protocol=profile.get("protocol") or "",
                 name=profile.get("name"),
-                risk_level=profile.get("risk_level", "informational"),
-                risk_score=profile.get("total_score", 0),
+                risk_level=profile.get("risk_level") or "informational",
+                risk_score=profile.get("total_score") or 0,
                 description=self._generate_finding_description(profile),
                 indicators=profile.get("indicators", []),
                 recommended_action=profile.get("recommended_action", "monitor"),
@@ -680,15 +739,10 @@ class TSCMReportBuilder:
     def _generate_finding_description(self, profile: dict) -> str:
         """Generate description from profile indicators using hedged language."""
         indicators = profile.get("indicators", [])
-        protocol = profile.get("protocol", "Unknown").upper()
-
-        # Get signal data for context
-        rssi = profile.get("rssi_mean") or profile.get("rssi")
-        duration = profile.get("observation_duration_seconds")
-        observation_count = profile.get("observation_count", 1)
+        protocol = (profile.get("protocol") or "Unknown").upper()
 
         # Assess signal to determine confidence
-        assessment = assess_signal(rssi, duration, observation_count)
+        assessment = assess_signal(*_signal_inputs(profile))
         confidence = assessment.confidence
 
         if not indicators:
@@ -719,11 +773,7 @@ class TSCMReportBuilder:
 
     def _classify_finding_signal(self, profile: dict) -> dict:
         """Extract signal classification data for a finding."""
-        rssi = profile.get("rssi_mean") or profile.get("rssi")
-        duration = profile.get("observation_duration_seconds")
-        observation_count = profile.get("observation_count", 1)
-
-        assessment = assess_signal(rssi, duration, observation_count)
+        assessment = assess_signal(*_signal_inputs(profile))
 
         return {
             "signal_strength": assessment.signal_strength.value,
@@ -862,9 +912,9 @@ def generate_report(
     completed_at = sweep_data.get("completed_at")
     if started_at:
         if isinstance(started_at, str):
-            started_at = datetime.fromisoformat(started_at.replace("Z", "+00:00")).replace(tzinfo=None)
+            started_at = _local_time(started_at)
         if completed_at and isinstance(completed_at, str):
-            completed_at = datetime.fromisoformat(completed_at.replace("Z", "+00:00")).replace(tzinfo=None)
+            completed_at = _local_time(completed_at)
         builder.set_sweep_times(started_at, completed_at)
 
     # Capabilities
@@ -881,8 +931,8 @@ def generate_report(
     # Add findings from profiles
     builder.add_findings_from_profiles(device_profiles)
 
-    # Statistics
-    results = sweep_data.get("results", {})
+    # Statistics (a sweep that has not completed has no results yet)
+    results = sweep_data.get("results") or {}
     wifi_count = results.get("wifi_count")
     if wifi_count is None:
         wifi_count = len(results.get("wifi_devices", results.get("wifi", [])))
@@ -929,6 +979,18 @@ def generate_report(
     builder.add_all_indicators(all_indicators)
 
     return builder.build()
+
+
+def _local_time(value: str) -> datetime:
+    """A stored timestamp as naive local time, the clock the report uses.
+
+    SQLite's CURRENT_TIMESTAMP is UTC with no offset, so a naive value is
+    read as UTC rather than as local time.
+    """
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone().replace(tzinfo=None)
 
 
 def get_pdf_report(report: TSCMReport) -> str:
