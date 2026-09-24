@@ -594,7 +594,7 @@ def detect_gps_devices() -> list[dict]:
 
     # Sort: devices with GPS-related descriptions first
     gps_keywords = ("gps", "gnss", "u-blox", "ublox", "nmea", "sirf", "navigation")
-    devices.sort(key=lambda d: (0 if any(k in d["description"].lower() for k in gps_keywords) else 1))
+    devices.sort(key=lambda d: 0 if any(k in d["description"].lower() for k in gps_keywords) else 1)
 
     return devices
 
@@ -635,6 +635,64 @@ def is_gpsd_running(host: str = "localhost", port: int = 2947) -> bool:
         return True
     except Exception:
         return False
+
+
+def gpsd_devices(host: str = "localhost", port: int = 2947, timeout: float = 2.0) -> list[str] | None:
+    """The device paths gpsd has attached, or None if gpsd cannot be asked.
+
+    A gpsd started by systemd's gpsd.socket (enabled by the Debian package)
+    listens with no receiver at all until one is added, so "gpsd is
+    running" does not mean "gpsd has a GPS".
+    """
+    import json
+    import socket
+    import time
+
+    try:
+        with socket.create_connection((host, port), timeout=timeout) as sock:
+            sock.settimeout(timeout)
+            sock.sendall(b"?DEVICES;\n")
+            buffer = ""
+            deadline = time.monotonic() + timeout
+            while time.monotonic() < deadline:
+                chunk = sock.recv(4096)
+                if not chunk:
+                    break
+                buffer += chunk.decode("utf-8", errors="replace")
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    try:
+                        msg = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if msg.get("class") == "DEVICES":
+                        return [d.get("path", "") for d in msg.get("devices", []) if d.get("path")]
+    except OSError:
+        return None
+    return None
+
+
+def add_device_to_gpsd(device_path: str, host: str = "localhost", port: int = 2947) -> tuple[bool, str]:
+    """Hand a receiver to a running gpsd (gpsdctl add), and confirm it took it."""
+    import shutil
+    import subprocess
+    import time
+
+    gpsdctl = shutil.which("gpsdctl")
+    if not gpsdctl:
+        return False, "gpsdctl not found (it is part of the gpsd package)"
+    try:
+        result = subprocess.run([gpsdctl, "add", device_path], capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return False, f"gpsdctl add failed: {e}"
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()
+        return False, f"gpsdctl add {device_path} failed{': ' + detail if detail else ''} (needs root)"
+    for _ in range(10):
+        if device_path in (gpsd_devices(host, port) or []):
+            return True, f"added {device_path} to gpsd"
+        time.sleep(0.3)
+    return False, f"gpsd did not attach {device_path}"
 
 
 def start_gpsd_daemon(device_path: str, host: str = "localhost", port: int = 2947) -> tuple[bool, str]:
