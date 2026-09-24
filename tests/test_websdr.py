@@ -260,3 +260,19 @@ def test_fetch_kiwi_receivers_cleans_fields():
     assert receivers[0]["name"] == "Test & Co"
     assert receivers[0]["antenna"] == "Loop active 👍"
     assert receivers[0]["location"] == "Assen | NL"
+
+
+def test_websdr_receivers_sorted_by_distance_with_bearing(auth_client):
+    base = {"url": "http://x", "users": 0, "users_max": 4, "available": True, "freq_lo": 0, "freq_hi": 30000}
+    mock_receivers = [
+        {**base, "name": "Paris", "lat": 48.86, "lon": 2.35},
+        {**base, "name": "No position", "lat": None, "lon": None},
+        {**base, "name": "Oxford", "lat": 51.75, "lon": -1.26},
+    ]
+    with patch("routes.websdr.get_receivers", return_value=mock_receivers):
+        resp = auth_client.get("/websdr/receivers?lat=51.5&lon=-0.13")
+    names = [r["name"] for r in resp.get_json()["receivers"]]
+    assert names == ["Oxford", "Paris", "No position"]
+    oxford, paris = resp.get_json()["receivers"][:2]
+    assert 70 < oxford["distance_km"] < 90 and 280 < oxford["bearing"] < 300  # west-north-west
+    assert 330 < paris["distance_km"] < 350 and 140 < paris["bearing"] < 160  # south-east

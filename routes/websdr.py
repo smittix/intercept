@@ -63,6 +63,15 @@ def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return R * c
 
 
+def _bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Initial great-circle bearing in degrees (0 = north) from point 1 to 2."""
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dlon = math.radians(lon2 - lon1)
+    y = math.sin(dlon) * math.cos(p2)
+    x = math.cos(p1) * math.sin(p2) - math.sin(p1) * math.cos(p2) * math.cos(dlon)
+    return (math.degrees(math.atan2(y, x)) + 360) % 360
+
+
 KIWI_DATA_URLS = [
     "https://rx.skywavelinux.com/kiwisdr_com.js",
     "http://rx.linkfanel.net/kiwisdr_com.js",
@@ -229,10 +238,17 @@ def get_receivers(force_refresh: bool = False) -> list[dict]:
 
 @websdr_bp.route("/receivers")
 def list_receivers() -> Response:
-    """List KiwiSDR receivers, with optional filters."""
+    """List KiwiSDR receivers, with optional filters.
+
+    With lat and lon, each receiver with a position gets distance_km and
+    bearing from there, and the list is nearest first (before the 100 cap,
+    so the nearest are the ones returned).
+    """
     freq_khz = request.args.get("freq_khz", type=float)
     available = request.args.get("available", type=str)
     refresh = request.args.get("refresh", type=str)
+    lat = request.args.get("lat", type=float)
+    lon = request.args.get("lon", type=float)
 
     receivers = get_receivers(force_refresh=(refresh == "true"))
 
@@ -242,6 +258,17 @@ def list_receivers() -> Response:
 
     if freq_khz is not None:
         filtered = [r for r in filtered if r.get("freq_lo", 0) <= freq_khz <= r.get("freq_hi", 30000)]
+
+    if lat is not None and lon is not None:
+        placed = []
+        for r in filtered:
+            entry = dict(r)
+            if r.get("lat") is not None and r.get("lon") is not None:
+                entry["distance_km"] = round(_haversine(lat, lon, r["lat"], r["lon"]), 1)
+                entry["bearing"] = round(_bearing(lat, lon, r["lat"], r["lon"]))
+            placed.append(entry)
+        placed.sort(key=lambda r: r.get("distance_km", math.inf))
+        filtered = placed
 
     return api_success(
         data={
