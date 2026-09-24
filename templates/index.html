@@ -599,23 +599,23 @@
             </a>
             <h1><span class="brand-i"><svg viewBox="36 14 28 68" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="20" r="6" fill="#00ff88"/><rect x="44" y="33" width="12" height="45" rx="2" fill="#00d4ff"/><rect x="38" y="33" width="24" height="4" rx="1" fill="#00d4ff"/><rect x="38" y="74" width="24" height="4" rx="1" fill="#00d4ff"/></svg></span>NTERCEPT <span class="tagline">// See the Invisible</span></h1>
         </div>
+        <!-- Run State, in the header row rather than a bar of its own -->
+        <div id="runStateStrip" class="run-state-strip" aria-live="polite">
+            <div class="run-state-left">
+                <span class="run-state-label">Run State</span>
+                <div id="runStateChips"></div>
+            </div>
+            <div class="run-state-right">
+                <span id="runStateSummary" class="run-state-value">Loading...</span>
+                <button id="runStateRefreshBtn" class="run-state-btn" type="button">Refresh</button>
+                <button id="runStateSettingsBtn" class="run-state-btn" type="button">Tools</button>
+            </div>
+        </div>
         <div class="header-right">
             <span class="active-mode-indicator" id="activeModeIndicator"><span class="pulse-dot"></span>PAGER</span>
             <span class="version-badge">v{{ version }}</span>
         </div>
     </header>
-
-    <div id="runStateStrip" class="run-state-strip" aria-live="polite">
-        <div class="run-state-left">
-            <span class="run-state-label">Run State</span>
-            <div id="runStateChips"></div>
-        </div>
-        <div class="run-state-right">
-            <span id="runStateSummary" class="run-state-value">Loading...</span>
-            <button id="runStateRefreshBtn" class="run-state-btn" type="button">Refresh</button>
-            <button id="runStateSettingsBtn" class="run-state-btn" type="button">Tools</button>
-        </div>
-    </div>
 
     <!-- Mode Navigation Bar -->
     {% set is_index_page = true %}

@@ -541,3 +541,51 @@ html[data-ui-tier="enhanced"] .run-state-btn:hover {
         max-width: none;
     }
 }
+
+/* ---- Run State inside the header row (index): one bar instead of two ---- */
+header #runStateStrip {
+    flex: 1;
+    min-width: 0;
+    margin: 0 18px;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+}
+
+header #runStateStrip .run-state-label {
+    display: none;
+}
+
+@media (max-width: 1280px) {
+    header #runStateStrip .run-state-value {
+        display: none;
+    }
+}
+
+@media (max-width: 1023px) {
+    header:has(#runStateStrip) {
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 48px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
+    header #runStateStrip {
+        order: 3;
+        flex-basis: 100%;
+        flex-direction: row;
+        align-items: center;
+        margin: 6px 0 0;
+    }
+
+    header #runStateStrip .run-state-right {
+        margin-left: auto;
+    }
+
+    /* The strip refreshes itself every few seconds */
+    header #runStateStrip #runStateRefreshBtn {
+        display: none;
+    }
+}
