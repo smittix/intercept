@@ -41,18 +41,93 @@
 }
 .tscm-threat-banner {
     display: flex;
-    gap: 12px;
-    padding: 12px;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
     background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    flex-wrap: wrap;
+}
+
+/* Overall threat level: a half dial (renderTscmThreatGauge in index.html) */
+.tscm-gauge {
+    flex: 0 0 150px;
+    text-align: center;
+    --level: var(--text-dim);
+}
+.tscm-gauge.low { --level: var(--severity-low); }
+.tscm-gauge.elevated { --level: var(--severity-high); }
+.tscm-gauge.high { --level: var(--severity-critical); }
+.tscm-gauge svg {
+    width: 130px;
+    height: 70px;
+    display: block;
+    margin: 0 auto;
+    overflow: visible;
+}
+.tscm-gauge path {
+    fill: none;
+    stroke-width: 8;
+}
+.tscm-gauge .zone { stroke-opacity: 0.18; }
+.tscm-gauge .zone.low { stroke: var(--severity-low); }
+.tscm-gauge .zone.elevated { stroke: var(--severity-high); }
+.tscm-gauge .zone.high { stroke: var(--severity-critical); }
+.tscm-gauge .fill {
+    stroke: var(--level);
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 3px var(--level));
+}
+.tscm-gauge .needle {
+    stroke: var(--text-primary);
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+.tscm-gauge .hub { fill: var(--text-primary); }
+.tscm-gauge-level {
+    margin-top: 2px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--level);
+}
+.tscm-gauge-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+}
+
+/* The counts beside it: neutral tiles, the colour on the count and edge */
+.tscm-threat-cards {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
 }
 .tscm-threat-banner .threat-card {
-    flex: 1;
-    padding: 12px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-left: 3px solid currentColor;
+    background: var(--bg-card, rgba(0,0,0,0.2));
+    cursor: pointer;
 }
+.tscm-threat-banner .threat-card:hover { border-color: currentColor; }
 .tscm-threat-banner .threat-card .count {
-    font-size: 24px;
+    font-size: 22px;
+    font-family: var(--font-mono);
+}
+.tscm-threat-banner .threat-card .label {
+    color: var(--text-secondary);
+    opacity: 1;
+    letter-spacing: 0.06em;
+}
+.tscm-threat-banner .threat-card:not(.active) .count { color: var(--text-dim); }
+.tscm-threat-banner .threat-card:not(.active) { border-left-color: var(--border-color); }
+.tscm-threat-banner .threat-card.active { background: color-mix(in srgb, currentColor 10%, var(--bg-card, transparent)); }
+
+@media (max-width: 900px) {
+    .tscm-threat-banner { flex-direction: column; align-items: stretch; }
 }
 .tscm-main-grid {
     display: grid;

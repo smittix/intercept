@@ -215,6 +215,12 @@ window.LiveEmptyState = LiveEmptyState;
         try { return typeof currentAgent === 'undefined' || currentAgent === 'local'; } catch (err) { return true; }  // eslint-disable-line no-undef
     };
     const onlyLocal = (mode) => () => (local() ? mode : null);  // an agent's decoder is not in /health
+    const tscm = () => {
+        try {
+            if (Object.values(tscmFilters).some((v) => v !== 'all')) return null;  // eslint-disable-line no-undef
+        } catch (err) { /* not the main page */ }
+        return local() ? 'tscm' : null;
+    };
 
     const FEED = {
         pager: { decoder: 'rtl_fm → multimon-ng', things: 'messages', label: 'Pager' },
@@ -252,6 +258,11 @@ window.LiveEmptyState = LiveEmptyState;
         acarsMessages: { mode: 'acars', decoder: 'acarsdec', things: 'messages', label: 'ACARS' },
         vesselList: { mode: 'ais', decoder: 'AIS-catcher', things: 'vessels', label: 'AIS', items: '.vessel-item' },
         dscMessageList: { mode: 'dsc', decoder: 'DSC decoder', things: 'messages', label: 'DSC' },
+        // TSCM sweep panels; with a filter set, the panel's own "no match" message stands.
+        tscmWifiList: { mode: tscm, decoder: 'TSCM sweep', things: 'networks', label: 'TSCM sweep' },
+        tscmWifiClientList: { mode: tscm, decoder: 'TSCM sweep', things: 'clients', label: 'TSCM sweep' },
+        tscmBtList: { mode: tscm, decoder: 'TSCM sweep', things: 'devices', label: 'TSCM sweep' },
+        tscmRfList: { mode: tscm, decoder: 'TSCM sweep', things: 'signals', label: 'TSCM sweep' },
     };
 
     function attachAll() {

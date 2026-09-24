@@ -1584,6 +1584,8 @@
 
                     <!-- Risk Summary Banner (new scoring model) - clickable cards -->
                     <div class="tscm-threat-banner">
+                        <div class="tscm-gauge" id="tscmThreatGauge" role="img" aria-label="Threat level"></div>
+                        <div class="tscm-threat-cards">
                         <div class="threat-card critical clickable" id="tscmHighInterestCard"
                             onclick="showDevicesByCategory('high_interest')"
                             title="Click to view high interest devices">
@@ -1610,6 +1612,7 @@
                             onclick="showDevicesByCategory('identity')" title="Click to view identity clusters">
                             <span class="count" id="tscmIdentityCount">0</span>
                             <span class="label">Identity Clusters</span>
+                        </div>
                         </div>
                     </div>
 
@@ -13546,6 +13549,36 @@
             updateTscmThreatCounts();
         }
 
+        // A half-dial for the sweep's overall level, from the classification counts:
+        // any high-interest device reads HIGH, any needing review ELEVATED.
+        function renderTscmThreatGauge(counts) {
+            const el = document.getElementById('tscmThreatGauge');
+            if (!el) return;
+            const total = counts.high_interest + counts.review + counts.informational;
+            const level = counts.high_interest ? { name: 'High', cls: 'high', at: 0.75 + Math.min(counts.high_interest, 5) * 0.045 }
+                : counts.review ? { name: 'Elevated', cls: 'elevated', at: 0.4 + Math.min(counts.review, 10) * 0.022 }
+                : total ? { name: 'Low', cls: 'low', at: 0.16 }
+                : { name: 'No data', cls: 'none', at: 0 };
+            const r = 46, cx = 60, cy = 58;
+            const pt = (t) => [cx - r * Math.cos(Math.PI * t), cy - r * Math.sin(Math.PI * t)];
+            const arc = (a, b, cls) => {
+                const [x1, y1] = pt(a), [x2, y2] = pt(b);
+                return `<path class="${cls}" d="M${x1.toFixed(1)} ${y1.toFixed(1)} A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
+            };
+            const [nx, ny] = pt(level.at);
+            el.className = 'tscm-gauge ' + level.cls;
+            el.setAttribute('aria-label', 'Threat level: ' + level.name);
+            el.innerHTML = `<svg viewBox="0 0 120 64" aria-hidden="true">
+                    ${arc(0, 0.33, 'zone low')}${arc(0.34, 0.66, 'zone elevated')}${arc(0.67, 1, 'zone high')}
+                    ${level.at ? arc(0, level.at, 'fill') : ''}
+                    <line class="needle" x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}"/>
+                    <circle class="hub" cx="${cx}" cy="${cy}" r="3.5"/>
+                </svg>
+                <div class="tscm-gauge-level">${level.name}</div>
+                <div class="tscm-gauge-sub">${total ? total + ' device' + (total === 1 ? '' : 's') + ' assessed' : 'Run a sweep to assess'}</div>`;
+        }
+        renderTscmThreatGauge({ high_interest: 0, review: 0, informational: 0 });
+
         function updateTscmThreatCounts() {
             // Count devices by new scoring model classification
             const counts = { high_interest: 0, review: 0, informational: 0 };
@@ -13570,6 +13603,7 @@
             document.getElementById('tscmInformationalCard').classList.toggle('active', counts.informational > 0);
             document.getElementById('tscmCorrelationsCard').classList.toggle('active', tscmCorrelations.length > 0);
             document.getElementById('tscmIdentityCard').classList.toggle('active', tscmIdentityClusters.length > 0);
+            renderTscmThreatGauge(counts);
 
             // Update threat panel count (shows high interest items only)
             document.getElementById('tscmThreatCount').textContent = counts.high_interest;
