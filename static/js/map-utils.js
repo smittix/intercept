@@ -354,10 +354,17 @@ const MapUtils = {
         const clockEl = tr.querySelector('.map-hud-clock');
         const dotEl   = tr.querySelector('.map-hud-dot');
 
-        // Clock tick
+        // Clock tick — shows the user's configured local timezone (default SAST)
+        // alongside UTC, rather than UTC-only.
         const updateClock = () => {
             if (!document.body.contains(container)) return;
-            clockEl.textContent = new Date().toISOString().substring(11, 19) + ' UTC';
+            const now = new Date();
+            const utc = now.toISOString().substring(11, 19) + ' UTC';
+            if (typeof InterceptTime !== 'undefined' && InterceptTime.getIANA()) {
+                clockEl.textContent = InterceptTime.fullTime(now) + InterceptTime.tzSuffix() + '  ·  ' + utc;
+            } else {
+                clockEl.textContent = utc;
+            }
         };
         updateClock();
         const clockInterval = setInterval(updateClock, 1000);
