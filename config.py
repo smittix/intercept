@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.18"
+VERSION = "2.33.19"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.19",
+        "date": "September 2026",
+        "highlights": [
+            "A polish pass: the Wi-Fi radar matches the Bluetooth one, BT Locate steers by a hotter / colder signal gauge, and GPS has a sky plot that needs neither WebGL nor the internet.",
+            "Space weather gauges for Kp, solar wind and Bz; empty lists that show when they are listening; a Run State strip that shows what is running.",
+        ],
+    },
     {
         "version": "2.33.18",
         "date": "September 2026",
