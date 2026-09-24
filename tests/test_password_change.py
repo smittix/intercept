@@ -207,3 +207,26 @@ class TestSeeding:
 def test_env_not_leaked(monkeypatch):
     """Guard against this module leaving auth disabled for later tests."""
     assert os.environ.get("INTERCEPT_DISABLE_AUTH") in (None, "", "1")
+
+
+def test_initial_password_file_is_written_beside_the_database(monkeypatch, tmp_path):
+    """Not relative to the working directory: a test (or a run from another
+    directory) initialising a fresh database must not overwrite the real
+    instance/.initial_password."""
+    import config
+    import utils.database as db
+
+    monkeypatch.setattr(config, "ADMIN_PASSWORD", "")
+    db_dir = tmp_path / "db"
+    cwd = tmp_path / "elsewhere"
+    db_dir.mkdir()
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    with patch.object(db, "DB_PATH", db_dir / "t.db"), patch.object(db, "DB_DIR", db_dir):
+        db.close_db()
+        try:
+            db.init_db()
+        finally:
+            db.close_db()
+    assert (db_dir / ".initial_password").read_text().startswith("admin:")
+    assert not (cwd / "instance").exists()
