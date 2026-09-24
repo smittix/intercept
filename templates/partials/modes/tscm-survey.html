@@ -1,0 +1,22 @@
+<!-- TSCM SURVEY MODE -->
+<div id="tscmsurveyMode" class="mode-content">
+    <div class="section">
+        <h3>TSCM Survey</h3>
+        <p style="color: var(--text-secondary); font-size: 11px; line-height: 1.5; margin-bottom: 12px;">
+            A survey in order: the active baseline, what the latest sweep shows that the
+            baseline did not, known devices, threats and findings, then the report.
+            Sweeps and baseline recording run in TSCM mode.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button class="preset-btn" onclick="TscmSurvey.scrollTo('tscmSurveyBaseline')">1. Baseline</button>
+            <button class="preset-btn" onclick="TscmSurvey.scrollTo('tscmSurveySweep')">2. Sweep</button>
+            <button class="preset-btn" onclick="TscmSurvey.scrollTo('tscmSurveyKnown')">3. Known devices</button>
+            <button class="preset-btn" onclick="TscmSurvey.scrollTo('tscmSurveyThreats')">4. Threats and findings</button>
+            <button class="preset-btn" onclick="TscmSurvey.scrollTo('tscmSurveyReport')">5. Report</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <button class="run-btn" onclick="TscmSurvey.openTscmMode()">Open TSCM mode</button>
+    </div>
+</div>

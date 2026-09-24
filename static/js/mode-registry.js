@@ -229,6 +229,15 @@ window.INTERCEPT_MODES = {
         visuals: true,
         destroy: () => { if (tscmEventSource) { tscmEventSource.close(); tscmEventSource = null; } },
     },
+    tscmsurvey: {
+        label: 'TSCM Survey', indicator: 'TSCM SURVEY', outputTitle: 'TSCM Survey Workspace', group: 'intel',
+        elementId: 'tscmsurveyMode',
+        visuals: true,
+        module: 'TscmSurvey',
+        init: () => {
+            TscmSurvey.init();
+        },
+    },
     drone: {
         label: 'Drone Intel', indicator: 'DRONE', outputTitle: 'Drone Intelligence', group: 'intel',
         elementId: 'droneMode',

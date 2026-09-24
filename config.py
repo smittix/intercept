@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.10"
+VERSION = "2.33.11"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.11",
+        "date": "September 2026",
+        "highlights": [
+            "Feat: TSCM Survey workspace (Intel > TSCM Survey). One page walks a survey in order: the active baseline and its health, what the latest sweep shows that the baseline did not, known devices, threats and findings, then the report.",
+            "Fix: a TSCM baseline's age read hours too old outside UTC, and comparing a sweep that had not finished failed with a server error.",
+        ],
+    },
     {
         "version": "2.33.10",
         "date": "September 2026",
