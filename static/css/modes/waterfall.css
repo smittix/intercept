@@ -154,7 +154,8 @@
     padding: 8px;
     background: rgba(4, 10, 20, 0.86);
     display: grid;
-    grid-template-columns: repeat(5, minmax(42px, 1fr));
+    /* Wraps to a second row rather than clipping LSB when the column is narrow */
+    grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
     gap: 6px;
     align-content: center;
 }
@@ -1315,4 +1316,11 @@ html[data-ui-tier="enhanced"] .wf-side-chip {
 
 html[data-ui-tier="enhanced"] .wf-side-stat {
     border-color: rgba(46, 125, 138, 0.20);
+}
+
+/* Idle note in the middle of the empty waterfall (a .map-waiting) */
+.wf-idle-note {
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
 }
