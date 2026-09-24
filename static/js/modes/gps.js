@@ -38,6 +38,9 @@ const GPS = (function() {
         'https://cdn.jsdelivr.net/npm/globe.gl@2.33.1/dist/globe.gl.min.js',
     ];
     const GPS_GLOBE_TEXTURE_URL = '/static/images/globe/earth-dark.jpg';
+    // The sky plot needs neither WebGL nor the globe library (fetched from a
+    // CDN), so it is the default; the 3D globe is a choice, remembered here.
+    const SKY_VIEW_KEY = 'intercept.gps.skyView';
     const GPS_SATELLITE_ICON_URL = '/static/images/globe/satellite-icon.svg';
 
     function init() {
@@ -70,7 +73,154 @@ const GPS = (function() {
         if (lastSky) updateSkyUI(lastSky);
     }
 
+    function preferredSkyView() {
+        try {
+            return localStorage.getItem(SKY_VIEW_KEY) === 'globe' ? 'globe' : 'polar';
+        } catch (err) {
+            return 'polar';
+        }
+    }
+
+    function setSkyView(view) {
+        try { localStorage.setItem(SKY_VIEW_KEY, view === 'globe' ? 'globe' : 'polar'); } catch (err) { /* kept for this visit only */ }
+        if (skyRenderer && typeof skyRenderer.destroy === 'function') skyRenderer.destroy();
+        skyRenderer = null;
+        skyRendererInitAttempted = false;
+        skyRendererInitPromise = null;
+        const pending = initSkyRenderer();
+        Promise.resolve(pending).then(() => {
+            if (lastSky) drawSkyView(lastSky.satellites || []);
+            else drawEmptySkyView();
+        }).catch(() => {});
+    }
+
+    function markSkyView(view) {
+        const wrap = document.getElementById('gpsSkyViewWrap');
+        if (wrap) wrap.classList.toggle('gps-sky-polar', view === 'polar');
+        document.querySelectorAll('.gps-sky-toggle button').forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.view === view);
+        });
+        const hint = document.getElementById('gpsSkyHint');
+        if (hint) {
+            hint.textContent = view === 'polar'
+                ? 'North up | Centre is overhead, edge the horizon | Rings at 30\u00b0 and 60\u00b0 elevation'
+                : 'Drag to orbit globe | Scroll to zoom | Hover satellites for details';
+        }
+    }
+
+    /**
+     * Sky plot: the satellites as seen from here. Centre is overhead, the
+     * edge the horizon, north up. Filled and glowing when used in the fix,
+     * hollow when not; sized by signal; a short trail of recent positions.
+     */
+    function createPolarSkyRenderer(container) {
+        const ns = 'http://www.w3.org/2000/svg';
+        const size = 400, c = size / 2, R = 180;
+        const trails = new Map();   // prn -> [[x, y], ...]
+        let latest = [];
+
+        const place = (el, az) => {
+            const r = R * (90 - Math.max(0, Math.min(90, el))) / 90;
+            const a = az * Math.PI / 180;
+            return [c + Math.sin(a) * r, c - Math.cos(a) * r];
+        };
+
+        container.innerHTML = `
+            <svg viewBox="0 0 ${size} ${size}" class="proximity-radar-svg gps-polar-svg" role="img" aria-label="Satellites in the sky">
+                ${typeof RadarFace !== 'undefined' ? RadarFace.markup({
+                    id: 'gpssky', size, padding: c - R, sweepSeconds: 8,
+                    rings: [{ radius: 1 / 3, label: '60\u00b0' }, { radius: 2 / 3, label: '30\u00b0' }],
+                }) : ''}
+                <g class="gps-polar-cardinals">
+                    <text x="${c}" y="${c - R - 6}">N</text>
+                    <text x="${c + R + 10}" y="${c + 4}">E</text>
+                    <text x="${c}" y="${c + R + 16}">S</text>
+                    <text x="${c - R - 10}" y="${c + 4}">W</text>
+                </g>
+                <g class="gps-polar-trails"></g>
+                <g class="gps-polar-sats"></g>
+            </svg>`;
+        const trailsGroup = container.querySelector('.gps-polar-trails');
+        const satsGroup = container.querySelector('.gps-polar-sats');
+
+        function render() {
+            trailsGroup.replaceChildren();
+            satsGroup.replaceChildren();
+            latest.forEach((sat) => {
+                if (!Number.isFinite(sat.elevation) || !Number.isFinite(sat.azimuth) || sat.elevation < 0) return;
+                const colour = CONST_COLORS[sat.constellation] || CONST_COLORS.GPS;
+                const [x, y] = place(sat.elevation, sat.azimuth);
+
+                const trail = trails.get(sat.prn) || [];
+                if (trail.length > 1) {
+                    const line = document.createElementNS(ns, 'polyline');
+                    line.setAttribute('points', trail.map((p) => p.join(',')).join(' '));
+                    line.setAttribute('stroke', colour);
+                    line.setAttribute('class', 'gps-polar-trail');
+                    trailsGroup.appendChild(line);
+                }
+
+                const g = document.createElementNS(ns, 'g');
+                g.setAttribute('class', 'gps-polar-sat' + (sat.used ? ' used' : ''));
+                const snr = Number.isFinite(sat.snr) ? sat.snr : 0;
+                const r = 4 + Math.max(0, Math.min(1, snr / 50)) * 5;
+                const dot = document.createElementNS(ns, 'circle');
+                dot.setAttribute('cx', x.toFixed(1));
+                dot.setAttribute('cy', y.toFixed(1));
+                dot.setAttribute('r', r.toFixed(1));
+                dot.setAttribute('stroke', colour);
+                dot.setAttribute('fill', sat.used ? colour : 'none');
+                if (sat.used) dot.setAttribute('filter', 'url(#gpssky-glow)');
+                const label = document.createElementNS(ns, 'text');
+                label.setAttribute('x', (x + r + 3).toFixed(1));
+                label.setAttribute('y', (y + 3).toFixed(1));
+                label.setAttribute('class', 'gps-polar-label');
+                label.textContent = sat.prn;
+                const title = document.createElementNS(ns, 'title');
+                title.textContent = `${sat.constellation || 'GPS'} ${sat.prn}: elevation ${Math.round(sat.elevation)}\u00b0, `
+                    + `azimuth ${Math.round(sat.azimuth)}\u00b0, SNR ${snr} dB-Hz, ${sat.used ? 'used in fix' : 'not used'}`;
+                g.append(dot, label, title);
+                satsGroup.appendChild(g);
+            });
+        }
+
+        function setSatellites(satellites) {
+            latest = Array.isArray(satellites) ? satellites : [];
+            const seen = new Set();
+            latest.forEach((sat) => {
+                if (!Number.isFinite(sat.elevation) || !Number.isFinite(sat.azimuth)) return;
+                seen.add(sat.prn);
+                let trail = trails.get(sat.prn) || [];
+                const point = place(sat.elevation, sat.azimuth).map((v) => Number(v.toFixed(1)));
+                const last = trail[trail.length - 1];
+                // Satellites move slowly; a jump (a dropped and regained
+                // signal) starts a new trail rather than drawing a streak.
+                if (last && Math.hypot(point[0] - last[0], point[1] - last[1]) > 30) trail = [];
+                if (!last || last[0] !== point[0] || last[1] !== point[1]) trail.push(point);
+                trails.set(sat.prn, trail.slice(-40));
+            });
+            trails.forEach((_, prn) => { if (!seen.has(prn)) trails.delete(prn); });
+            render();
+        }
+
+        return {
+            setSatellites,
+            requestRender: render,
+            destroy: () => { container.replaceChildren(); },
+        };
+    }
+
     function initSkyRenderer() {
+        const view = preferredSkyView();
+        markSkyView(view);
+        if (skyRendererInitPromise) return skyRendererInitPromise;
+        if (view === 'polar') {
+            const polar = document.getElementById('gpsSkyPolar');
+            skyRendererInitAttempted = true;
+            skyRenderer = polar ? createPolarSkyRenderer(polar) : null;
+            skyRendererInitPromise = Promise.resolve(skyRenderer);
+            return skyRendererInitPromise;
+        }
         if (skyRendererInitPromise) return skyRendererInitPromise;
         skyRendererInitAttempted = true;
 
@@ -1550,6 +1700,7 @@ const GPS = (function() {
     }
 
     return {
+        setSkyView,
         init: init,
         connect: connect,
         disconnect: disconnect,

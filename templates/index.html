@@ -1399,13 +1399,20 @@
                     <div class="gps-visuals-top">
                         <!-- Sky View Globe -->
                         <div class="gps-skyview-panel">
-                            <h4>Satellite Globe View</h4>
+                            <div class="gps-sky-header">
+                                <h4>Satellite Sky View</h4>
+                                <div class="gps-sky-toggle" role="group" aria-label="Sky view">
+                                    <button type="button" data-view="polar" onclick="GPS.setSkyView('polar')">Sky plot</button>
+                                    <button type="button" data-view="globe" onclick="GPS.setSkyView('globe')">3D globe</button>
+                                </div>
+                            </div>
                             <div class="gps-skyview-canvas-wrap" id="gpsSkyViewWrap">
+                                <div id="gpsSkyPolar" class="gps-sky-polar-view"></div>
                                 <div id="gpsSkyGlobe" class="gps-sky-globe" aria-label="GPS satellite globe"></div>
                                 <canvas id="gpsSkyCanvas" width="400" height="400" aria-label="GPS satellite sky fallback globe"></canvas>
                                 <div class="gps-sky-overlay" id="gpsSkyOverlay" aria-hidden="true"></div>
                             </div>
-                            <div class="gps-sky-hint">Drag to orbit globe | Scroll to zoom | Hover satellites for details</div>
+                            <div class="gps-sky-hint" id="gpsSkyHint">Drag to orbit globe | Scroll to zoom | Hover satellites for details</div>
                             <div class="gps-legend">
                                 <div class="gps-legend-item"><span class="gps-legend-dot" style="background:#ffffff;"></span> Observer</div>
                                 <div class="gps-legend-item"><span class="gps-legend-dot" style="background:#00d4ff;"></span> GPS</div>

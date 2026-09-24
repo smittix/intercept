@@ -435,3 +435,95 @@
         font-size: 16px;
     }
 }
+
+
+/* Sky plot (the default view): centre overhead, edge the horizon, north up */
+.gps-sky-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.gps-sky-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.gps-sky-toggle button {
+    padding: 2px 8px;
+    border: 0;
+    background: none;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.gps-sky-toggle button.active {
+    background: var(--accent-cyan-dim, rgba(74, 163, 255, 0.15));
+    color: var(--accent-cyan);
+}
+
+.gps-sky-polar-view {
+    display: none;
+}
+
+.gps-sky-polar .gps-sky-polar-view {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.gps-sky-polar #gpsSkyGlobe,
+.gps-sky-polar #gpsSkyCanvas,
+.gps-sky-polar #gpsSkyOverlay {
+    display: none !important;
+}
+
+.gps-polar-svg {
+    width: 100%;
+    max-width: 420px;
+    height: auto;
+    overflow: visible;
+}
+
+.gps-polar-cardinals text {
+    fill: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    text-anchor: middle;
+}
+
+.gps-polar-trail {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-opacity: 0.35;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.gps-polar-sat circle {
+    stroke-width: 1.5;
+    opacity: 0.55;
+    transition: cx 0.8s, cy 0.8s;
+}
+
+.gps-polar-sat.used circle {
+    opacity: 1;
+}
+
+.gps-polar-label {
+    fill: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 8px;
+}
+
+.gps-polar-sat.used .gps-polar-label {
+    fill: var(--text-secondary);
+}
