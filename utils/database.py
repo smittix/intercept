@@ -588,6 +588,28 @@ def init_db() -> None:
             ON tscm_known_devices(identifier)
         """)
 
+        # Observations: one sighting from any mode, for the activity feed.
+        # Bounded by rate limiting and a registered retention policy
+        # (utils/observations.py cleanup_old_observations).
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS observations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts REAL NOT NULL,
+                source TEXT NOT NULL,
+                identifier TEXT NOT NULL,
+                entity TEXT,
+                rssi REAL,
+                lat REAL,
+                lon REAL,
+                summary TEXT,
+                raw TEXT
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_observations_ts ON observations(ts)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_observations_source_ts ON observations(source, ts)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_observations_identifier ON observations(identifier, ts)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_observations_entity ON observations(entity, ts)")
+
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_tscm_cases_status
             ON tscm_cases(status, created_at)

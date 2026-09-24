@@ -1,0 +1,215 @@
+/**
+ * Activity feed
+ * One reverse-chronological stream of sightings, colour-coded by source
+ */
+
+.activity-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    min-height: 0;
+    flex: 1;
+    font-size: 12px;
+    color: var(--text-primary);
+}
+
+.activity-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.activity-header h3 {
+    margin: 0 0 4px;
+    font-size: 14px;
+}
+
+.activity-muted {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.activity-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.activity-status {
+    font-family: var(--font-mono);
+    color: var(--accent-green);
+}
+
+.activity-status.paused {
+    color: var(--accent-amber);
+}
+
+.activity-focus-banner {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--accent-cyan-dim);
+    border-radius: 6px;
+}
+
+.activity-focus-banner[hidden] {
+    display: none;
+}
+
+.activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+    scrollbar-color: var(--border-color) transparent;
+}
+
+/* Source colours: one per source, a neutral one for any other */
+.activity-row,
+.activity-source-toggle {
+    --source-color: var(--text-dim);
+}
+[data-source="adsb"] { --source-color: var(--accent-cyan); }
+[data-source="ais"] { --source-color: #3b82f6; }
+[data-source="wifi"] { --source-color: var(--accent-green); }
+[data-source="bluetooth"] { --source-color: var(--accent-purple); }
+[data-source="sensor"] { --source-color: var(--accent-orange); }
+[data-source="meshtastic"] { --source-color: var(--accent-yellow); }
+[data-source="aprs"] { --source-color: #ec4899; }
+[data-source="dsc"] { --source-color: var(--accent-red); }
+[data-source="pager"] { --source-color: var(--accent-amber); }
+[data-source="rtlamr"] { --source-color: #14b8a6; }
+
+.activity-row {
+    display: grid;
+    grid-template-columns: 80px 90px minmax(140px, auto) 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-left: 3px solid var(--source-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.activity-row:last-child {
+    border-bottom: 0;
+}
+
+.activity-time {
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.activity-source {
+    color: var(--source-color);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.activity-id {
+    font-family: var(--font-mono);
+    white-space: nowrap;
+}
+
+.activity-summary {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.activity-details {
+    display: flex;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+}
+
+.activity-entity {
+    cursor: help;
+    text-decoration: underline dotted;
+}
+
+.activity-focus {
+    white-space: nowrap;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: none;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 11px;
+    padding: 1px 6px;
+    cursor: pointer;
+}
+
+.activity-focus:hover,
+.activity-focus:focus-visible {
+    color: var(--text-primary);
+    border-color: var(--accent-cyan);
+}
+
+.activity-empty {
+    padding: 24px 16px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.activity-empty strong {
+    color: var(--text-primary);
+}
+
+.activity-sources {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.activity-source-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.activity-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--source-color);
+}
+
+@media (max-width: 800px) {
+    .activity-header {
+        flex-direction: column;
+    }
+
+    .activity-row {
+        grid-template-columns: auto 1fr auto;
+        grid-template-areas:
+            "time source focus"
+            "id id id"
+            "summary summary details";
+        row-gap: 2px;
+    }
+
+    .activity-time { grid-area: time; }
+    .activity-source { grid-area: source; }
+    .activity-focus { grid-area: focus; }
+    .activity-id { grid-area: id; }
+    .activity-summary { grid-area: summary; }
+    .activity-details { grid-area: details; }
+}

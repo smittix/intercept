@@ -17,6 +17,21 @@ os.environ.setdefault("INTERCEPT_SKIP_DEFERRED_INIT", "1")
 # against an open app. Tests control auth through fixtures instead.
 os.environ.pop("INTERCEPT_DISABLE_AUTH", None)
 
+# Keep the whole session off the developer's own database. Importing app runs
+# init_db(), which seeds users, and tests that emit observations or record
+# events would otherwise write to instance/intercept.db. Must precede the
+# app import; tests that patch DB_PATH for their own temp file still can.
+import atexit  # noqa: E402
+import shutil  # noqa: E402
+import tempfile  # noqa: E402
+
+import utils.database as _database  # noqa: E402
+
+_SESSION_DB_DIR = tempfile.mkdtemp(prefix="intercept-tests-")
+_database.DB_DIR = type(_database.DB_DIR)(_SESSION_DB_DIR)
+_database.DB_PATH = _database.DB_DIR / "intercept.db"
+atexit.register(shutil.rmtree, _SESSION_DB_DIR, ignore_errors=True)
+
 from app import app as flask_app
 from routes import register_blueprints
 

@@ -6,6 +6,7 @@ from typing import Any
 
 from utils.alerts import get_alert_manager
 from utils.mqtt import publish as mqtt_publish
+from utils.observations import emit_from_event
 from utils.recording import get_recording_manager
 from utils.temporal_patterns import get_pattern_detector
 
@@ -59,6 +60,12 @@ def process_event(mode: str, event: dict | Any, event_type: str | None = None) -
         mqtt_publish(mode, event, event_type)
     except Exception:
         # MQTT failures should never break streaming
+        pass
+
+    try:
+        emit_from_event(mode, event, event_type)
+    except Exception:
+        # The activity feed must never break streaming either
         pass
 
 

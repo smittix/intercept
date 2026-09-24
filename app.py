@@ -1475,6 +1475,10 @@ def _init_app() -> None:
             cleanup_manager.register_db_cleanup(cleanup_old_timeline_entries, interval_multiplier=1440)
             cleanup_manager.register_db_cleanup(cleanup_old_dsc_alerts, interval_multiplier=1440)
             cleanup_manager.register_db_cleanup(cleanup_old_payloads, interval_multiplier=1440)
+            # Observations are the busiest table: every 10 minutes, not daily.
+            from utils.observations import cleanup_old_observations
+
+            cleanup_manager.register_db_cleanup(cleanup_old_observations, interval_multiplier=10)
             cleanup_manager.start()
         except Exception as e:
             logger.warning(f"Cleanup manager init failed: {e}")

@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.13"
+VERSION = "2.33.14"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.14",
+        "date": "September 2026",
+        "highlights": [
+            "Feat: Activity feed (Intel > Activity). Sightings from every mode that reports them in one stream, newest first, colour-coded by source, filterable by source, time window and device, and pausable without losing anything.",
+            "433 MHz and Wi-Fi record sightings whenever they run; busy sources are thinned so ADS-B cannot swamp the feed, and sightings are kept 24 hours (configurable).",
+        ],
+    },
     {
         "version": "2.33.13",
         "date": "September 2026",
@@ -668,6 +676,10 @@ RADIOSONDE_UDP_PORT = _get_env_int("RADIOSONDE_UDP_PORT", 55673)
 GITHUB_REPO = _get_env("GITHUB_REPO", "smittix/intercept")
 UPDATE_CHECK_ENABLED = _get_env_bool("UPDATE_CHECK_ENABLED", True)
 UPDATE_CHECK_INTERVAL_HOURS = _get_env_int("UPDATE_CHECK_INTERVAL_HOURS", 6)
+
+# Activity feed observations: how long they are kept, and a ceiling on rows
+OBSERVATION_RETENTION_HOURS = _get_env_float("OBSERVATION_RETENTION_HOURS", 24.0)
+OBSERVATION_MAX_ROWS = _get_env_int("OBSERVATION_MAX_ROWS", 100_000)
 
 # Alerting
 ALERT_WEBHOOK_URL = _get_env("ALERT_WEBHOOK_URL", "")

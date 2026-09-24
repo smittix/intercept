@@ -1,0 +1,23 @@
+<!-- ACTIVITY FEED MODE -->
+<div id="activityMode" class="mode-content">
+    <div class="section">
+        <h3>Activity</h3>
+        <p style="color: var(--text-secondary); font-size: 11px; line-height: 1.5; margin-bottom: 12px;">
+            One stream of sightings from every mode that reports them. Repeat sightings
+            are thinned: each device appears at most every few seconds, and a busy source
+            is capped, so the feed stays readable.
+        </p>
+        <label for="activityWindow">Time window</label>
+        <select id="activityWindow" onchange="Activity.setWindow(this.value)">
+            <option value="15">Last 15 min</option>
+            <option value="60" selected>Last hour</option>
+            <option value="360">Last 6 hours</option>
+            <option value="1440">Last 24 hours</option>
+        </select>
+    </div>
+
+    <div class="section">
+        <h3>Sources</h3>
+        <div id="activitySources" class="activity-sources"></div>
+    </div>
+</div>
