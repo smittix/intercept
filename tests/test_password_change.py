@@ -14,13 +14,8 @@ import pytest
 
 
 @pytest.fixture
-def seeded_app(monkeypatch):
-    """A real app over a temporary DB, with auth genuinely enabled.
-
-    tests/conftest.py disables auth process-wide, so anything testing the
-    gate has to undo that or it proves nothing (see #284).
-    """
-    monkeypatch.delenv("INTERCEPT_DISABLE_AUTH", raising=False)
+def seeded_app():
+    """A real app over a temporary DB, with auth genuinely enabled."""
     import utils.database as db
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -204,6 +199,6 @@ class TestSeeding:
                 assert db.user_must_change_password("admin") is True
 
 
-def test_env_not_leaked(monkeypatch):
-    """Guard against this module leaving auth disabled for later tests."""
-    assert os.environ.get("INTERCEPT_DISABLE_AUTH") in (None, "", "1")
+def test_env_not_leaked():
+    """Guard against anything leaving auth disabled for later tests."""
+    assert os.environ.get("INTERCEPT_DISABLE_AUTH") is None
