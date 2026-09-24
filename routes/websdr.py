@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 import math
 import queue
@@ -68,6 +69,17 @@ KIWI_DATA_URLS = [
 ]
 
 
+def _clean_text(value: object) -> str:
+    """Plain text from a directory field. Receiver owners write HTML and
+    entities into their names and antenna notes ("<b>▶ PA0EBC ◀</b> &#128077;");
+    the page shows text, so tags go and entities become their characters."""
+    text = re.sub(r"<[^>]*>", "", str(value or ""))
+    text = html.unescape(text)
+    text = re.sub(r"<[^>]*>", "", text)  # tags that were written as entities
+    text = re.sub(r"<[a-zA-Z/!][^>]*$", "", text)  # a tag cut off by the field's length limit
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def _fetch_kiwi_receivers() -> list[dict]:
     """Fetch the KiwiSDR receiver list from the public directory."""
     import json
@@ -132,11 +144,11 @@ def _fetch_kiwi_receivers() -> list[dict]:
         if entry.get("offline") == "yes" or entry.get("status") != "active":
             continue
 
-        name = entry.get("name", "Unknown")
+        name = _clean_text(entry.get("name")) or "Unknown"
         url = entry.get("url", "")
         gps = entry.get("gps", "")
-        antenna = entry.get("antenna", "")
-        location = entry.get("loc", "")
+        antenna = _clean_text(entry.get("antenna"))
+        location = _clean_text(entry.get("loc"))
 
         # Parse users (strings in actual data)
         try:
