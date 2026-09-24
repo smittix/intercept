@@ -7,7 +7,6 @@ aggregation, and heuristics.
 
 from __future__ import annotations
 
-import contextlib
 import csv
 import io
 import json
@@ -25,8 +24,8 @@ from utils.bluetooth import (
     check_capabilities,
     get_bluetooth_scanner,
 )
+from utils.bluetooth.scanner import sse_event
 from utils.database import get_db
-from utils.event_pipeline import process_event
 from utils.responses import api_error
 from utils.sse import format_sse, subscribe_fanout_queue
 
@@ -881,26 +880,6 @@ def stream_events():
     """SSE event stream for real-time device updates."""
     scanner = get_bluetooth_scanner()
 
-    def map_event_type(event: dict) -> tuple[str, dict]:
-        event_type = event.get("type", "unknown")
-        if event_type == "device":
-            return "device_update", event.get("device", event)
-        elif event_type == "status":
-            status = event.get("status", "")
-            if status == "started":
-                return "scan_started", event
-            elif status == "stopped":
-                return "scan_stopped", event
-            return "status", event
-        elif event_type == "error":
-            return "error", event
-        elif event_type == "baseline":
-            return "baseline", event
-        elif event_type == "ping":
-            return "ping", {}
-        else:
-            return event_type, event
-
     subscriber, unsubscribe = subscribe_fanout_queue(
         source_queue=scanner._event_queue,
         channel_key="bluetooth_v2",
@@ -915,9 +894,7 @@ def stream_events():
                 try:
                     event = subscriber.get(timeout=1.0)
                     last_keepalive = time.time()
-                    event_name, event_data = map_event_type(event)
-                    with contextlib.suppress(Exception):
-                        process_event("bluetooth", event_data, event_name)
+                    event_name, event_data = sse_event(event)
                     yield format_sse(event_data, event=event_name)
                 except queue.Empty:
                     now = time.time()

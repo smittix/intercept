@@ -496,16 +496,12 @@ def stop_decoding() -> Response:
 def stream() -> Response:
     """SSE stream for real-time DSC messages."""
 
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("dsc", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=app_module.dsc_queue,
             channel_key="dsc",
             timeout=1.0,
             keepalive_interval=30.0,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

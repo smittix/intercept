@@ -1378,6 +1378,46 @@ def _ensure_self_signed_cert(cert_dir: str) -> tuple:
 _app_initialized = False
 
 
+def _register_event_pipelines() -> None:
+    """Send each mode's decoded events through the event pipeline (alerts,
+    recording, MQTT, the activity feed) once per event.
+
+    They used to be processed by each browser's SSE stream: once per open
+    tab, and not at all with none. The fan-out distributor takes every
+    message from these queues exactly once, so the pipeline runs there, and
+    registering starts it now rather than when a browser first connects.
+    Channel keys must match the ones the stream routes subscribe with.
+    """
+    import routes.listening_post as listening_post
+    from routes.sstv import _sstv_queue
+    from routes.sstv_general import _sstv_general_queue
+    from utils.event_pipeline import ingest_hook
+    from utils.sse import register_ingest
+
+    channels = {
+        # channel key: (source queue, pipeline mode)
+        "pager": (output_queue, "pager"),
+        "sensor": (sensor_queue, "sensor"),
+        "rtlamr": (rtlamr_queue, "rtlamr"),
+        "wifi": (wifi_queue, "wifi"),
+        "bluetooth": (bt_queue, "bluetooth"),
+        "acars": (acars_queue, "acars"),
+        "vdl2": (vdl2_queue, "vdl2"),
+        "aprs": (aprs_queue, "aprs"),
+        "ais": (ais_queue, "ais"),
+        "dsc": (dsc_queue, "dsc"),
+        "ook": (ook_queue, "ook"),
+        "morse": (morse_queue, "morse"),
+        "tscm": (tscm_queue, "tscm"),
+        "sstv": (_sstv_queue, "sstv"),
+        "sstv_general": (_sstv_general_queue, "sstv_general"),
+        "receiver_scanner": (listening_post.scanner_queue, "receiver_scanner"),
+        "receiver_waterfall": (listening_post.waterfall_queue, "waterfall"),
+    }
+    for channel_key, (source_queue, mode) in channels.items():
+        register_ingest(source_queue, channel_key, ingest_hook(mode))
+
+
 def _init_app() -> None:
     """Initialize blueprints, database, and websockets.
 
@@ -1405,6 +1445,9 @@ def _init_app() -> None:
     from routes import register_blueprints
 
     register_blueprints(app)
+
+    # Every decoded event through the pipeline once, with or without a page open
+    _register_event_pipelines()
 
     # Initialize WebSocket for audio streaming
     try:

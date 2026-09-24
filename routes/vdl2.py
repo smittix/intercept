@@ -13,7 +13,6 @@ import subprocess
 import threading
 import time
 from datetime import datetime
-from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
 
@@ -25,7 +24,6 @@ from utils.constants import (
     SSE_KEEPALIVE_INTERVAL,
     SSE_QUEUE_TIMEOUT,
 )
-from utils.event_pipeline import process_event
 from utils.flight_correlator import get_flight_correlator
 from utils.logging import sensor_logger as logger
 from utils.process import register_process, unregister_process
@@ -369,16 +367,12 @@ def stop_vdl2() -> Response:
 def stream_vdl2() -> Response:
     """SSE stream for VDL2 messages."""
 
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("vdl2", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=app_module.vdl2_queue,
             channel_key="vdl2",
             timeout=SSE_QUEUE_TIMEOUT,
             keepalive_interval=SSE_KEEPALIVE_INTERVAL,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

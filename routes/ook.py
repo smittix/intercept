@@ -18,7 +18,6 @@ from typing import Any
 from flask import Blueprint, Response, jsonify, request
 
 import app as app_module
-from utils.event_pipeline import process_event
 from utils.logging import sensor_logger as logger
 from utils.ook import ook_parser_thread
 from utils.process import register_process, safe_terminate, unregister_process
@@ -335,16 +334,12 @@ def ook_status() -> Response:
 
 @ook_bp.route("/ook/stream")
 def ook_stream() -> Response:
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("ook", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=app_module.ook_queue,
             channel_key="ook",
             timeout=1.0,
             keepalive_interval=30.0,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

@@ -7,7 +7,6 @@ channel analysis, hidden SSID correlation, and SSE streaming.
 
 from __future__ import annotations
 
-import contextlib
 import csv
 import io
 import json
@@ -17,7 +16,6 @@ from datetime import datetime
 
 from flask import Blueprint, Response, jsonify, request
 
-from utils.event_pipeline import process_event
 from utils.responses import api_error
 from utils.sse import format_sse
 from utils.validation import validate_wifi_channel
@@ -432,8 +430,6 @@ def event_stream():
         scanner = get_wifi_scanner()
 
         for event in scanner.get_event_stream():
-            with contextlib.suppress(Exception):
-                process_event("wifi", event, event.get("type"))
             yield format_sse(event)
 
     response = Response(generate(), mimetype="text/event-stream")

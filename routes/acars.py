@@ -13,7 +13,6 @@ import subprocess
 import threading
 import time
 from datetime import datetime
-from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
 
@@ -26,7 +25,6 @@ from utils.constants import (
     SSE_QUEUE_TIMEOUT,
 )
 from utils.dependencies import install_hint
-from utils.event_pipeline import process_event
 from utils.flight_correlator import get_flight_correlator
 from utils.logging import sensor_logger as logger
 from utils.process import register_process, unregister_process
@@ -399,16 +397,12 @@ def stop_acars() -> Response:
 def stream_acars() -> Response:
     """SSE stream for ACARS messages."""
 
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("acars", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=app_module.acars_queue,
             channel_key="acars",
             timeout=SSE_QUEUE_TIMEOUT,
             keepalive_interval=SSE_KEEPALIVE_INTERVAL,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

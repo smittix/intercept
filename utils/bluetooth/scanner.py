@@ -316,7 +316,12 @@ class BluetoothScanner:
             logger.error(f"Error handling observation: {e}")
 
     def _queue_event(self, event: dict) -> None:
-        """Add event to queue for SSE streaming."""
+        """Add event to queue for SSE streaming, and send it through the
+        event pipeline once, whether or not a browser is subscribed."""
+        from utils.event_pipeline import submit
+
+        event_name, event_data = sse_event(event)
+        submit("bluetooth", event_data, event_name)
         try:
             self._event_queue.put_nowait(event)
         except queue.Full:
@@ -490,6 +495,28 @@ class BluetoothScanner:
     def has_baseline(self) -> bool:
         """Whether baseline is set."""
         return self._aggregator.has_baseline
+
+
+def sse_event(event: dict) -> tuple[str, dict]:
+    """A scanner event as the SSE stream names and shapes it: (event name, data)."""
+    event_type = event.get("type", "unknown")
+    if event_type == "device":
+        return "device_update", event.get("device", event)
+    elif event_type == "status":
+        status = event.get("status", "")
+        if status == "started":
+            return "scan_started", event
+        elif status == "stopped":
+            return "scan_stopped", event
+        return "status", event
+    elif event_type == "error":
+        return "error", event
+    elif event_type == "baseline":
+        return "baseline", event
+    elif event_type == "ping":
+        return "ping", {}
+    else:
+        return event_type, event
 
 
 def get_bluetooth_scanner(adapter_id: str | None = None) -> BluetoothScanner:

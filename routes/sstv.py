@@ -11,13 +11,11 @@ import queue
 import threading
 import time
 from pathlib import Path
-from typing import Any
 
 from flask import Blueprint, Response, jsonify, request, send_file
 
 import app as app_module
 from routes.satellite import get_cached_tle
-from utils.event_pipeline import process_event
 from utils.logging import get_logger
 from utils.responses import api_error, start_failure
 from utils.sse import sse_stream_fanout
@@ -435,16 +433,12 @@ def stream_progress():
         SSE stream (text/event-stream)
     """
 
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("sstv", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=_sstv_queue,
             channel_key="sstv",
             timeout=1.0,
             keepalive_interval=30.0,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

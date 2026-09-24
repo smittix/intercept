@@ -12,7 +12,6 @@ import os
 import platform
 import re
 import subprocess
-from typing import Any
 
 from flask import Response, jsonify, request
 
@@ -24,7 +23,6 @@ from routes.tscm import (
     tscm_bp,
 )
 from utils.database import get_tscm_sweep, update_tscm_sweep
-from utils.event_pipeline import process_event
 from utils.sse import sse_stream_fanout
 
 logger = logging.getLogger("intercept.tscm")
@@ -151,16 +149,12 @@ def sweep_stream():
 
     import routes.tscm as _tscm_pkg
 
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("tscm", msg, msg.get("type"))
-
     return Response(
         sse_stream_fanout(
             source_queue=_tscm_pkg.tscm_queue,
             channel_key="tscm",
             timeout=1.0,
             keepalive_interval=30.0,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},

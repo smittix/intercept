@@ -10,7 +10,6 @@ import subprocess
 import threading
 import time
 from datetime import datetime
-from typing import Any
 
 from flask import Response, jsonify, request
 
@@ -25,7 +24,6 @@ from . import (
     app_module,
     find_rtl_power,
     logger,
-    process_event,
     receiver_bp,
     sse_stream_fanout,
 )
@@ -491,16 +489,12 @@ def stop_waterfall() -> Response:
 def stream_waterfall() -> Response:
     """SSE stream for waterfall data."""
 
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("waterfall", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=_state.waterfall_queue,
             channel_key="receiver_waterfall",
             timeout=SSE_QUEUE_TIMEOUT,
             keepalive_interval=SSE_KEEPALIVE_INTERVAL,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

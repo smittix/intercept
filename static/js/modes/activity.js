@@ -118,8 +118,8 @@ const Activity = (function () {
         const scope = identifier ? 'of ' + identifier + ' ' : '';
         list.append(el('li', { class: 'activity-empty' },
             el('strong', null, 'No sightings ' + scope + 'in the last ' + windowText() + '.'),
-            el('span', null, ' Sightings appear here as modes that report them run: 433 MHz and Wi-Fi ' +
-                'record whenever they are running; the others record while their live view is open.'),
+            el('span', null, ' Sightings appear here while modes that report them are running, ' +
+                'whether or not their own view is open.'),
         ));
     }
 

@@ -12,7 +12,6 @@ import select
 import subprocess
 import threading
 import time
-from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
 
@@ -23,7 +22,6 @@ from utils.constants import (
     SUBPROCESS_TIMEOUT_SHORT,
 )
 from utils.dependencies import check_tool
-from utils.event_pipeline import process_event
 from utils.logging import bluetooth_logger as logger
 from utils.responses import api_error, api_success
 from utils.sse import sse_stream_fanout
@@ -671,16 +669,12 @@ def get_bt_devices():
 def stream_bt():
     """SSE stream for Bluetooth events."""
 
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("bluetooth", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=app_module.bt_queue,
             channel_key="bluetooth",
             timeout=1.0,
             keepalive_interval=30.0,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

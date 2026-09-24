@@ -10,13 +10,11 @@ import subprocess
 import threading
 import time
 from datetime import datetime
-from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
 
 import app as app_module
 from utils.dependencies import install_hint
-from utils.event_pipeline import process_event
 from utils.logging import sensor_logger as logger
 from utils.observations import emit_observation
 from utils.process import register_process, unregister_process
@@ -339,16 +337,12 @@ def stop_sensor() -> Response:
 
 @sensor_bp.route("/stream_sensor")
 def stream_sensor() -> Response:
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("sensor", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=app_module.sensor_queue,
             channel_key="sensor",
             timeout=1.0,
             keepalive_interval=30.0,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

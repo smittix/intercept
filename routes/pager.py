@@ -21,7 +21,6 @@ from flask import Blueprint, Response, jsonify, request
 
 import app as app_module
 from utils.dependencies import get_tool_path, install_hint
-from utils.event_pipeline import process_event
 from utils.logging import pager_logger as logger
 from utils.process import register_process, unregister_process
 from utils.responses import api_error
@@ -561,16 +560,12 @@ def toggle_logging() -> Response:
 
 @pager_bp.route("/stream")
 def stream() -> Response:
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("pager", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=app_module.output_queue,
             channel_key="pager",
             timeout=1.0,
             keepalive_interval=30.0,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )
