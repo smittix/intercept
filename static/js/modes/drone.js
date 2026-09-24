@@ -215,7 +215,7 @@ var DroneMode = (function () {
                 _showStartNote(data.message || data.error || 'Drone detection failed to start');
                 return;
             }
-            _showStartNote(unavailable.length ? 'Not running: ' + unavailable.join('; ') : '');
+            _showStartNote(unavailable.length ? 'Started without ' + unavailable.join('; ') : '');
             _setRunningUI(true);
             _refreshStatus();
         })
