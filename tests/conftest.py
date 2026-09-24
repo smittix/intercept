@@ -3,6 +3,7 @@
 import contextlib
 import os
 import sqlite3
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -358,3 +359,24 @@ def tscm_survey():
         "site_name": "Head Office, 3rd floor boardroom",
         "examiner_name": "A. Examiner",
     }
+
+
+# Peak memory for the whole run. A MagicMock standing in for a queue once
+# leaked 16 GB here and went unnoticed for months. A full run peaks near
+# 350 MB (each CI shard near 270 MB), so a real leak cannot hide under 1 GB.
+RSS_CEILING_MB = int(os.environ.get("INTERCEPT_TEST_RSS_CEILING_MB", "1024"))
+
+
+def pytest_sessionfinish(session, exitstatus):
+    try:
+        import resource
+    except ImportError:  # Windows
+        return
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    peak_mb = peak / (1024 * 1024) if sys.platform == "darwin" else peak / 1024  # bytes on macOS, KiB on Linux
+    if peak_mb > RSS_CEILING_MB:
+        reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+        message = f"peak RSS {peak_mb:.0f} MB exceeds the {RSS_CEILING_MB} MB ceiling (memory leak?)"
+        if reporter:
+            reporter.write_line(f"FAILED: {message}", red=True, bold=True)
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED

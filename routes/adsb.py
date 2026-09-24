@@ -1186,7 +1186,9 @@ def start_adsb():
             if stderr_output and len(stderr_output) < 300:
                 full_msg += f" (Details: {stderr_output})"
 
-            return jsonify({"status": "error", "error_type": error_type, "message": full_msg})
+            return jsonify({"status": "error", "error_type": error_type, "message": full_msg}), (
+                409 if error_type == "DEVICE_BUSY" else 503
+            )
 
         # dump1090 is still running but SBS port never came up — device may be
         # held by a stale process from a previous mode.  Kill it so the USB
@@ -1218,7 +1220,7 @@ def start_adsb():
                         "Please wait a moment and try again."
                     ),
                 }
-            )
+            ), 409
 
         adsb_using_service = True
         thread = threading.Thread(target=parse_sbs_stream, args=(f"localhost:{ADSB_SBS_PORT}",), daemon=True)

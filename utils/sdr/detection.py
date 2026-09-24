@@ -462,6 +462,7 @@ def probe_rtlsdr_device(device_index: int) -> str | None:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            errors="replace",
             env=env,
         )
 

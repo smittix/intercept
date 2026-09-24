@@ -90,6 +90,7 @@ class UbertoothScanner:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                errors="replace",
                 bufsize=1,  # Line buffered
             )
 

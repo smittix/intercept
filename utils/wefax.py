@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import base64
 import contextlib
+import errno
 import io
 import math
 import os
@@ -246,6 +247,7 @@ class WeFaxDecoder:
         self._output_dir.mkdir(parents=True, exist_ok=True)
         self._sdr_tool_name: str = "rtl_fm"
         self._last_error: str = ""
+        self.last_start_error: BaseException | None = None
 
     @property
     def is_running(self) -> bool:
@@ -307,6 +309,7 @@ class WeFaxDecoder:
             except Exception as e:
                 self._running = False
                 self._last_error = str(e)
+                self.last_start_error = e
                 logger.error(f"Failed to start WeFax decoder: {e}")
                 self._emit_progress(
                     WeFaxProgress(
@@ -325,6 +328,7 @@ class WeFaxDecoder:
             with self._lock:
                 self._running = False
                 self._last_error = str(e)
+                self.last_start_error = e
             logger.error(f"Failed to start WeFax decoder: {e}")
             self._emit_progress(
                 WeFaxProgress(
@@ -349,10 +353,10 @@ class WeFaxDecoder:
         # Validate that the required tool is available
         if sdr_type_enum == SDRType.RTL_SDR:
             if not get_tool_path("rtl_fm"):
-                raise RuntimeError("rtl_fm not found")
+                raise FileNotFoundError(errno.ENOENT, "rtl_fm not found", "rtl_fm")
         else:
             if not get_tool_path("rx_fm"):
-                raise RuntimeError("rx_fm not found (required for non-RTL-SDR devices)")
+                raise FileNotFoundError(errno.ENOENT, "rx_fm not found (required for non-RTL-SDR devices)", "rx_fm")
 
         sdr_device = SDRFactory.create_default_device(sdr_type_enum, index=self._device_index)
         builder = SDRFactory.get_builder(sdr_type_enum)

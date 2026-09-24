@@ -208,7 +208,13 @@ class WeatherSatDecoder:
 
     @property
     def decoder_available(self) -> str | None:
-        """Return name of available decoder or None."""
+        """Return name of available decoder or None.
+
+        A miss is checked again, so installing SatDump takes effect without
+        restarting iNTERCEPT.
+        """
+        if self._decoder is None:
+            self._decoder = self._detect_decoder()
         return self._decoder
 
     @property
@@ -277,7 +283,7 @@ class WeatherSatDecoder:
             if self._running:
                 return True, None
 
-            if not self._decoder:
+            if not self.decoder_available:
                 logger.error("No weather satellite decoder available")
                 msg = "SatDump not installed. Build from source or install via package manager."
                 self._emit_progress(
@@ -431,7 +437,7 @@ class WeatherSatDecoder:
             if self._running:
                 return True, None
 
-            if not self._decoder:
+            if not self.decoder_available:
                 logger.error("No weather satellite decoder available")
                 msg = "SatDump not installed. Build from source or install via package manager."
                 self._emit_progress(
@@ -1224,7 +1230,7 @@ class WeatherSatDecoder:
             elapsed = int(time.time() - self._capture_start_time)
 
         return {
-            "available": self._decoder is not None,
+            "available": self.decoder_available is not None,
             "decoder": self._decoder,
             "running": self._running,
             "satellite": self._current_satellite,

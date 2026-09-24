@@ -35,3 +35,17 @@ def api_error(message, status_code=400, error_type=None):
     if error_type:
         payload["error_type"] = error_type
     return jsonify(payload), status_code
+
+
+def start_failure(error: BaseException | None, what: str = "decoder"):
+    """Error response for a mode that failed to start.
+
+    A missing executable is the operator's to fix, so it is a 400 naming the
+    tool; anything else is a 500 carrying the underlying reason.
+    """
+    if isinstance(error, FileNotFoundError):
+        tool = error.filename or "A required tool"
+        return api_error(f"{tool} not found. Install it to use this mode.", 400, error_type="TOOL_MISSING")
+    if error is not None:
+        return api_error(f"Failed to start {what}: {error}", 500)
+    return api_error(f"Failed to start {what}", 500)

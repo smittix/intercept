@@ -19,7 +19,7 @@ import app as app_module
 from routes.satellite import get_cached_tle
 from utils.event_pipeline import process_event
 from utils.logging import get_logger
-from utils.responses import api_error
+from utils.responses import api_error, start_failure
 from utils.sse import sse_stream_fanout
 from utils.sstv import (
     ISS_SSTV_FREQ,
@@ -247,7 +247,7 @@ def start_decoder():
     else:
         # Release device on failure
         app_module.release_sdr_device(device_int, sdr_type_str)
-        return jsonify({"status": "error", "message": "Failed to start decoder"}), 500
+        return start_failure(decoder.last_start_error)
 
 
 @sstv_bp.route("/stop", methods=["POST"])

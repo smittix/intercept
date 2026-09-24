@@ -456,13 +456,13 @@ def start_morse() -> Response:
             with contextlib.suppress(queue.Full):
                 control_q.put_nowait({"cmd": "shutdown"})
 
-        if rtl_proc is not None:
-            _close_pipe(getattr(rtl_proc, "stdout", None))
-            _close_pipe(getattr(rtl_proc, "stderr", None))
-
+        # Terminate before closing the pipes: close() blocks while a reader
+        # thread is mid-read on a silent pipe, and only process exit ends it.
         if rtl_proc is not None:
             safe_terminate(rtl_proc, timeout=0.4)
             unregister_process(rtl_proc)
+            _close_pipe(getattr(rtl_proc, "stdout", None))
+            _close_pipe(getattr(rtl_proc, "stderr", None))
 
         _join_thread(decoder_worker, timeout_s=0.35)
         _join_thread(stderr_worker, timeout_s=0.35)
@@ -820,15 +820,15 @@ def stop_morse() -> Response:
             control_queue.put_nowait({"cmd": "shutdown"})
         _mark("control_queue shutdown signal sent")
 
-    if rtl_proc is not None:
-        _close_pipe(getattr(rtl_proc, "stdout", None))
-        _close_pipe(getattr(rtl_proc, "stderr", None))
-        _mark("rtl_fm pipes closed")
-
+    # Terminate before closing the pipes: close() blocks while a reader
+    # thread is mid-read on a silent pipe, and only process exit ends it.
     if rtl_proc is not None:
         safe_terminate(rtl_proc, timeout=0.6)
         unregister_process(rtl_proc)
         _mark("rtl_fm process terminated")
+        _close_pipe(getattr(rtl_proc, "stdout", None))
+        _close_pipe(getattr(rtl_proc, "stderr", None))
+        _mark("rtl_fm pipes closed")
 
     decoder_joined = _join_thread(decoder_thread, timeout_s=0.45)
     stderr_joined = _join_thread(stderr_thread, timeout_s=0.45)

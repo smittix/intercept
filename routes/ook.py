@@ -278,11 +278,9 @@ def cleanup_ook(*, emit_status: bool = True) -> None:
     if _ook_stop_event:
         _ook_stop_event.set()
 
-    # Close pipes so parser thread unblocks from readline()
-    _close_pipe(getattr(proc, "stdout", None))
-    _close_pipe(getattr(proc, "stderr", None))
-
-    # Kill the entire process group so child processes are cleaned up
+    # Kill the entire process group so child processes are cleaned up.
+    # This is what unblocks the parser's readline(): the pipe reaches EOF.
+    # Closing the pipes first does not; close() waits on the blocked reader.
     try:
         pgid = os.getpgid(proc.pid)
         os.killpg(pgid, signal.SIGTERM)
@@ -294,6 +292,8 @@ def cleanup_ook(*, emit_status: bool = True) -> None:
     except (ProcessLookupError, OSError):
         # Process already dead — fall back to normal terminate
         safe_terminate(proc)
+    _close_pipe(getattr(proc, "stdout", None))
+    _close_pipe(getattr(proc, "stderr", None))
     unregister_process(proc)
     app_module.ook_process = None
 

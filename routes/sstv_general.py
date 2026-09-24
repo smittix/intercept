@@ -15,7 +15,7 @@ from flask import Blueprint, Response, jsonify, request, send_file
 import app as app_module
 from utils.event_pipeline import process_event
 from utils.logging import get_logger
-from utils.responses import api_error
+from utils.responses import api_error, start_failure
 from utils.sse import sse_stream_fanout
 from utils.sstv import (
     get_general_sstv_decoder,
@@ -254,7 +254,7 @@ def start_decoder():
         )
     else:
         app_module.release_sdr_device(device_int, sdr_type_str)
-        return api_error("Failed to start decoder", 500)
+        return start_failure(decoder.last_start_error)
 
 
 @sstv_general_bp.route("/stop", methods=["POST"])

@@ -210,7 +210,7 @@ def start_mesh():
         client = get_meshtastic_client()
         return jsonify(
             {"status": "error", "message": client.error if client else "Failed to connect to Meshtastic device"}
-        ), 500
+        ), 503
 
 
 @meshtastic_bp.route("/stop", methods=["POST"])

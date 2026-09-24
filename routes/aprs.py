@@ -1987,7 +1987,7 @@ def stop_aprs() -> Response:
             processes_to_stop.append(app_module.aprs_process)
 
         if not processes_to_stop:
-            return api_error("APRS decoder not running", 400)
+            return jsonify({"status": "not_running"})
 
         # Release SDR device immediately so status panel reflects the
         # change without waiting for process termination.

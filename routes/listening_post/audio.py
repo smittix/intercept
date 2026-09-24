@@ -11,6 +11,7 @@ import time
 from flask import Response, jsonify, request
 
 import routes.listening_post as _state
+from utils.responses import start_failure
 
 from . import (
     _start_audio_stream,
@@ -214,6 +215,9 @@ def start_audio() -> Response:
             app_module.release_sdr_device(_state.receiver_active_device, _state.receiver_active_sdr_type)
             _state.receiver_active_device = None
             _state.receiver_active_sdr_type = "rtlsdr"
+
+        if _state.audio_start_error is not None:
+            return start_failure(_state.audio_start_error, "audio")
 
         start_error = ""
         for log_path in ("/tmp/rtl_fm_stderr.log", "/tmp/ffmpeg_stderr.log"):
