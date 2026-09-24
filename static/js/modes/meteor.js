@@ -38,6 +38,7 @@ const MeteorScatter = (function () {
     let _stars = [];
     let _meteors = [];
     let _starAnimId = null;
+    let _nextIdleStreak = 0;
 
     // Signal meter state
     let _peakSignal = 0;
@@ -468,6 +469,13 @@ const MeteorScatter = (function () {
         wfWrap.insertBefore(_starCanvas, wfWrap.firstChild);
         _starCtx = _starCanvas.getContext('2d');
 
+        const note = document.createElement('div');
+        note.className = 'ms-idle-note';
+        note.id = 'meteorIdleNote';
+        note.innerHTML = '<strong>Idle</strong><span>Start monitoring: each ping from a meteor trail streaks across here, brighter for a stronger echo.</span>';
+        wfWrap.appendChild(note);
+        _updateUI();
+
         _resizeStarfield();
         _generateStars();
         _starAnimLoop();
@@ -481,6 +489,8 @@ const MeteorScatter = (function () {
         if (_starCanvas && _starCanvas.parentNode) {
             _starCanvas.parentNode.removeChild(_starCanvas);
         }
+        const note = document.getElementById('meteorIdleNote');
+        if (note) note.remove();
         _starCanvas = null;
         _starCtx = null;
         _stars = [];
@@ -520,6 +530,12 @@ const MeteorScatter = (function () {
         const now = performance.now() * 0.001;
 
         ctx.clearRect(0, 0, w, h);
+
+        // Idle: an occasional faint streak, a hint of what a ping looks like
+        if (!_running && now > _nextIdleStreak) {
+            if (_nextIdleStreak) _spawnMeteorStreak(4 + Math.random() * 6, 0.45);
+            _nextIdleStreak = now + 3 + Math.random() * 4;
+        }
 
         // Draw twinkling stars
         for (const s of _stars) {
@@ -580,14 +596,14 @@ const MeteorScatter = (function () {
         _starAnimId = requestAnimationFrame(_starAnimLoop);
     }
 
-    function _spawnMeteorStreak(snr) {
+    function _spawnMeteorStreak(snr, dim) {
         if (!_starCanvas) return;
         const w = _starCanvas.width;
         const h = _starCanvas.height;
 
         // Brightness and size proportional to SNR
         const norm = Math.min(1, Math.max(0, (snr - 3) / 27)); // 3-30 dB range
-        const brightness = 0.4 + norm * 0.6;
+        const brightness = (0.4 + norm * 0.6) * (dim || 1);
         const streakWidth = 1 + norm * 3;
         const duration = 0.4 + norm * 0.8; // 0.4s to 1.2s
 
@@ -772,6 +788,9 @@ const MeteorScatter = (function () {
         const sidebarStop = document.getElementById('meteorSidebarStopBtn');
         if (sidebarStart) sidebarStart.style.display = _running ? 'none' : '';
         if (sidebarStop) sidebarStop.style.display = _running ? '' : 'none';
+
+        const idleNote = document.getElementById('meteorIdleNote');
+        if (idleNote) idleNote.hidden = _running;
     }
 
     function _flashPing(snr) {
