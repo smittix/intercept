@@ -43,14 +43,17 @@
             <div class="summary-card">
                 <div class="summary-label">Messages</div>
                 <div class="summary-value" id="summaryMessages">--</div>
+                <div class="summary-spark" id="summaryMessagesSpark"></div>
             </div>
             <div class="summary-card">
                 <div class="summary-label">Snapshots</div>
                 <div class="summary-value" id="summarySnapshots">--</div>
+                <div class="summary-spark" id="summarySnapshotsSpark"></div>
             </div>
             <div class="summary-card">
                 <div class="summary-label">Aircraft</div>
                 <div class="summary-value" id="summaryAircraft">--</div>
+                <div class="summary-spark" id="summaryAircraftSpark"></div>
             </div>
             <div class="summary-card">
                 <div class="summary-label">First Seen</div>
@@ -60,6 +63,15 @@
                 <div class="summary-label">Last Seen</div>
                 <div class="summary-value" id="summaryLastSeen">--</div>
             </div>
+        </section>
+
+        <section class="traffic-strip" id="trafficStrip" hidden>
+            <div class="traffic-head">
+                <span class="traffic-title">Traffic</span>
+                <span class="traffic-sub" id="trafficSub"></span>
+            </div>
+            <div class="traffic-bars" id="trafficBars"></div>
+            <div class="traffic-axis" id="trafficAxis"></div>
         </section>
 
         <section class="session-strip">
@@ -720,6 +732,61 @@
             summaryLastSeen.textContent = formatTime(data.last_seen);
         }
 
+        // Aircraft per bucket as a bar strip, and each summary total's trend as a sparkline
+        async function loadTraffic() {
+            const sinceMinutes = Number(windowSelect.value);
+            const resp = await fetch(`/adsb/history/traffic?since_minutes=${sinceMinutes}&buckets=24`);
+            const strip = document.getElementById('trafficStrip');
+            if (!resp.ok) {
+                strip.hidden = true;
+                return;
+            }
+            const data = await resp.json();
+            renderSpark('summaryMessagesSpark', data.messages);
+            renderSpark('summarySnapshotsSpark', data.snapshots);
+            renderSpark('summaryAircraftSpark', data.aircraft);
+
+            const start = Date.now() - sinceMinutes * 60000;
+            const bucketMs = data.bucket_seconds * 1000;
+            const peak = Math.max(1, ...data.aircraft);
+            const peakIndex = data.aircraft.indexOf(Math.max(...data.aircraft));
+            const long = sinceMinutes > 1440;
+            const label = (ms) => long
+                ? new Date(ms).toLocaleDateString([], { weekday: 'short', day: 'numeric' })
+                : new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const bars = document.getElementById('trafficBars');
+            bars.replaceChildren(...data.aircraft.map((count, i) => {
+                const bar = document.createElement('div');
+                bar.className = 'traffic-bar' + (i === peakIndex && count ? ' peak' : '');
+                bar.style.setProperty('--h', (count / peak * 100).toFixed(1) + '%');
+                bar.title = `${label(start + i * bucketMs)} – ${label(start + (i + 1) * bucketMs)}: ` +
+                    `${formatNumber(count)} aircraft, ${formatNumber(data.messages[i])} messages`;
+                return bar;
+            }));
+            const axis = document.getElementById('trafficAxis');
+            axis.replaceChildren(...[0, 0.25, 0.5, 0.75, 1].map((f) => {
+                const tick = document.createElement('span');
+                tick.textContent = f === 1 ? 'now' : label(start + f * sinceMinutes * 60000);
+                return tick;
+            }));
+            const minutes = data.bucket_seconds / 60;
+            const per = minutes >= 60 ? (minutes === 60 ? 'hour' : `${+(minutes / 60).toFixed(1)} h`) : `${Math.round(minutes)} min`;
+            document.getElementById('trafficSub').textContent = `aircraft per ${per}` +
+                (data.aircraft[peakIndex] ? ` · busiest ${label(start + peakIndex * bucketMs)} (${formatNumber(data.aircraft[peakIndex])})` : '');
+            strip.hidden = false;
+        }
+
+        function renderSpark(id, values) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const max = Math.max(1, ...values);
+            const step = 100 / Math.max(1, values.length - 1);
+            const points = values.map((v, i) => `${(i * step).toFixed(1)},${(22 - v / max * 20).toFixed(1)}`).join(' ');
+            el.innerHTML = `<svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+                <polygon points="0,24 ${points} 100,24"/><polyline points="${points}"/></svg>`;
+        }
+
         async function loadAircraft() {
             const sinceMinutes = windowSelect.value;
             const limit = limitSelect.value;
@@ -1106,7 +1173,7 @@
             if (!historyEnabled) {
                 return;
             }
-            await Promise.all([loadSummary(), loadAircraft(), loadSessionStatus()]);
+            await Promise.all([loadSummary(), loadTraffic(), loadAircraft(), loadSessionStatus()]);
             if (selectedIcao) {
                 await loadTimeline(selectedIcao);
             }

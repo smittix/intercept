@@ -1426,6 +1426,53 @@ def adsb_history_aircraft():
         return api_error("History database unavailable", 503)
 
 
+@adsb_bp.route("/history/traffic")
+def adsb_history_traffic():
+    """Traffic over the history window in equal buckets: distinct aircraft and
+    snapshots per bucket (adsb_snapshots) and messages (adsb_messages), oldest
+    first, for the summary sparklines and the traffic strip."""
+    if not ADSB_HISTORY_ENABLED or not PSYCOPG2_AVAILABLE:
+        return api_error("ADS-B history is disabled", 503)
+    _ensure_history_schema()
+
+    since_minutes = _parse_int_param(request.args.get("since_minutes"), 1440, 1, 10080)
+    buckets = _parse_int_param(request.args.get("buckets"), 24, 1, 168)
+    window = f"{since_minutes} minutes"
+    bucket_seconds = since_minutes * 60 / buckets
+
+    # Bucket index from the window start. A row stamped exactly NOW() would
+    # fall one past the last bucket; LEAST keeps it in the last.
+    sql = """
+        SELECT LEAST(%s, FLOOR(EXTRACT(EPOCH FROM ({col} - (NOW() - INTERVAL %s))) / %s))::int AS bucket,
+               {counts}
+        FROM {table}
+        WHERE {col} >= NOW() - INTERVAL %s
+        GROUP BY 1
+    """
+    snapshots_sql = sql.format(
+        col="captured_at", table="adsb_snapshots", counts="COUNT(DISTINCT icao) AS aircraft, COUNT(*) AS snapshots"
+    )
+    messages_sql = sql.format(col="received_at", table="adsb_messages", counts="COUNT(*) AS messages")
+    params = (buckets - 1, window, bucket_seconds, window)
+
+    series = {name: [0] * buckets for name in ("aircraft", "snapshots", "messages")}
+    try:
+        with _get_history_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(snapshots_sql, params)
+            for row in cur.fetchall():
+                if 0 <= row["bucket"] < buckets:
+                    series["aircraft"][row["bucket"]] = row["aircraft"]
+                    series["snapshots"][row["bucket"]] = row["snapshots"]
+            cur.execute(messages_sql, params)
+            for row in cur.fetchall():
+                if 0 <= row["bucket"] < buckets:
+                    series["messages"][row["bucket"]] = row["messages"]
+        return jsonify({"since_minutes": since_minutes, "buckets": buckets, "bucket_seconds": bucket_seconds, **series})
+    except Exception as exc:
+        logger.warning("ADS-B history traffic query failed: %s", exc)
+        return api_error("History database unavailable", 503)
+
+
 @adsb_bp.route("/history/timeline")
 def adsb_history_timeline():
     """Timeline snapshots for a specific aircraft."""
