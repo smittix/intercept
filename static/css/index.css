@@ -29,8 +29,8 @@
     /* Text hierarchy */
     --text-primary: #d7e0ee;
     --text-secondary: #9fb0c7;
-    --text-dim: #6f7f94;
-    --text-muted: #445266;
+    --text-dim: #7d8da2;
+    --text-muted: #6c7d92;  /* 4.5:1 on the page (was 2.5:1) */
 
     /* Borders */
     --border-color: #263246;
@@ -63,8 +63,8 @@
     --accent-amber: #b5863a;
     --text-primary: #122034;
     --text-secondary: #3a4a5f;
-    --text-dim: #6b7c93;
-    --text-muted: #aab6c8;
+    --text-dim: #566a7f;
+    --text-muted: #5f6f84;  /* was 2:1 on white */
     --border-color: #d1d9e6;
     --border-light: #c1ccdb;
     --border-glow: rgba(31, 95, 168, 0.12);

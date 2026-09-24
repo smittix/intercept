@@ -1060,7 +1060,7 @@ var MorseMode = (function () {
                 scopeStatus.style.color = '#ffaa00';
             } else {
                 scopeStatus.textContent = 'IDLE';
-                scopeStatus.style.color = '#444';
+                scopeStatus.style.color = 'var(--text-dim)';
             }
         }
 

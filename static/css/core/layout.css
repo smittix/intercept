@@ -1502,3 +1502,14 @@ body.nav-more-open .app-toast-stack {
 body.nav-notices-open .app-toast-stack {
     visibility: hidden;
 }
+
+/* A visible focus ring for keyboard users on every page (core/base.css has
+   one, but the main page does not load it) */
+:focus-visible {
+    outline: 2px solid var(--accent-cyan);
+    outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+}

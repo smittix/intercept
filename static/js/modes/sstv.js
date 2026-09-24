@@ -829,12 +829,12 @@ const SSTV = (function() {
             if (sstvScopeTone === 'leader') { toneLabel.textContent = 'LEADER'; toneLabel.style.color = '#0f0'; }
             else if (sstvScopeTone === 'sync') { toneLabel.textContent = 'SYNC'; toneLabel.style.color = '#0ff'; }
             else if (sstvScopeTone === 'decoding') { toneLabel.textContent = 'DECODING'; toneLabel.style.color = '#fa0'; }
-            else if (sstvScopeTone === 'noise') { toneLabel.textContent = 'NOISE'; toneLabel.style.color = '#555'; }
-            else { toneLabel.textContent = 'QUIET'; toneLabel.style.color = '#444'; }
+            else if (sstvScopeTone === 'noise') { toneLabel.textContent = 'NOISE'; toneLabel.style.color = 'var(--text-dim)'; }
+            else { toneLabel.textContent = 'QUIET'; toneLabel.style.color = 'var(--text-dim)'; }
         }
         if (statusLabel) {
             if (sstvScopeRms > 500) { statusLabel.textContent = 'SIGNAL'; statusLabel.style.color = '#0f0'; }
-            else { statusLabel.textContent = 'MONITORING'; statusLabel.style.color = '#555'; }
+            else { statusLabel.textContent = 'MONITORING'; statusLabel.style.color = 'var(--text-dim)'; }
         }
 
         sstvScopeAnim = requestAnimationFrame(drawSstvScope);
