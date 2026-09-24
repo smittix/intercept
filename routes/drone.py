@@ -6,6 +6,7 @@ import logging
 import os
 import platform
 import queue
+import shutil
 import subprocess
 import threading
 
@@ -13,9 +14,11 @@ from flask import Blueprint, Response, jsonify, request
 
 import app as app_module
 from utils.constants import SSE_KEEPALIVE_INTERVAL, SSE_QUEUE_TIMEOUT
+from utils.drone import remote_id
 from utils.drone.correlator import DroneCorrelator
 from utils.drone.remote_id import RemoteIDScanner
 from utils.drone.rf_detector import RFDetector
+from utils.responses import api_error
 from utils.sse import sse_stream_fanout
 from utils.validation import validate_device_index
 
@@ -29,6 +32,8 @@ _rf_detector: RFDetector | None = None
 _obs_queue: queue.Queue | None = None  # raw observations from scanners/detectors
 _relay_thread: threading.Thread | None = None
 _drone_running = False
+_drone_vectors: list[str] = []  # the detection sources this run started
+_claimed_device: int | None = None
 _drone_lock = threading.Lock()
 
 _SENTINEL = object()
@@ -164,15 +169,10 @@ def devices():
 
 @drone_bp.route("/status")
 def status():
-    vectors = []
-    if _remote_id_scanner and _remote_id_scanner.running:
-        vectors.append("REMOTE_ID")
-    if _rf_detector and _rf_detector.running:
-        vectors.append("RF")
     return jsonify(
         {
             "running": _drone_running,
-            "vectors": vectors,
+            "vectors": list(_drone_vectors),
             "contact_count": len(_correlator.get_all()) if _correlator else 0,
         }
     )
@@ -187,7 +187,13 @@ def contacts():
 
 @drone_bp.route("/start", methods=["POST"])
 def start():
-    global _drone_running
+    """Start every detection source that can run, or fail naming why none can.
+
+    Each source is optional: Remote ID needs scapy and a Wi-Fi interface,
+    433/868 MHz needs rtl_433 and a free RTL-SDR (claimed here), and
+    2.4/5.8 GHz needs hackrf_sweep.
+    """
+    global _drone_running, _claimed_device
     body = request.json or {}
     wifi_iface = body.get("wifi_iface") or None
     try:
@@ -197,21 +203,57 @@ def start():
     use_hackrf = bool(body.get("use_hackrf", True))
 
     with _drone_lock:
-        _ensure_workers()
-        if not _drone_running:
-            if _remote_id_scanner:
-                _remote_id_scanner.start(wifi_iface=wifi_iface)
-            if _rf_detector:
-                _rf_detector.start(rtl_sdr_index=rtl_index, use_hackrf=use_hackrf)
-            _drone_running = True
-            logger.info("Drone detection started")
+        if _drone_running:
+            return jsonify({"status": "ok", "running": True, "vectors": list(_drone_vectors)})
 
-    return jsonify({"status": "ok", "running": True})
+        vectors, unavailable = [], []
+        if not remote_id.SCAPY_AVAILABLE:
+            unavailable.append("Remote ID: scapy is not installed")
+        elif not wifi_iface:
+            unavailable.append("Remote ID: no Wi-Fi interface selected")
+        else:
+            vectors.append("REMOTE_ID")
+
+        claimed = None
+        if not shutil.which("rtl_433"):
+            unavailable.append("433/868 MHz: rtl_433 not found")
+        else:
+            error = app_module.claim_sdr_device(rtl_index, "drone")
+            if error:
+                unavailable.append(f"433/868 MHz: {error}")
+            else:
+                claimed = rtl_index
+                vectors.append("RTL433")
+
+        if not use_hackrf:
+            pass
+        elif not shutil.which("hackrf_sweep"):
+            unavailable.append("2.4/5.8 GHz: hackrf_sweep not found")
+        else:
+            vectors.append("HACKRF")
+
+        if not vectors:
+            return api_error(
+                "No drone detection source is available. " + "; ".join(unavailable) + ".",
+                400,
+                error_type="TOOL_MISSING",
+            )
+
+        _ensure_workers()
+        if "REMOTE_ID" in vectors:
+            _remote_id_scanner.start(wifi_iface=wifi_iface)
+        _rf_detector.start(rtl_sdr_index=claimed, use_hackrf="HACKRF" in vectors)
+        _claimed_device = claimed
+        _drone_vectors[:] = vectors
+        _drone_running = True
+        logger.info("Drone detection started: %s", ", ".join(vectors))
+
+    return jsonify({"status": "ok", "running": True, "vectors": vectors, "unavailable": unavailable})
 
 
 @drone_bp.route("/stop", methods=["POST"])
 def stop():
-    global _drone_running
+    global _drone_running, _claimed_device
     with _drone_lock:
         if _remote_id_scanner:
             _remote_id_scanner.stop()
@@ -219,6 +261,10 @@ def stop():
             _rf_detector.stop()
         if _obs_queue is not None:
             _obs_queue.put_nowait(_SENTINEL)
+        if _claimed_device is not None:
+            app_module.release_sdr_device(_claimed_device)
+            _claimed_device = None
+        _drone_vectors.clear()
         _drone_running = False
     logger.info("Drone detection stopped")
     return jsonify({"status": "ok", "running": False})

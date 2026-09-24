@@ -93,12 +93,7 @@ MODES = {
         "/wifi/v2/scan/status",
         success="a deep scan needs root and a monitor-mode interface",
     ),
-    "drone": _mode(
-        "/drone/start",
-        "/drone/stop",
-        "/drone/status",
-        missing_tool="runs degraded by design: each detection source is optional",
-    ),
+    "drone": _mode("/drone/start", "/drone/stop", "/drone/status"),
     "bluetooth": _mode(
         "/api/bluetooth/scan/start",
         "/api/bluetooth/scan/stop",
@@ -495,3 +490,22 @@ class TestLifecycleRecord:
 
             client.post(spec["stop"], json={})
         assert self._record(client, "sensor")["started_at"] is None
+
+
+def test_drone_claims_its_sdr_and_reports_the_sources_it_started(client, lifecycle):
+    """Each drone source is optional, but the run reports which ones started,
+    and the RTL-SDR it uses is claimed until stop."""
+    spec = lifecycle("drone")
+    with _decoders(installed=True):
+        resp = client.post(spec["start"], json={"rtl_sdr_index": 0, "use_hackrf": False})
+        assert resp.status_code == 200, _message(resp)
+        assert resp.get_json()["vectors"] == ["RTL433"]
+        assert client.get("/drone/status").get_json()["vectors"] == ["RTL433"]
+        assert app_module.sdr_device_registry == {"rtlsdr:0": "drone"}
+
+        # another mode cannot take the SDR the drone detector is using
+        assert app_module.claim_sdr_device(0, "sensor") is not None
+
+        client.post(spec["stop"], json={})
+        assert app_module.sdr_device_registry == {}
+        assert client.get("/drone/status").get_json()["vectors"] == []
