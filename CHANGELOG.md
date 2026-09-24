@@ -6,6 +6,7 @@ All notable changes to iNTERCEPT will be documented in this file.
 
 ### Fixed
 
+- **A TSCM sweep that detected nothing was reported as clear.** With zero devices on every band the report read "OVERALL ASSESSMENT: LOW. No significant indicators of surveillance activity were detected", presenting a sweep whose equipment was not receiving as a clean room. It now reads INCONCLUSIVE and says why. An enabled Wi-Fi or Bluetooth band that detected no devices is listed first under the sweep's limitations, with a prompt to check the adapter; a quiet RF band can be genuine and is not flagged.
 - **TSCM report findings all read "Signal: Minimal (Confidence: Low)".** The report looked for `rssi_mean`, `observation_count` and `observation_duration_seconds`, none of which a correlation-engine profile carries, so every finding was assessed from no data. It now uses the profile's `rssi_current`, `detection_count` and first/last-seen times.
 - **The TSCM CSV annex listed every device as `informational` with risk score 0**, including high-interest ones, because device timelines carry no risk fields. Device rows now take risk level, score and indicators from the device's finding.
 - **CSV annex cells could be read as spreadsheet formulas.** Bluetooth names are chosen by whoever owns the device; a name beginning `=`, `+`, `-` or `@` now gets a leading apostrophe so Excel and LibreOffice treat it as text.
