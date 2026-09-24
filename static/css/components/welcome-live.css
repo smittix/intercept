@@ -195,10 +195,3 @@
     background: var(--accent-green);
     box-shadow: 0 0 6px var(--accent-green);
 }
-
-/* The mode list's scrollbar was the browser's white default */
-.welcome-modes,
-.welcome-changelog {
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-color) transparent;
-}
