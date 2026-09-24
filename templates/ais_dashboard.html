@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
 <head>
+    <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/copy-id.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/device-notes.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/live-empty-state.js') }}"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VESSEL RADAR // INTERCEPT - See the Invisible</title>
@@ -433,7 +437,7 @@
             drawRangeRings();
             loadDevices();
             updateClock();
-            setInterval(updateClock, 1000);
+            VisibleInterval.set(updateClock, 1000);
             setInterval(cleanupStaleVessels, 10000);
         }
 
@@ -846,7 +850,7 @@
                     <div class="vessel-icon">${iconSvg}</div>
                     <div>
                         <div class="vessel-name">${vessel.name || 'Unknown Vessel'}</div>
-                        <div class="vessel-mmsi">MMSI: ${vessel.mmsi}</div>
+                        <div class="vessel-mmsi">MMSI: ${CopyId.html(vessel.mmsi)}${DeviceNotes.html(vessel.mmsi, 'ais')}</div>
                     </div>
                 </div>
                 <div class="vessel-details">
@@ -927,7 +931,7 @@
                         <div class="vessel-item-icon">${iconSvg}</div>
                         <div class="vessel-item-info">
                             <div class="vessel-item-name">${v.name || 'Unknown'}${agentBadge}</div>
-                            <div class="vessel-item-type">${category} | ${v.mmsi}</div>
+                            <div class="vessel-item-type">${category} | ${CopyId.html(v.mmsi)}${DeviceNotes.html(v.mmsi, 'ais')}</div>
                         </div>
                         <div class="vessel-item-speed">${v.speed ? v.speed + ' kt' : '-'}</div>
                     </div>
@@ -1093,22 +1097,22 @@
             if (!stats.sessionStart) {
                 stats.sessionStart = Date.now();
             }
-            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
-            sessionTimerInterval = setInterval(updateSessionTimer, 1000);
+            if (sessionTimerInterval) VisibleInterval.clear(sessionTimerInterval);
+            sessionTimerInterval = VisibleInterval.set(updateSessionTimer, 1000);
 
             // Start message rate tracking
-            if (messageRateInterval) clearInterval(messageRateInterval);
+            if (messageRateInterval) VisibleInterval.clear(messageRateInterval);
             lastMessageCount = stats.messagesReceived;
-            messageRateInterval = setInterval(updateMessageRate, 1000);
+            messageRateInterval = VisibleInterval.set(updateMessageRate, 1000);
         }
 
         function stopSessionTimer() {
             if (sessionTimerInterval) {
-                clearInterval(sessionTimerInterval);
+                VisibleInterval.clear(sessionTimerInterval);
                 sessionTimerInterval = null;
             }
             if (messageRateInterval) {
-                clearInterval(messageRateInterval);
+                VisibleInterval.clear(messageRateInterval);
                 messageRateInterval = null;
             }
         }
@@ -1374,7 +1378,7 @@
             alertDiv.className = 'dsc-distress-alert';
             alertDiv.innerHTML = `
                 <div class="dsc-alert-header">${data.category}</div>
-                <div class="dsc-alert-mmsi">MMSI: ${data.source_mmsi}</div>
+                <div class="dsc-alert-mmsi">MMSI: ${CopyId.html(data.source_mmsi)}${DeviceNotes.html(data.source_mmsi, 'dsc')}</div>
                 ${data.source_country ? `<div class="dsc-alert-country">${data.source_country}</div>` : ''}
                 ${data.nature_of_distress ? `<div class="dsc-alert-nature">${data.nature_of_distress}</div>` : ''}
                 ${data.latitude ? `<div class="dsc-alert-position">${data.latitude.toFixed(4)}, ${data.longitude.toFixed(4)}</div>` : ''}
@@ -1458,7 +1462,7 @@
                             <span class="dsc-message-category">${msg.category}</span>
                             <span class="dsc-message-time">${formatDscTime(msg.timestamp)}</span>
                         </div>
-                        <div class="dsc-message-mmsi">MMSI: ${msg.source_mmsi}</div>
+                        <div class="dsc-message-mmsi">MMSI: ${CopyId.html(msg.source_mmsi)}${DeviceNotes.html(msg.source_mmsi, 'dsc')}</div>
                         ${msg.source_country ? `<div class="dsc-message-country">${msg.source_country}</div>` : ''}
                         ${msg.nature_of_distress ? `<div class="dsc-message-nature">${msg.nature_of_distress}</div>` : ''}
                         ${msg.latitude ? `<div class="dsc-message-pos">${msg.latitude.toFixed(4)}, ${msg.longitude.toFixed(4)}</div>` : ''}

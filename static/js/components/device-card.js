@@ -44,16 +44,7 @@ const DeviceCard = (function() {
      * Format relative time
      */
     function formatRelativeTime(isoString) {
-        if (!isoString) return '';
-        const date = new Date(isoString);
-        const now = new Date();
-        const diff = Math.floor((now - date) / 1000);
-
-        if (diff < 10) return 'Just now';
-        if (diff < 60) return `${diff}s ago`;
-        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-        return date.toLocaleDateString();
+        return InterceptTime.relative(isoString);
     }
 
     /**
@@ -203,7 +194,7 @@ const DeviceCard = (function() {
         const identityHtml = '<div class="device-identity">' +
             '<div class="device-name">' + escapeHtml(deviceName) + '</div>' +
             '<div class="device-address">' +
-            '<span class="address-value">' + escapeHtml(deviceAddress) + '</span>' +
+            '<span class="address-value">' + CopyId.html(deviceAddress) + DeviceNotes.html(device.address, 'bluetooth') + '</span>' +
             '<span class="address-type">(' + escapeHtml(addressType) + ')</span>' +
             '</div></div>';
 
@@ -247,7 +238,7 @@ const DeviceCard = (function() {
                     <div class="signal-advanced-grid">
                         <div class="signal-advanced-item">
                             <span class="signal-advanced-label">Address</span>
-                            <span class="signal-advanced-value">${escapeHtml(device.address)}</span>
+                            <span class="signal-advanced-value">${CopyId.html(device.address)}${DeviceNotes.html(device.address, 'bluetooth')}</span>
                         </div>
                         <div class="signal-advanced-item">
                             <span class="signal-advanced-label">Address Type</span>

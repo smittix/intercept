@@ -12,7 +12,10 @@ import socket as _socket_mod
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
+
+if TYPE_CHECKING:
+    import subprocess
 
 logger = logging.getLogger("intercept.gps")
 

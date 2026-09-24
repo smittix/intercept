@@ -523,6 +523,41 @@ TOOL_DEPENDENCIES = {
 }
 
 
+def package_manager() -> str:
+    """The package manager install hints are written for on this machine.
+
+    "apt" only where apt actually exists; every other Linux distribution gets
+    the project's own instructions rather than a Debian command.
+    """
+    system = platform.system().lower()
+    if system == "darwin":
+        return "brew" if shutil.which("brew") else "manual"
+    if system == "linux" and shutil.which("apt-get"):
+        return "apt"
+    return "manual"
+
+
+def install_hint(tool: str) -> str:
+    """How to install a tool here: the command for this platform's package
+    manager, or the project's own instructions. Never a guess at the platform."""
+    manager = package_manager()
+    for config in TOOL_DEPENDENCIES.values():
+        for name, tool_config in config["tools"].items():
+            if name == tool or tool in tool_config.get("alternatives", []):
+                install = tool_config.get("install", {})
+                if manager != "manual" and install.get(manager):
+                    return f"Install with: {install[manager]}"
+                if install.get("manual"):
+                    return f"See {install['manual']}"
+    return f"Install {tool} with your system's package manager."
+
+
+def install_hints() -> dict[str, str]:
+    """install_hint() for every tool the dependency map knows."""
+    tools = {name for config in TOOL_DEPENDENCIES.values() for name in config["tools"]}
+    return {tool: install_hint(tool) for tool in sorted(tools)}
+
+
 def check_all_dependencies() -> dict[str, dict[str, Any]]:
     """Check all tool dependencies and return status."""
     results: dict[str, dict[str, Any]] = {}

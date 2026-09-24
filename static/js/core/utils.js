@@ -155,13 +155,104 @@ const InterceptTime = (function() {
         return l ? ' ' + l : '';
     }
 
+    // ---- Relative time -----------------------------------------------------
+
+    /**
+     * A Date from a Date, epoch milliseconds, an ISO string, or a bare
+     * "HH:MM:SS" (several decoders send only the time of day; it is today,
+     * or yesterday if that would put it in the future).
+     * @returns {Date|null}
+     */
+    function parse(input) {
+        if (input === null || input === undefined || input === '') return null;
+        if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
+        const text = String(input).trim();
+        if (typeof input === 'number' || /^\d{11,}$/.test(text)) return new Date(Number(text));
+        const clock = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(text);
+        if (clock) {
+            const d = new Date();
+            d.setHours(Number(clock[1]), Number(clock[2]), Number(clock[3] || 0), 0);
+            if (d.getTime() - Date.now() > 60000) d.setDate(d.getDate() - 1);
+            return d;
+        }
+        const d = new Date(text);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    /** "just now", "14 s ago", "3 min ago", "2 h ago", then the date. */
+    function relative(input, now) {
+        const date = parse(input);
+        if (!date) return typeof input === 'string' ? input : '';
+        const secs = Math.round(((now === undefined ? Date.now() : now) - date.getTime()) / 1000);
+        if (secs < 5) return 'just now';  // also absorbs a little clock skew
+        if (secs < 60) return secs + ' s ago';
+        if (secs < 3600) return Math.floor(secs / 60) + ' min ago';
+        if (secs < 86400) return Math.floor(secs / 3600) + ' h ago';
+        return dateOnly(date);
+    }
+
+    /** The precise time, for a title: "Sep 24, 14:03:07 ET". */
+    function absolute(input) {
+        const date = parse(input);
+        if (!date) return '';
+        return format(date, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + tzSuffix();
+    }
+
+    function _escapeAttr(text) {
+        return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /**
+     * A <time> element the page's relative clock keeps current, with the
+     * precise time as its title. For HTML built from template strings.
+     */
+    function relTimeHtml(input) {
+        const date = parse(input);
+        if (!date) return '';
+        const iso = date.toISOString();
+        return '<time class="rel-time" data-timestamp="' + iso + '" datetime="' + iso + '" title="' +
+            _escapeAttr(absolute(date)) + '">' + _escapeAttr(relative(date)) + '</time>';
+    }
+
+    // Every relative time on the page, including the classes the signal and
+    // device cards already used, is refreshed by this one clock.
+    const RELATIVE_SELECTOR = '.rel-time[data-timestamp], .signal-timestamp[data-timestamp], ' +
+        '.device-timestamp[data-timestamp], .msg-time[data-timestamp]';
+
+    function refreshRelative(root) {
+        const now = Date.now();
+        (root || document).querySelectorAll(RELATIVE_SELECTOR).forEach((el) => {
+            const date = parse(el.dataset.timestamp);
+            if (!date) return;
+            const text = relative(date, now);
+            if (el.textContent !== text) el.textContent = text;
+            if (!el.title) el.title = absolute(date);
+        });
+    }
+
+    let _clock = null;
+    /** One interval for the whole page, idle while the tab is hidden. */
+    function startRelativeClock() {
+        if (_clock) return;
+        _clock = setInterval(() => { if (!document.hidden) refreshRelative(); }, 1000);
+    }
+
     return {
         getTimezone, getHour12, getIANA, getLabel,
         setTimezone, setHour12, onChange,
         format, shortTime, fullTime, dateTime, dateOnly, tzSuffix,
+        parse, relative, absolute, relTimeHtml, refreshRelative, startRelativeClock,
         TZ_MAP, TZ_LABELS,
     };
 })();
+
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', InterceptTime.startRelativeClock);
+    } else {
+        InterceptTime.startRelativeClock();
+    }
+}
 
 /**
  * Get relative time string from timestamp
@@ -169,17 +260,7 @@ const InterceptTime = (function() {
  * @returns {string} Relative time like "5s ago", "2m ago"
  */
 function getRelativeTime(timestamp) {
-    if (!timestamp) return '';
-    const now = new Date();
-    const parts = timestamp.split(':');
-    const msgTime = new Date();
-    msgTime.setHours(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
-
-    const diff = Math.floor((now - msgTime) / 1000);
-    if (diff < 5) return 'just now';
-    if (diff < 60) return diff + 's ago';
-    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-    return timestamp;
+    return InterceptTime.relative(timestamp);
 }
 
 /**

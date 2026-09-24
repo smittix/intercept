@@ -15,13 +15,6 @@ const PagerDirectory = (function () {
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    function formatAge(ts) {
-        const s = Math.floor((Date.now() - ts) / 1000);
-        if (s < 10) return 'just now';
-        if (s < 60) return `${s}s ago`;
-        return `${Math.floor(s / 60)}m ago`;
-    }
-
     // ---- Directory rendering ----
 
     function renderDirectory() {
@@ -49,7 +42,7 @@ const PagerDirectory = (function () {
                     <span class="pdir-count">×${data.count}</span>
                 </div>
                 <div class="pdir-bar-wrap"><div class="pdir-bar ${barClass}" style="width:${pct}%"></div></div>
-                <div class="pdir-age">${formatAge(data.lastSeen)}</div>`;
+                <div class="pdir-age">${InterceptTime.relTimeHtml(data.lastSeen)}</div>`;
 
             if (!el) {
                 el = document.createElement('div');

@@ -341,10 +341,11 @@
             </div>
 
             <div class="settings-group" style="margin-top: 15px;">
-                <div class="settings-group-title">Quick Install (Debian/Ubuntu)</div>
-                <div style="background: var(--bg-tertiary); padding: 10px; border-radius: 4px; font-family: var(--font-mono); font-size: 10px; overflow-x: auto;">
-                    <div>sudo apt install rtl-sdr multimon-ng rtl-433 aircrack-ng bluez dump1090-mutability hcxdumptool hcxtools</div>
-                    <div style="margin-top: 5px;">pip install skyfield flask</div>
+                <div class="settings-group-title">Installing Everything</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">
+                    Run <code>./setup.sh</code> from the iNTERCEPT directory. It detects your platform and
+                    installs the tools for the modes you choose. Each missing tool above shows the command for
+                    this machine.
                 </div>
                 <div style="margin-top: 10px; font-size: 11px; color: var(--text-dim);">
                     <strong>Note:</strong> ACARS decoding requires <code>acarsdec</code> which must be built from source.

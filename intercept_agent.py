@@ -78,6 +78,15 @@ try:
 except ImportError:
     HAS_DEVICE_CONFIG = False
 
+# Install advice for this platform, from the shared dependency map
+try:
+    from utils.dependencies import install_hint as _install_hint
+except ImportError:
+
+    def _install_hint(tool: str) -> str:
+        return f"Install {tool} with your system's package manager."
+
+
 # Modes that tune an SDR and so take its PPM, gain and bias-T defaults
 SDR_MODES = {"sensor", "adsb", "pager", "ais", "acars", "aprs", "rtlamr", "dsc", "listening_post"}
 
@@ -1080,7 +1089,7 @@ class ModeManager:
             }
 
         except FileNotFoundError:
-            return {"status": "error", "message": "rtl_433 not found. Install via: apt install rtl-433"}
+            return {"status": "error", "message": f"rtl_433 not found. {_install_hint('rtl_433')}"}
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
@@ -1201,7 +1210,7 @@ class ModeManager:
             # Fallback: find dump1090 manually and build command
             dump1090_path = self._find_dump1090()
             if not dump1090_path:
-                return {"status": "error", "message": "dump1090 not found. Install via: apt install dump1090-fa"}
+                return {"status": "error", "message": f"dump1090 not found. {_install_hint('dump1090')}"}
 
             cmd = [dump1090_path, "--net", "--quiet"]
             if gain:

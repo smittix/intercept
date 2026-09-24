@@ -355,8 +355,8 @@ const SSTV = (function() {
      * Start countdown timer
      */
     function startCountdown() {
-        if (countdownInterval) clearInterval(countdownInterval);
-        countdownInterval = setInterval(updateCountdown, 1000);
+        if (countdownInterval) VisibleInterval.clear(countdownInterval);
+        countdownInterval = VisibleInterval.set(updateCountdown, 1000);
         updateCountdown();
     }
 
@@ -365,7 +365,7 @@ const SSTV = (function() {
      */
     function stopCountdown() {
         if (countdownInterval) {
-            clearInterval(countdownInterval);
+            VisibleInterval.clear(countdownInterval);
             countdownInterval = null;
         }
     }

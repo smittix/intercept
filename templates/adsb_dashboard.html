@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
 <head>
+    <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/copy-id.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/device-notes.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/live-empty-state.js') }}"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AIRCRAFT RADAR // INTERCEPT - See the Invisible</title>
@@ -1148,8 +1152,8 @@
                 stats.sessionStart = Date.now();
                 sessionLog.startTime = new Date().toISOString();
             }
-            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
-            sessionTimerInterval = setInterval(updateSessionTimer, 1000);
+            if (sessionTimerInterval) VisibleInterval.clear(sessionTimerInterval);
+            sessionTimerInterval = VisibleInterval.set(updateSessionTimer, 1000);
         }
 
         function stopSessionTimer() {
@@ -1730,7 +1734,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
             if (agentPollTimer) { clearInterval(agentPollTimer); agentPollTimer = null; }
             if (acarsPollTimer) { clearInterval(acarsPollTimer); acarsPollTimer = null; }
             if (vdl2PollTimer) { clearInterval(vdl2PollTimer); vdl2PollTimer = null; }
-            if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+            if (clockInterval) { VisibleInterval.clear(clockInterval); clockInterval = null; }
             if (cleanupInterval) { clearInterval(cleanupInterval); cleanupInterval = null; }
             if (delayedGpsInitTimer) { clearTimeout(delayedGpsInitTimer); delayedGpsInitTimer = null; }
             if (delayedDriverCheckTimer) { clearTimeout(delayedDriverCheckTimer); delayedDriverCheckTimer = null; }
@@ -1798,7 +1802,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
 
             try {
                 updateClock();
-                clockInterval = setInterval(updateClock, 1000);
+                clockInterval = VisibleInterval.set(updateClock, 1000);
                 cleanupInterval = setInterval(cleanupOldAircraft, 10000);
             } catch (e) {
                 console.error('ADS-B timer bootstrap warning:', e);
@@ -2213,8 +2217,8 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                 <details style="font-size: 11px;">
                     <summary style="cursor: pointer; margin-bottom: 8px;">Installation Instructions</summary>
                     <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 4px; margin-top: 5px;">
-                        <code style="display: block; white-space: pre-wrap; font-family: var(--font-mono); font-size: 10px;">sudo apt install build-essential libsoapysdr-dev librtlsdr-dev
-git clone https://github.com/wiedehopf/readsb.git
+                        <div style="margin-bottom: 6px;">Install a C toolchain and the SoapySDR and librtlsdr development packages for your system, then:</div>
+                        <code style="display: block; white-space: pre-wrap; font-family: var(--font-mono); font-size: 10px;">git clone https://github.com/wiedehopf/readsb.git
 cd readsb
 make HAVE_SOAPYSDR=1
 sudo make install</code>
@@ -3126,7 +3130,7 @@ sudo make install</code>
             return `
                 <div class="aircraft-header">
                     <span class="aircraft-callsign">${escapeHtml(callsign)}${badge}${acarsIndicator}${agentBadge}</span>
-                    <span class="aircraft-icao">${typeCode ? escapeHtml(typeCode) + ' • ' : ''}${escapeHtml(ac.icao)}</span>
+                    <span class="aircraft-icao">${typeCode ? escapeHtml(typeCode) + ' • ' : ''}${CopyId.html(ac.icao)}${DeviceNotes.html(ac.icao, 'adsb')}</span>
                 </div>
                 <div class="aircraft-details">
                     <div class="aircraft-detail">
@@ -3381,7 +3385,7 @@ sudo make install</code>
                 <div class="telemetry-grid">
                     <div class="telemetry-item">
                         <div class="telemetry-label">ICAO</div>
-                        <div class="telemetry-value">${ac.icao}</div>
+                        <div class="telemetry-value">${CopyId.html(ac.icao)}${DeviceNotes.html(ac.icao, 'adsb')}</div>
                     </div>
                     <div class="telemetry-item">
                         <div class="telemetry-label">Squawk</div>
@@ -3510,7 +3514,7 @@ sudo make install</code>
             const text = msg.text || msg.msg || '';
             const truncText = escapeHtml(text.length > 200 ? text.substring(0, 200) + '...' : text);
             const time = msg.timestamp && typeof InterceptTime !== 'undefined'
-                ? InterceptTime.shortTime(msg.timestamp) + InterceptTime.tzSuffix()
+                ? InterceptTime.relTimeHtml(msg.timestamp)
                 : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '');
             const flight = escapeHtml(msg.flight || '');
             const tail = escapeHtml(msg.tail || msg.reg || '');
@@ -3806,12 +3810,24 @@ sudo make install</code>
             warning.innerHTML = `
                 <div style="font-weight: bold; margin-bottom: 6px;">⚠️ Airband Listen Unavailable</div>
                 <div>Missing required tools: <strong>${toolList}</strong></div>
-                <div style="margin-top: 8px; font-size: 10px; opacity: 0.9;">
-                    Install with: <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">sudo apt install rtl-sdr ffmpeg</code> (Debian) or <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">brew install librtlsdr ffmpeg</code> (macOS)
-                </div>
+                <div class="airband-install-hints" style="margin-top: 8px; font-size: 10px; opacity: 0.9;"></div>
                 <button onclick="this.parentElement.remove()" style="position: absolute; top: 5px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 14px;">×</button>
             `;
             document.body.appendChild(warning);
+            // Install advice for this platform, from the dependency map.
+            fetch('/dependencies')
+                .then(r => r.json())
+                .then(data => {
+                    const hints = (data && data.install_hints) || {};
+                    const box = warning.querySelector('.airband-install-hints');
+                    if (!box) return;
+                    missingTools.forEach(tool => {
+                        const line = document.createElement('div');
+                        line.textContent = `${tool}: ${hints[tool] || `install ${tool} with your system's package manager.`}`;
+                        box.appendChild(line);
+                    });
+                })
+                .catch(() => {});
 
             // Auto-dismiss after 15 seconds
             setTimeout(() => {

@@ -21,6 +21,7 @@ import logging
 import os
 import platform
 import queue
+import re
 import subprocess
 import threading
 from pathlib import Path
@@ -626,6 +627,69 @@ def get_devices() -> Response:
     return jsonify(describe_devices(SDRFactory.detect_devices()))
 
 
+_NOTE_PROTOCOLS = {"bluetooth", "wifi", "rf", "adsb", "ais", "dsc", "aprs", "meshtastic", "meshcore", "other"}
+_NOTE_IDENTIFIER = re.compile(r"^[A-Za-z0-9:._!-]{1,64}$")
+
+
+def _clean_note(notes) -> str | None:
+    if notes is None:
+        return None
+    if not isinstance(notes, str):
+        raise ValueError("notes must be text")
+    notes = notes.strip()
+    if len(notes) > 2000:
+        raise ValueError("notes must be at most 2000 characters")
+    if any(ord(c) < 32 and c not in "\n\t" for c in notes):
+        raise ValueError("notes must not contain control characters")
+    return notes or None
+
+
+def _clean_tags(tags) -> list[str]:
+    if tags is None:
+        return []
+    if not isinstance(tags, list) or len(tags) > 10:
+        raise ValueError("tags must be a list of at most 10")
+    cleaned = []
+    for tag in tags:
+        if not isinstance(tag, str) or not re.fullmatch(r"[\w .-]{1,32}", tag.strip()):
+            raise ValueError("each tag must be 1-32 letters, digits, spaces, dots or dashes")
+        if tag.strip() not in cleaned:
+            cleaned.append(tag.strip())
+    return cleaned
+
+
+@app.route("/device-notes")
+def list_device_notes() -> Response:
+    """Every device an operator has noted or tagged, by identifier."""
+    from utils.database import get_device_annotations
+
+    return jsonify({"status": "success", "devices": get_device_annotations()})
+
+
+@app.route("/device-notes/<identifier>", methods=["PUT", "DELETE"])
+@(csrf.exempt if csrf else lambda f: f)  # fetch() JSON API, like the blueprints
+def update_device_notes(identifier: str) -> Response:
+    """Set or clear an operator's note and tags on an observed device.
+
+    Shown wherever the device appears. A note does not make a device
+    known-good; that stays a separate, deliberate step.
+    """
+    from utils.database import set_device_annotation
+
+    if not _NOTE_IDENTIFIER.match(identifier):
+        return jsonify({"status": "error", "message": "Invalid device identifier"}), 400
+    data = {} if request.method == "DELETE" else (request.get_json(silent=True) or {})
+    protocol = data.get("protocol") or "other"
+    if protocol not in _NOTE_PROTOCOLS:
+        return jsonify({"status": "error", "message": "Unknown protocol"}), 400
+    try:
+        notes = _clean_note(data.get("notes"))
+        tags = _clean_tags(data.get("tags"))
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+    return jsonify({"status": "success", "device": set_device_annotation(identifier, protocol, notes, tags)})
+
+
 @app.route("/devices/config/<key>", methods=["PUT", "DELETE"])
 @(csrf.exempt if csrf else lambda f: f)  # fetch() JSON API, like the blueprints
 def update_device_config(key: str) -> Response:
@@ -758,18 +822,18 @@ def get_devices_debug() -> Response:
 @app.route("/dependencies")
 def get_dependencies() -> Response:
     """Get status of all tool dependencies."""
+    from utils.dependencies import install_hints, package_manager
+
     results = check_all_dependencies()
-
-    # Determine OS for install instructions
-    system = platform.system().lower()
-    if system == "darwin":
-        pkg_manager = "brew"
-    elif system == "linux":
-        pkg_manager = "apt"
-    else:
-        pkg_manager = "manual"
-
-    return jsonify({"status": "success", "os": system, "pkg_manager": pkg_manager, "modes": results})
+    return jsonify(
+        {
+            "status": "success",
+            "os": platform.system().lower(),
+            "pkg_manager": package_manager(),
+            "install_hints": install_hints(),
+            "modes": results,
+        }
+    )
 
 
 @app.route("/export/aircraft", methods=["GET"])
@@ -977,6 +1041,68 @@ def _get_wifi_health() -> tuple[bool, int, int]:
     )
 
 
+# Each mode's start and stop routes, so the live views can say how long a
+# decoder has run or why it failed to start. Keys match /health "processes".
+_MODE_LIFECYCLE_PATHS: dict[str, tuple[str, str]] = {
+    path: (mode, action)
+    for mode, start, stop in (
+        ("pager", "/start", "/stop"),
+        ("sensor", "/start_sensor", "/stop_sensor"),
+        ("rtlamr", "/start_rtlamr", "/stop_rtlamr"),
+        ("adsb", "/adsb/start", "/adsb/stop"),
+        ("ais", "/ais/start", "/ais/stop"),
+        ("acars", "/acars/start", "/acars/stop"),
+        ("vdl2", "/vdl2/start", "/vdl2/stop"),
+        ("aprs", "/aprs/start", "/aprs/stop"),
+        ("dsc", "/dsc/start", "/dsc/stop"),
+        ("radiosonde", "/radiosonde/start", "/radiosonde/stop"),
+        ("morse", "/morse/start", "/morse/stop"),
+        ("ook", "/ook/start", "/ook/stop"),
+        ("sstv", "/sstv/start", "/sstv/stop"),
+        ("sstv_general", "/sstv-general/start", "/sstv-general/stop"),
+        ("weathersat", "/weather-sat/start", "/weather-sat/stop"),
+        ("wefax", "/wefax/start", "/wefax/stop"),
+        ("wifi", "/wifi/v2/scan/start", "/wifi/v2/scan/stop"),
+        ("bluetooth", "/api/bluetooth/scan/start", "/api/bluetooth/scan/stop"),
+        ("meshtastic", "/meshtastic/start", "/meshtastic/stop"),
+        ("drone", "/drone/start", "/drone/stop"),
+    )
+    for path, action in ((start, "start"), (stop, "stop"))
+}
+_mode_lifecycle: dict[str, dict] = {}
+
+
+@app.after_request
+def _record_mode_lifecycle(response: Response) -> Response:
+    """Remember when each mode last started, and why its last start failed."""
+    if request.method != "POST":
+        return response
+    entry = _MODE_LIFECYCLE_PATHS.get(request.path)
+    if not entry:
+        return response
+    mode, action = entry
+    state = _mode_lifecycle.setdefault(mode, {"started_at": None, "error": None})
+    if action == "stop":
+        state["started_at"] = None
+    elif response.status_code < 400:
+        state.update(started_at=_time.time(), error=None)
+    else:
+        # An "already running" refusal must not erase the running start's time.
+        data = response.get_json(silent=True) if response.is_json else None
+        message = (data or {}).get("message") or f"HTTP {response.status_code}"
+        state["error"] = {"message": str(message)[:300], "at": _time.time()}
+    return response
+
+
+def _get_drone_running() -> bool:
+    try:
+        from routes import drone
+
+        return bool(drone._drone_running)
+    except Exception:
+        return False
+
+
 @app.route("/health")
 def health_check() -> Response:
     """Health check endpoint for monitoring."""
@@ -1046,7 +1172,10 @@ def health_check() -> Response:
                 "tscm": _get_tscm_active(),
                 "gps": _get_singleton_running("utils.gps", "get_gps_reader", "is_running"),
                 "bt_locate": _get_singleton_running("utils.bt_locate", "get_locate_session", "is_active"),
+                "ook": ook_process is not None and (ook_process.poll() is None if ook_process else False),
+                "drone": _get_drone_running(),
             },
+            "lifecycle": _mode_lifecycle,
             "data": {
                 "aircraft_count": len(adsb_aircraft),
                 "vessel_count": len(ais_vessels),
@@ -1152,6 +1281,8 @@ def kill_all() -> Response:
             cleanup_ook(emit_status=False)
         except Exception:
             if ook_process:
+                from utils.process import safe_terminate, unregister_process
+
                 safe_terminate(ook_process)
                 unregister_process(ook_process)
             ook_process = None

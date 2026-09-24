@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
 <head>
+    <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SATELLITE COMMAND // iNTERCEPT - See the Invisible</title>
@@ -1753,11 +1754,11 @@
                 _telemetryPollTimer = null;
             }
             if (_clockTimer) {
-                clearInterval(_clockTimer);
+                VisibleInterval.clear(_clockTimer);
                 _clockTimer = null;
             }
             if (_countdownTimer) {
-                clearInterval(_countdownTimer);
+                VisibleInterval.clear(_countdownTimer);
                 _countdownTimer = null;
             }
             if (_dashboardRetryTimer) {
@@ -1806,8 +1807,8 @@
             loadReceiverDevices();
             loadDashboardSatellites();
             updateClock();
-            _clockTimer = setInterval(updateClock, 1000);
-            _countdownTimer = setInterval(updateCountdown, 1000);
+            _clockTimer = VisibleInterval.set(updateClock, 1000);
+            _countdownTimer = VisibleInterval.set(updateCountdown, 1000);
             // In standalone mode, start SSE tracking immediately.
             // In embedded mode, wait for parent to signal visibility.
             if (!isEmbedded) {

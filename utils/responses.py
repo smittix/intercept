@@ -44,8 +44,11 @@ def start_failure(error: BaseException | None, what: str = "decoder"):
     tool; anything else is a 500 carrying the underlying reason.
     """
     if isinstance(error, FileNotFoundError):
+        from utils.dependencies import install_hint
+
         tool = error.filename or "A required tool"
-        return api_error(f"{tool} not found. Install it to use this mode.", 400, error_type="TOOL_MISSING")
+        hint = install_hint(tool) if error.filename else "Install it to use this mode."
+        return api_error(f"{tool} not found. {hint}", 400, error_type="TOOL_MISSING")
     if error is not None:
         return api_error(f"Failed to start {what}: {error}", 500)
     return api_error(f"Failed to start {what}", 500)

@@ -523,12 +523,12 @@ const GPS = (function() {
         // Poll satellite data every 5 seconds as a reliable fallback
         // SSE stream may miss sky updates due to queue contention with position messages
         pollSatellites();
-        skyPollTimer = setInterval(pollSatellites, 5000);
+        skyPollTimer = VisibleInterval.set(pollSatellites, 5000);
     }
 
     function stopSkyPolling() {
         if (skyPollTimer) {
-            clearInterval(skyPollTimer);
+            VisibleInterval.clear(skyPollTimer);
             skyPollTimer = null;
         }
     }
@@ -550,12 +550,12 @@ const GPS = (function() {
         stopStatusPolling();
         // Poll full status as a fallback when SSE is unavailable or blocked.
         pollStatus();
-        statusPollTimer = setInterval(pollStatus, 2000);
+        statusPollTimer = VisibleInterval.set(pollStatus, 2000);
     }
 
     function stopStatusPolling() {
         if (statusPollTimer) {
-            clearInterval(statusPollTimer);
+            VisibleInterval.clear(statusPollTimer);
             statusPollTimer = null;
         }
     }

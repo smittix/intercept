@@ -2,6 +2,10 @@
 <html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
 
 <head>
+    <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/copy-id.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/device-notes.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/live-empty-state.js') }}"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>iNTERCEPT // See the Invisible</title>
@@ -3996,7 +4000,7 @@
 
         // Update clock every second
         window._navClockStarted = true;
-        setInterval(updateHeaderClock, 1000);
+        VisibleInterval.set(updateHeaderClock, 1000);
         updateHeaderClock();
         if (typeof InterceptTime !== 'undefined' && InterceptTime.onChange) {
             InterceptTime.onChange(updateHeaderClock);
@@ -4082,15 +4086,7 @@
             if (headerPassCount) headerPassCount.textContent = document.getElementById('passCount')?.textContent || '0';
         }
         // Sync stats periodically
-        setInterval(syncHeaderStats, 500);
-
-        // Update relative timestamps on signal cards every 30 seconds
-        setInterval(function() {
-            const output = document.getElementById('output');
-            if (output && typeof SignalCards !== 'undefined') {
-                SignalCards.updateTimestamps(output);
-            }
-        }, 30000);
+        VisibleInterval.set(syncHeaderStats, 500);
 
         // Observer location for distance calculations (load from localStorage or default to London)
         let observerLocation = (function () {
@@ -4126,8 +4122,8 @@
 
         // Start satellite countdown timer
         function startCountdownTimer() {
-            if (countdownInterval) clearInterval(countdownInterval);
-            countdownInterval = setInterval(updateSatelliteCountdown, 1000);
+            if (countdownInterval) VisibleInterval.clear(countdownInterval);
+            countdownInterval = VisibleInterval.set(updateSatelliteCountdown, 1000);
         }
 
         // Update satellite countdown display
@@ -6128,31 +6124,14 @@
             lastMessageTime = Date.now();
         }
 
-        // Relative timestamps
+        // Relative timestamps: rendered by InterceptTime, whose one page-wide
+        // clock keeps every .msg-time, card and device timestamp current.
         function getRelativeTime(timestamp) {
-            if (!timestamp) return '';
-            const now = new Date();
-            const parts = timestamp.split(':');
-            const msgTime = new Date();
-            msgTime.setHours(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
-
-            const diff = Math.floor((now - msgTime) / 1000);
-            if (diff < 5) return 'just now';
-            if (diff < 60) return diff + 's ago';
-            if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-            return timestamp;
-        }
-
-        function updateRelativeTimes() {
-            document.querySelectorAll('.msg-time').forEach(el => {
-                const ts = el.dataset.timestamp;
-                if (ts) el.textContent = getRelativeTime(ts);
-            });
+            return InterceptTime.relative(timestamp);
         }
 
         // Update timers
-        setInterval(updateSignalMeter, 100);
-        setInterval(updateRelativeTimes, 10000);
+        VisibleInterval.set(updateSignalMeter, 100);
 
         // Default presets (UK frequencies)
         const defaultPresets = ['153.350', '153.025'];
@@ -6482,12 +6461,12 @@
             // Initial fetch
             fetchSdrStatus();
             // Poll every 5 seconds
-            sdrStatusPollingInterval = setInterval(fetchSdrStatus, 5000);
+            sdrStatusPollingInterval = VisibleInterval.set(fetchSdrStatus, 5000);
         }
 
         function stopSdrStatusPolling() {
             if (sdrStatusPollingInterval) {
-                clearInterval(sdrStatusPollingInterval);
+                VisibleInterval.clear(sdrStatusPollingInterval);
                 sdrStatusPollingInterval = null;
             }
         }
@@ -6987,7 +6966,7 @@
         }
 
         // Periodic status check every 5 seconds
-        setInterval(checkStatus, 5000);
+        VisibleInterval.set(checkStatus, 5000);
 
         function toggleLogging() {
             const enabled = document.getElementById('loggingEnabled').checked;
@@ -10301,8 +10280,8 @@
             }
 
             // Update time display (both map header and function bar)
-            if (aprsClockInterval) clearInterval(aprsClockInterval);
-            aprsClockInterval = setInterval(() => {
+            if (aprsClockInterval) VisibleInterval.clear(aprsClockInterval);
+            aprsClockInterval = VisibleInterval.set(() => {
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
                 const utcStr = now.toUTCString().slice(17, 25) + ' UTC';
@@ -10326,7 +10305,7 @@
                 aprsPollTimer = null;
             }
             if (aprsClockInterval) {
-                clearInterval(aprsClockInterval);
+                VisibleInterval.clear(aprsClockInterval);
                 aprsClockInterval = null;
             }
             if (aprsMap) {

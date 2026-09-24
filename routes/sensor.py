@@ -15,6 +15,7 @@ from typing import Any
 from flask import Blueprint, Response, jsonify, request
 
 import app as app_module
+from utils.dependencies import install_hint
 from utils.event_pipeline import process_event
 from utils.logging import sensor_logger as logger
 from utils.process import register_process, unregister_process
@@ -291,7 +292,7 @@ def start_sensor() -> Response:
                 app_module.release_sdr_device(sensor_active_device, sensor_active_sdr_type or "rtlsdr")
                 sensor_active_device = None
                 sensor_active_sdr_type = None
-            return api_error("rtl_433 not found. Install with: brew install rtl_433")
+            return api_error(f"rtl_433 not found. {install_hint('rtl_433')}")
         except Exception as e:
             # Release device on failure
             if sensor_active_device is not None:

@@ -53,7 +53,7 @@ const RunState = (function() {
         refresh();
 
         if (!refreshTimer) {
-            refreshTimer = window.setInterval(refresh, REFRESH_MS);
+            refreshTimer = VisibleInterval.set(refresh, REFRESH_MS);
         }
 
         document.addEventListener('visibilitychange', () => {
@@ -103,6 +103,8 @@ const RunState = (function() {
             const data = await response.json();
             lastHealth = data;
             renderHealth(data);
+            // Shared with LiveEmptyState, so the page polls /health once.
+            window.dispatchEvent(new CustomEvent('intercept:health', { detail: data }));
         } catch (err) {
             renderHealth(null, err);
             const transient = isTransientFailure(err);
@@ -254,7 +256,7 @@ const RunState = (function() {
 
     function destroy() {
         if (refreshTimer) {
-            clearInterval(refreshTimer);
+            VisibleInterval.clear(refreshTimer);
             refreshTimer = null;
         }
     }

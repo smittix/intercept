@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
 <head>
+    <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
     <script>(function(){var t=localStorage.getItem('intercept-ui-tier')||'enhanced';document.documentElement.setAttribute('data-ui-tier',t);})();</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -976,9 +977,9 @@
 
         function startSessionTimer() {
             if (sessionTimer) {
-                clearInterval(sessionTimer);
+                VisibleInterval.clear(sessionTimer);
             }
-            sessionTimer = setInterval(() => {
+            sessionTimer = VisibleInterval.set(() => {
                 if (!sessionStartAt) {
                     sessionUptime.textContent = '--:--:--';
                     return;

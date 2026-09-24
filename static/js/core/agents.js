@@ -37,7 +37,7 @@ function startHealthMonitoring() {
     }, 5000);
 
     // Start periodic checks every 30 seconds
-    healthCheckInterval = setInterval(checkAllAgentsHealth, 30000);
+    healthCheckInterval = VisibleInterval.set(checkAllAgentsHealth, 30000);
     console.log('[AgentManager] Health monitoring started (30s interval)');
 }
 
@@ -50,7 +50,7 @@ function stopHealthMonitoring() {
         healthCheckKickoffTimer = null;
     }
     if (healthCheckInterval) {
-        clearInterval(healthCheckInterval);
+        VisibleInterval.clear(healthCheckInterval);
         healthCheckInterval = null;
         console.log('[AgentManager] Health monitoring stopped');
     }

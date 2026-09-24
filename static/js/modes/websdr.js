@@ -792,8 +792,8 @@ function initKiwiAudioContext(sampleRate) {
     kiwiGainNode.connect(kiwiAudioContext.destination);
 
     // S-meter display updates
-    if (kiwiSmeterInterval) clearInterval(kiwiSmeterInterval);
-    kiwiSmeterInterval = setInterval(updateSmeterDisplay, 200);
+    if (kiwiSmeterInterval) VisibleInterval.clear(kiwiSmeterInterval);
+    kiwiSmeterInterval = VisibleInterval.set(updateSmeterDisplay, 200);
 }
 
 function disconnectFromReceiver() {
@@ -812,7 +812,7 @@ function disconnectFromReceiver() {
 
 function cleanupKiwiAudio() {
     if (kiwiSmeterInterval) {
-        clearInterval(kiwiSmeterInterval);
+        VisibleInterval.clear(kiwiSmeterInterval);
         kiwiSmeterInterval = null;
     }
     if (kiwiScriptProcessor) {

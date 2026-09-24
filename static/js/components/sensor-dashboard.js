@@ -15,15 +15,6 @@ const SensorDashboard = (function () {
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    function formatAge(timestamp) {
-        if (!timestamp) return '';
-        const ts = typeof timestamp === 'string' ? new Date(timestamp).getTime() : Number(timestamp);
-        const s = Math.floor((Date.now() - ts) / 1000);
-        if (s < 10) return 'just now';
-        if (s < 60) return `${s}s ago`;
-        return `${Math.floor(s / 60)}m ago`;
-    }
-
     function isRecent(timestamp) {
         if (!timestamp) return false;
         const ts = typeof timestamp === 'string' ? new Date(timestamp).getTime() : Number(timestamp);
@@ -105,7 +96,7 @@ const SensorDashboard = (function () {
     }
 
     function buildCardHTML(msg, history, primaryColor) {
-        const age     = formatAge(msg.timestamp);
+        const age     = InterceptTime.relTimeHtml(msg.timestamp);
         const fresh   = isRecent(msg.timestamp);
         const batLow  = msg.battery === 'LOW';
         const sparkHTML = history.length > 0

@@ -460,9 +460,25 @@ def init_db() -> None:
                 added_by TEXT,
                 last_verified TIMESTAMP,
                 score_modifier INTEGER DEFAULT -2,
-                metadata TEXT
+                metadata TEXT,
+                known_good INTEGER NOT NULL DEFAULT 1,
+                notes TEXT,
+                tags TEXT
             )
         """)
+
+        # Operator notes and tags share the row, but a device that only has a
+        # note is not known-good: known_good separates the two.
+        try:
+            columns = {row["name"] for row in conn.execute("PRAGMA table_info(tscm_known_devices)")}
+            if "known_good" not in columns:
+                conn.execute("ALTER TABLE tscm_known_devices ADD COLUMN known_good INTEGER NOT NULL DEFAULT 1")
+            if "notes" not in columns:
+                conn.execute("ALTER TABLE tscm_known_devices ADD COLUMN notes TEXT")
+            if "tags" not in columns:
+                conn.execute("ALTER TABLE tscm_known_devices ADD COLUMN tags TEXT")
+        except Exception as e:
+            logger.debug(f"Schema update skipped for tscm_known_devices: {e}")
 
         # TSCM Cases - Grouping sweeps, threats, and notes
         conn.execute("""
@@ -1541,8 +1557,8 @@ def add_known_device(
         cursor = conn.execute(
             """
             INSERT INTO tscm_known_devices
-            (identifier, protocol, name, description, location, scope, added_by, score_modifier, metadata)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (identifier, protocol, name, description, location, scope, added_by, score_modifier, metadata, known_good)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON CONFLICT(identifier) DO UPDATE SET
                 name = excluded.name,
                 description = excluded.description,
@@ -1550,6 +1566,7 @@ def add_known_device(
                 scope = excluded.scope,
                 score_modifier = excluded.score_modifier,
                 metadata = excluded.metadata,
+                known_good = 1,
                 last_verified = CURRENT_TIMESTAMP
         """,
             (
@@ -1570,7 +1587,9 @@ def add_known_device(
 def get_known_device(identifier: str) -> dict | None:
     """Get a known device by identifier."""
     with get_db() as conn:
-        cursor = conn.execute("SELECT * FROM tscm_known_devices WHERE identifier = ?", (identifier.upper(),))
+        cursor = conn.execute(
+            "SELECT * FROM tscm_known_devices WHERE identifier = ? AND known_good = 1", (identifier.upper(),)
+        )
         row = cursor.fetchone()
         if not row:
             return None
@@ -1587,6 +1606,8 @@ def get_known_device(identifier: str) -> dict | None:
             "last_verified": row["last_verified"],
             "score_modifier": row["score_modifier"],
             "metadata": json.loads(row["metadata"]) if row["metadata"] else None,
+            "notes": row["notes"],
+            "tags": json.loads(row["tags"]) if row["tags"] else [],
         }
 
 
@@ -1602,7 +1623,8 @@ def get_all_known_devices(location: str | None = None, scope: str | None = None)
         conditions.append("scope = ?")
         params.append(scope)
 
-    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    conditions.append("known_good = 1")  # a row may hold only an operator's note
+    where_clause = f"WHERE {' AND '.join(conditions)}"
 
     with get_db() as conn:
         cursor = conn.execute(
@@ -1628,16 +1650,65 @@ def get_all_known_devices(location: str | None = None, scope: str | None = None)
                 "last_verified": row["last_verified"],
                 "score_modifier": row["score_modifier"],
                 "metadata": json.loads(row["metadata"]) if row["metadata"] else None,
+                "notes": row["notes"],
+                "tags": json.loads(row["tags"]) if row["tags"] else [],
             }
             for row in cursor
         ]
 
 
 def delete_known_device(identifier: str) -> bool:
-    """Remove a device from the known-good registry."""
+    """Remove a device from the known-good registry, keeping any operator notes."""
     with get_db() as conn:
-        cursor = conn.execute("DELETE FROM tscm_known_devices WHERE identifier = ?", (identifier.upper(),))
+        cursor = conn.execute(
+            "UPDATE tscm_known_devices SET known_good = 0 WHERE identifier = ? AND known_good = 1",
+            (identifier.upper(),),
+        )
+        conn.execute(
+            "DELETE FROM tscm_known_devices WHERE identifier = ? AND known_good = 0 AND notes IS NULL AND tags IS NULL",
+            (identifier.upper(),),
+        )
         return cursor.rowcount > 0
+
+
+def set_device_annotation(identifier: str, protocol: str, notes: str | None, tags: list[str] | None) -> dict:
+    """Set an operator's note and tags on a device, whatever it is.
+
+    Shares the known-devices row without making the device known-good. With
+    neither a note nor tags left, a row that is not known-good is removed.
+    """
+    notes = notes or None
+    tags_json = json.dumps(tags) if tags else None
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO tscm_known_devices (identifier, protocol, known_good, notes, tags)
+            VALUES (?, ?, 0, ?, ?)
+            ON CONFLICT(identifier) DO UPDATE SET notes = excluded.notes, tags = excluded.tags
+        """,
+            (identifier.upper(), protocol, notes, tags_json),
+        )
+        conn.execute(
+            "DELETE FROM tscm_known_devices WHERE identifier = ? AND known_good = 0 AND notes IS NULL AND tags IS NULL",
+            (identifier.upper(),),
+        )
+    return {"identifier": identifier.upper(), "protocol": protocol, "notes": notes, "tags": tags or []}
+
+
+def get_device_annotations() -> dict[str, dict]:
+    """Every device an operator has noted or tagged, by identifier."""
+    with get_db() as conn:
+        cursor = conn.execute(
+            "SELECT identifier, protocol, notes, tags FROM tscm_known_devices WHERE notes IS NOT NULL OR tags IS NOT NULL"
+        )
+        return {
+            row["identifier"]: {
+                "protocol": row["protocol"],
+                "notes": row["notes"],
+                "tags": json.loads(row["tags"]) if row["tags"] else [],
+            }
+            for row in cursor
+        }
 
 
 # =============================================================================
@@ -1748,12 +1819,14 @@ def is_known_good_device(identifier: str, location: str | None = None) -> dict |
             cursor = conn.execute(
                 """
                 SELECT * FROM tscm_known_devices
-                WHERE identifier = ? AND (location = ? OR scope = 'global')
+                WHERE identifier = ? AND known_good = 1 AND (location = ? OR scope = 'global')
             """,
                 (identifier.upper(), location),
             )
         else:
-            cursor = conn.execute("SELECT * FROM tscm_known_devices WHERE identifier = ?", (identifier.upper(),))
+            cursor = conn.execute(
+                "SELECT * FROM tscm_known_devices WHERE identifier = ? AND known_good = 1", (identifier.upper(),)
+            )
         row = cursor.fetchone()
         if not row:
             return None

@@ -463,3 +463,35 @@ def test_text_mode_decoder_pipes_tolerate_bad_bytes():
             if re.search(r"\b(text|universal_newlines)=True", call) and "errors=" not in call:
                 strict.append(f"{path.relative_to(root)}:{source[: match.start()].count(chr(10)) + 1}")
     assert not strict, f"text-mode Popen without errors=: {strict}"
+
+
+# =============================================================================
+# /health records each mode's last start, for the live views' empty states
+# =============================================================================
+
+
+class TestLifecycleRecord:
+    def _record(self, client, mode):
+        return client.get("/health").get_json()["lifecycle"].get(mode, {})
+
+    def test_failed_start_is_recorded_with_its_reason(self, client, lifecycle):
+        spec = lifecycle("sensor")
+        with _decoders(installed=False):
+            client.post(spec["start"], json=spec["body"])
+        record = self._record(client, "sensor")
+        assert "rtl_433" in record["error"]["message"]
+        assert client.get("/health").get_json()["processes"]["sensor"] is False
+
+    def test_start_then_refusal_then_stop(self, client, lifecycle):
+        spec = lifecycle("sensor")
+        with _decoders(installed=True):
+            assert client.post(spec["start"], json=spec["body"]).status_code == 200
+            record = self._record(client, "sensor")
+            assert record["started_at"] and record["error"] is None
+            started = record["started_at"]
+
+            client.post(spec["start"], json=spec["body"])  # refused: already running
+            assert self._record(client, "sensor")["started_at"] == started
+
+            client.post(spec["stop"], json={})
+        assert self._record(client, "sensor")["started_at"] is None

@@ -1267,7 +1267,7 @@ const WiFiMode = (function() {
             elements.detailEssid.textContent = network.display_name || network.essid || '[Hidden SSID]';
         }
         if (elements.detailBssid) {
-            elements.detailBssid.textContent = network.bssid;
+            elements.detailBssid.innerHTML = CopyId.html(network.bssid) + DeviceNotes.html(network.bssid, 'wifi');
         }
 
         // Update detail stats
@@ -1407,7 +1407,7 @@ const WiFiMode = (function() {
                                rssi >= -85 ? 'signal-weak' : 'signal-very-weak';
 
             // Format last seen time
-            const lastSeen = client.last_seen ? formatTime(client.last_seen) : '--';
+            const lastSeen = InterceptTime.relTimeHtml(client.last_seen) || '--';
 
             // Build probed SSIDs badges
             let probesHtml = '';
@@ -1463,7 +1463,7 @@ const WiFiMode = (function() {
             }
 
             if (lastSeenEl && client.last_seen) {
-                lastSeenEl.textContent = formatTime(client.last_seen);
+                lastSeenEl.innerHTML = InterceptTime.relTimeHtml(client.last_seen);
             }
         } else {
             // New client for this network - re-fetch the full list

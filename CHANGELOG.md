@@ -2,6 +2,26 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.13] - 2026-09-24
+
+### Added
+
+- **Elapsed time in live lists.** Message, device and station times read "14 s ago" and stay current (one page-wide clock, once a second), with the exact time in your timezone on hover. Ten separate "ago" helpers, most refreshed every 10 or 30 seconds or never, now share one implementation.
+- **Empty lists say why they are empty.** Each live list shows, while it has nothing in it, whether its decoder is running and for how long ("rtl_433 running · 0 readings in 4 s"), stopped, or why it last failed to start, naming the missing tool or busy device. Covers the shared feed, the sensor grid, APRS, Wi-Fi, Bluetooth, Meshtastic, OOK, drone, radiosonde, the image galleries, and the ADS-B, ACARS, AIS and DSC dashboard lists.
+- **Copy buttons on identifiers**: ICAO hex, MMSI, MAC, BSSID and Meshtastic node ids.
+- **Notes and tags on devices.** Attach a note and tags to any observed device; they are kept across restarts and shown wherever the device appears. A note does not mark a device known-good.
+
+### Changed
+
+- **Hidden tabs stop polling.** Clocks, countdowns and status polls pause while the tab is hidden. Measured on the main page in pager mode: 925 → 101 interval callbacks and 39 → 3 requests per minute. Data streams and recording are unaffected.
+- **Install advice matches your platform.** Commands come from the dependency map for the package manager actually present, or the project's page when there is none; the 433 MHz mode no longer tells Linux users to use Homebrew.
+
+### Fixed
+
+- **Kill All could stop partway**, if OOK's cleanup failed, on an undefined name. Undefined-name checking is back on in `ruff`.
+
+---
+
 ## [2.33.12] - 2026-09-24
 
 A lifecycle contract now runs against every mode: start, stop and start again without restarting iNTERCEPT, with the tool missing, twice in a row, and with garbage on the decoder's output. These are what it found.
