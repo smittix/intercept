@@ -2498,3 +2498,32 @@ html[data-ui-tier="lean"] .scanline,
 html[data-ui-tier="lean"] .radar-bg {
     display: none;
 }
+
+/* Trend line beside a strip value (components/strip-spark.js) */
+.strip-stat.has-spark {
+    display: grid;
+    grid-template-columns: auto 60px;
+    grid-template-rows: auto auto;
+    column-gap: 8px;
+    align-items: center;
+}
+
+.strip-stat.has-spark .strip-value,
+.strip-stat.has-spark .strip-label {
+    grid-column: 1;
+    justify-self: center;
+}
+
+.strip-spark {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: 60px;
+    height: 20px;
+}
+
+.strip-spark polyline {
+    fill: none;
+    stroke: var(--accent-cyan);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+}
