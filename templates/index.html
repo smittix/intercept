@@ -4988,10 +4988,11 @@
             document.getElementById('toolStatusPager')?.classList.toggle('active', mode === 'pager');
             document.getElementById('toolStatusSensor')?.classList.toggle('active', mode === 'sensor');
 
-            // Hide output console for modes with their own visualizations
-            const hideStatusBar = ['satellite', 'websdr', 'subghz', 'spaceweather', 'waterfall', 'morse', 'meteor', 'system'].includes(mode);
+            // The bottom bar's controls (recon, mute, auto-scroll, export, clear) act on the
+            // shared message feed, which only these modes fill; elsewhere they did nothing.
+            const showStatusBar = ['pager', 'sensor', 'rtlamr', 'ook'].includes(mode);
             const statusBar = document.querySelector('.status-bar');
-            if (statusBar) statusBar.style.display = hideStatusBar ? 'none' : 'flex';
+            if (statusBar) statusBar.style.display = showStatusBar ? 'flex' : 'none';
 
             // Restore sidebar when leaving Meshtastic mode (user may have collapsed it)
             if (mode !== 'meshtastic' && mode !== 'meshcore') {
