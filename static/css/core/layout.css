@@ -1273,3 +1273,109 @@ a.nav-dashboard-btn:hover {
     background: rgba(46, 125, 138, 0.16);
     border-color: rgba(46, 125, 138, 0.55);
 }
+
+/* Toolbar "More" menu (partials/nav.html): labelled rows for the less-used tools */
+.nav-more {
+    position: relative;
+}
+
+.nav-tools .nav-more-btn {
+    width: auto;
+    gap: 5px;
+    padding: 0 9px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.nav-more-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    min-width: 220px;
+    padding: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.nav-more-menu[hidden] {
+    display: none;
+}
+
+.nav-tools .nav-more-menu .nav-more-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    height: auto;
+    min-height: 34px;
+    padding: 6px 10px !important;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font: 500 12px var(--font-sans) !important;
+    letter-spacing: normal !important;
+    text-align: left;
+    color: var(--text-secondary);
+    text-shadow: none;
+}
+
+.nav-more-menu .nav-more-item:hover,
+.nav-more-menu .nav-more-item:focus-visible {
+    background: rgba(var(--accent-cyan-rgb), 0.1);
+    color: var(--text-primary);
+}
+
+.nav-more-label {
+    display: none;
+}
+
+.nav-more-menu .nav-more-label {
+    display: inline;
+    flex: 1;
+    order: 1;
+}
+
+.nav-more-menu .nav-more-item .icon {
+    order: 0;
+}
+
+.nav-tools .nav-more-menu .nav-more-item.nav-tier-btn {
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+/* The display mode's current setting, as a badge at the row's end */
+.nav-more-menu .nav-tier-btn .tier-label-lean,
+.nav-more-menu .nav-tier-btn .tier-label-enhanced {
+    order: 2;
+    font: 600 9px var(--font-mono);
+    letter-spacing: 0.08em;
+    color: var(--accent-cyan);
+}
+
+.nav-tools .nav-killall-btn {
+    width: auto;
+    gap: 5px;
+    padding: 0 9px;
+    color: var(--accent-red);
+    border-color: rgba(226, 93, 93, 0.4);
+}
+
+.nav-killall-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+body.nav-more-open .app-toast-stack {
+    visibility: hidden;
+}
