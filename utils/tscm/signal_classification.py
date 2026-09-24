@@ -40,31 +40,31 @@ SIGNAL_STRENGTH_DESCRIPTIONS = {
     SignalStrength.MINIMAL: {
         "label": "Minimal",
         "description": "At detection threshold",
-        "interpretation": "may be ambient noise or distant source",
+        "interpretation": "ambient noise or a distant source",
         "confidence": "low",
     },
     SignalStrength.WEAK: {
         "label": "Weak",
         "description": "Detectable signal",
-        "interpretation": "potentially distant or obstructed",
+        "interpretation": "a distant or obstructed source",
         "confidence": "low",
     },
     SignalStrength.MODERATE: {
         "label": "Moderate",
         "description": "Consistent presence",
-        "interpretation": "likely in proximity",
+        "interpretation": "a source in proximity",
         "confidence": "medium",
     },
     SignalStrength.STRONG: {
         "label": "Strong",
         "description": "Clear signal",
-        "interpretation": "probable close proximity",
+        "interpretation": "a source in close proximity",
         "confidence": "medium",
     },
     SignalStrength.VERY_STRONG: {
         "label": "Very Strong",
         "description": "High signal level",
-        "interpretation": "indicates likely nearby source",
+        "interpretation": "a nearby source",
         "confidence": "high",
     },
 }
@@ -148,7 +148,7 @@ DURATION_DESCRIPTIONS = {
     },
     DetectionDuration.SUSTAINED: {
         "label": "Sustained",
-        "modifier": "observed over sustained period",
+        "modifier": "observed over a sustained period",
         "confidence_impact": "supports confidence",
     },
     DetectionDuration.PERSISTENT: {
@@ -325,18 +325,17 @@ def _build_summary(
     strength_info = SIGNAL_STRENGTH_DESCRIPTIONS[strength]
     duration_info = DURATION_DESCRIPTIONS[duration]
 
+    # Labels are title case ("Very Strong"); mid-sentence they are not.
+    strength_label = strength_info["label"].capitalize()
     if confidence == ConfidenceLevel.HIGH:
         return (
-            f"{strength_info['label']}, {duration_info['label'].lower()} signal "
+            f"{strength_label}, {duration_info['label'].lower()} signal "
             f"with characteristics that suggest device presence in proximity"
         )
     elif confidence == ConfidenceLevel.MEDIUM:
-        return f"{strength_info['label']}, {duration_info['label'].lower()} signal that may indicate device activity"
+        return f"{strength_label}, {duration_info['label'].lower()} signal that may indicate device activity"
     else:
-        return (
-            f"{duration_info['modifier'].capitalize()} {strength_info['label'].lower()} signal "
-            f"consistent with possible device presence"
-        )
+        return f"{strength_label} signal, {duration_info['modifier']}, consistent with possible device presence"
 
 
 def _build_interpretation(
@@ -347,14 +346,14 @@ def _build_interpretation(
     """Build interpretation text with appropriate hedging."""
     strength_info = SIGNAL_STRENGTH_DESCRIPTIONS[strength]
 
-    base = strength_info["interpretation"]
+    base = strength_info["interpretation"]  # a noun phrase: "a nearby source"
 
     if confidence == ConfidenceLevel.HIGH:
         return f"Observed signal characteristics suggest {base}"
     elif confidence == ConfidenceLevel.MEDIUM:
         return f"Signal pattern may indicate {base}"
     else:
-        return f"Limited data; signal could represent {base} or environmental factors"
+        return f"Limited data; the signal could represent {base}, or environmental factors"
 
 
 def _build_caveats(

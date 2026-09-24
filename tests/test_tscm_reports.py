@@ -615,3 +615,28 @@ class TestOverallAssessmentWording:
         summary = self._summary(["high_interest"] * 3)
         assert "OVERALL ASSESSMENT: 3 devices require investigation." in summary
         assert "HIGH" not in summary and "immediate attention" not in summary
+
+
+def test_signal_descriptions_read_as_sentences():
+    """The annexes carry these phrases. Interpretations were verb phrases
+    spliced after another verb ("suggest may be ambient noise", "may indicate
+    indicates likely nearby source"), and title-case labels sat mid-sentence."""
+    import itertools
+    import re
+
+    from utils.tscm import signal_classification as sc
+
+    phrases = {
+        build(strength, duration, confidence)
+        for strength, duration, confidence in itertools.product(
+            sc.SignalStrength, sc.DetectionDuration, sc.ConfidenceLevel
+        )
+        for build in (sc._build_summary, sc._build_interpretation)
+    }
+    stacked = re.compile(r"\b(suggest|indicate|represent) (may|indicates|potentially|likely|probable)\b")
+    for phrase in phrases:
+        assert not stacked.search(phrase), phrase
+        assert "Very Strong" not in phrase and " or environmental" not in phrase.replace(", or environmental", ""), (
+            phrase
+        )
+        assert phrase[0].isupper() and "  " not in phrase, phrase

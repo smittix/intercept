@@ -27,7 +27,7 @@ const SignalCards = (function() {
             minimal: {
                 label: 'Minimal',
                 description: 'Near minimum observable level',
-                interpretation: 'may represent background activity or a distant source',
+                interpretation: 'background activity or a distant source',
                 confidence: 'low',
                 color: '#888888',
                 icon: 'signal-0',
@@ -36,7 +36,7 @@ const SignalCards = (function() {
             weak: {
                 label: 'Weak',
                 description: 'Low-level signal present',
-                interpretation: 'possibly distant or partially obstructed',
+                interpretation: 'a distant or partially obstructed source',
                 confidence: 'low',
                 color: '#6baed6',
                 icon: 'signal-1',
@@ -45,7 +45,7 @@ const SignalCards = (function() {
             moderate: {
                 label: 'Moderate',
                 description: 'Consistent signal presence',
-                interpretation: 'likely in proximity',
+                interpretation: 'a source in proximity',
                 confidence: 'medium',
                 color: '#3182bd',
                 icon: 'signal-2',
@@ -54,7 +54,7 @@ const SignalCards = (function() {
             strong: {
                 label: 'Strong',
                 description: 'Clear, consistent signal',
-                interpretation: 'suggests relatively close proximity',
+                interpretation: 'a source in relatively close proximity',
                 confidence: 'medium',
                 color: '#fd8d3c',
                 icon: 'signal-3',
@@ -63,7 +63,7 @@ const SignalCards = (function() {
             very_strong: {
                 label: 'Very Strong',
                 description: 'Elevated signal level',
-                interpretation: 'consistent with a nearby source',
+                interpretation: 'a nearby source',
                 confidence: 'high',
                 color: '#e6550d',
                 icon: 'signal-4',
@@ -92,7 +92,7 @@ const SignalCards = (function() {
             },
             sustained: {
                 label: 'Sustained',
-                modifier: 'observed over sustained period',
+                modifier: 'observed over a sustained period',
                 confidence_impact: 'supports assessment confidence'
             },
             persistent: {
@@ -188,13 +188,15 @@ const SignalCards = (function() {
             const strengthInfo = this.getStrengthInfo(rssi);
             const durationInfo = this.getDurationInfo(durationSeconds);
             const confidence = this.calculateConfidence(rssi, durationSeconds, observationCount);
+            // Labels are title case ("Very Strong"); mid-sentence they are not.
+            const label = strengthInfo.label.charAt(0) + strengthInfo.label.slice(1).toLowerCase();
 
             if (confidence === 'high') {
-                return `${strengthInfo.label}, ${durationInfo.label.toLowerCase()} signal with characteristics that suggest a transmitting device may be nearby`;
+                return `${label}, ${durationInfo.label.toLowerCase()} signal with characteristics that suggest a transmitting device may be nearby`;
             } else if (confidence === 'medium') {
-                return `${strengthInfo.label}, ${durationInfo.label.toLowerCase()} signal that may indicate nearby device activity`;
+                return `${label}, ${durationInfo.label.toLowerCase()} signal that may indicate nearby device activity`;
             } else {
-                return `${durationInfo.modifier.charAt(0).toUpperCase() + durationInfo.modifier.slice(1)} ${strengthInfo.label.toLowerCase()} signal consistent with possible nearby device activity`;
+                return `${label} signal, ${durationInfo.modifier}, consistent with possible nearby device activity`;
             }
         },
 
@@ -211,7 +213,7 @@ const SignalCards = (function() {
             } else if (confidence === 'medium') {
                 return `Observed pattern may indicate ${base}`;
             } else {
-                return `With limited data, this signal may represent ${base} or environmental factors`;
+                return `With limited data, this signal may represent ${base}, or environmental factors`;
             }
         },
 
