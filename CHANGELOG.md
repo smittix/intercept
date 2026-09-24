@@ -2,6 +2,28 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.15] - 2026-09-24
+
+### Added
+
+- **Past TSCM sweeps are listed** (`GET /tscm/sweeps`) with what each detected, and the survey's sweep step shows them. Any completed sweep can be compared with the active baseline.
+
+### Changed
+
+- **The TSCM client report is a printable page** (`/tscm/report/print`). The "PDF" was plain text, saved by the panel with a `.pdf` name that no PDF reader opens. Print the page, or choose "Save as PDF" as the printer. The text version is at `/tscm/report/text`, and `/tscm/report/pdf` now leads to the printable page.
+
+### Fixed
+
+- **The TSCM report left out the baseline comparison and meeting windows.** The report generator supported both, but no route passed them. The report now compares the sweep with the baseline it ran against and summarises its meeting windows.
+- **Meeting windows were compared with device sightings an hour out in summer time** (or by whatever the local UTC offset is), so devices seen during a meeting could be counted as outside it.
+- **Drone detection reported "running" with no working source**, and used an RTL-SDR without claiming it. It now claims the SDR, starts only the sources that can run, lists those left out, and fails with the reasons when none can run. The source indicators now light.
+- **SubGHz returned 409 Conflict for a missing HackRF tool.** It now returns a 400 naming the tool, with the install command for your platform.
+- **Remote agents said "sensor not available (missing tools)"**, or showed a raw `[Errno 2]`. They now name the missing tools, with install advice.
+- **TSCM signal descriptions read badly.** For example, "suggest may be ambient noise" and "may indicate indicates likely nearby source" now read "suggest ambient noise or a distant source" and "may indicate a nearby source".
+- **AIS dashboard DSC messages** show elapsed time ("3 min ago") like every other list.
+
+---
+
 ## [2.33.14] - 2026-09-24
 
 ### Added

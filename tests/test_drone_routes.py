@@ -48,9 +48,27 @@ def test_start_returns_ok(client):
         patch("routes.drone._correlator"),
         patch("routes.drone._remote_id_scanner"),
         patch("routes.drone._rf_detector"),
+        patch("routes.drone.shutil.which", return_value="/usr/bin/hackrf_sweep"),
+        patch.object(app_module, "claim_sdr_device", return_value="Device 0 is in use by sensor"),
     ):
         resp = client.post("/drone/start", json={})
         assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["vectors"] == ["HACKRF"]
+        assert any("in use by sensor" in reason for reason in data["unavailable"])
+    client.post("/drone/stop")
+
+
+def test_start_with_no_source_available_says_why(client):
+    with (
+        patch("routes.drone.shutil.which", return_value=None),
+        patch("routes.drone.remote_id.SCAPY_AVAILABLE", False),
+    ):
+        resp = client.post("/drone/start", json={})
+    assert resp.status_code == 400
+    message = resp.get_json()["message"]
+    assert "scapy" in message and "rtl_433 not found" in message and "hackrf_sweep not found" in message
+    assert client.get("/drone/status").get_json()["running"] is False
 
 
 def test_stop_returns_ok(client):

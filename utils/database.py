@@ -1348,6 +1348,49 @@ def get_tscm_sweep(sweep_id: int) -> dict | None:
         }
 
 
+def get_tscm_sweeps(limit: int = 50) -> list[dict]:
+    """Recent TSCM sweeps, newest first, summarised: what each detected,
+    not the full device lists (a sweep's results can be large)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, baseline_id, started_at, completed_at, status, sweep_type, threats_found, results
+            FROM tscm_sweeps ORDER BY id DESC LIMIT ?
+        """,
+            (limit,),
+        ).fetchall()
+
+    def count(results: dict, key: str, *lists: str) -> int:
+        if results.get(key) is not None:
+            return results[key]
+        return next((len(results[name]) for name in lists if isinstance(results.get(name), list)), 0)
+
+    sweeps = []
+    for row in rows:
+        results = json.loads(row["results"]) if row["results"] else None
+        sweeps.append(
+            {
+                "id": row["id"],
+                "baseline_id": row["baseline_id"],
+                "started_at": row["started_at"],
+                "completed_at": row["completed_at"],
+                "status": row["status"],
+                "sweep_type": row["sweep_type"],
+                "threats_found": row["threats_found"],
+                "has_results": results is not None,
+                "detected": None
+                if results is None
+                else {
+                    "wifi": count(results, "wifi_count", "wifi_devices", "wifi"),
+                    "wifi_clients": count(results, "wifi_client_count", "wifi_clients"),
+                    "bluetooth": count(results, "bt_count", "bt_devices", "bluetooth"),
+                    "rf": count(results, "rf_count", "rf_signals", "rf"),
+                },
+            }
+        )
+    return sweeps
+
+
 def add_tscm_threat(
     sweep_id: int,
     threat_type: str,

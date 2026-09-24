@@ -401,14 +401,8 @@ def generate_pdf_content(report: TSCMReport) -> str:
     sections.append("")
 
     if report.capabilities:
-        caps = report.capabilities
         sections.append("Equipment Used:")
-        if caps.get("wifi", {}).get("mode") != "unavailable":
-            sections.append(f"  - WiFi: {caps.get('wifi', {}).get('mode', 'unknown')} mode")
-        if caps.get("bluetooth", {}).get("mode") != "unavailable":
-            sections.append(f"  - Bluetooth: {caps.get('bluetooth', {}).get('mode', 'unknown')}")
-        if caps.get("rf", {}).get("available"):
-            sections.append(f"  - RF/SDR: {caps.get('rf', {}).get('device_type', 'unknown')}")
+        sections.extend(f"  - {item}" for item in describe_equipment(report.capabilities))
         sections.append("")
 
     if report.limitations:
@@ -435,6 +429,56 @@ def generate_pdf_content(report: TSCMReport) -> str:
     sections.append("=" * 70)
 
     return "\n".join(sections)
+
+
+def describe_equipment(caps: dict) -> list[str]:
+    """The equipment a sweep used, one line each, from its capabilities."""
+    items = []
+    if caps.get("wifi", {}).get("mode") != "unavailable":
+        items.append(f"WiFi: {caps.get('wifi', {}).get('mode', 'unknown')} mode")
+    if caps.get("bluetooth", {}).get("mode") != "unavailable":
+        items.append(f"Bluetooth: {caps.get('bluetooth', {}).get('mode', 'unknown')}")
+    if caps.get("rf", {}).get("available"):
+        items.append(f"RF/SDR: {caps.get('rf', {}).get('device_type', 'unknown')}")
+    return items
+
+
+def report_html_context(report: TSCMReport) -> dict:
+    """What the printable client report (templates/tscm_report.html) shows:
+    the same content as the text report, structured for HTML. Values are
+    left unescaped; the template escapes them."""
+
+    def finding(f: ReportFinding) -> dict:
+        return {
+            "title": f.name or f.identifier,
+            "protocol": f.protocol.upper(),
+            "identifier": f.identifier,
+            "measurements": _describe_measurements(f),
+            "assessment": f.description,
+            "indicators": [f"{ind.get('type', 'unknown')}: {ind.get('description', '')}" for ind in f.indicators[:5]],
+            "action": f.recommended_action,
+            "reference": f.playbook_reference,
+            "note": f.signal_caveats[0] if f.signal_caveats and f.risk_level == "high_interest" else None,
+        }
+
+    return {
+        "report": report,
+        "generated": report.generated_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "executive_summary": report.executive_summary or generate_executive_summary(report),
+        "sections": [
+            (title, [finding(f) for f in findings])
+            for title, findings in (
+                ("High interest findings", report.high_interest_findings),
+                ("Findings requiring review", report.needs_review_findings),
+            )
+            if findings
+        ],
+        "meetings": report.meeting_summaries,
+        "equipment": describe_equipment(report.capabilities) if report.capabilities else [],
+        "limitations": report.limitations,
+        "signal_note": SIGNAL_ANALYSIS_DISCLAIMER.strip(),
+        "disclaimer": REPORT_DISCLAIMER.strip(),
+    }
 
 
 def generate_technical_annex_json(report: TSCMReport) -> dict:
@@ -842,15 +886,21 @@ class TSCMReportBuilder:
         return ""
 
     def add_meeting_summary(self, summary: dict) -> TSCMReportBuilder:
-        """Add meeting window summary."""
+        """Add a meeting window summary: flat counts, or the nested shape
+        MeetingWindowSummary.to_dict() produces (device lists, counts under
+        "summary")."""
+        counts = summary.get("summary") or {}
+        first_seen = summary.get("devices_first_seen", counts.get("new_devices", 0))
+        if isinstance(first_seen, list):
+            first_seen = len(first_seen)
         meeting = ReportMeetingSummary(
             name=summary.get("name"),
-            start_time=summary.get("start_time", ""),
+            start_time=summary.get("start_time") or "",
             end_time=summary.get("end_time"),
-            duration_minutes=summary.get("duration_minutes", 0),
-            devices_first_seen=summary.get("devices_first_seen", 0),
-            behavior_changes=summary.get("behavior_changes", 0),
-            high_interest_devices=summary.get("high_interest_devices", 0),
+            duration_minutes=summary.get("duration_minutes") or 0,
+            devices_first_seen=first_seen,
+            behavior_changes=summary.get("behavior_changes", counts.get("behavior_changes", 0)),
+            high_interest_devices=summary.get("high_interest_devices", counts.get("high_interest", 0)),
         )
         self.report.meeting_summaries.append(meeting)
         return self
@@ -1025,6 +1075,8 @@ def generate_report(
 
     if baseline_diff:
         builder.add_baseline_diff(baseline_diff)
+        if baseline_diff.get("baseline_name"):
+            builder.set_baseline(baseline_diff.get("baseline_id"), baseline_diff["baseline_name"])
 
     if meeting_summaries:
         for summary in meeting_summaries:

@@ -150,9 +150,35 @@ def test_practitioner_flow(client, surveyed):
     caps = MagicMock()
     caps.to_dict.return_value = {}
     with patch("utils.tscm.advanced.detect_sweep_capabilities", return_value=caps):
-        resp = client.get(f"/tscm/report/pdf?sweep_id={ids['sweep_id']}&site_name=HQ")
+        resp = client.get(f"/tscm/report/text?sweep_id={ids['sweep_id']}&site_name=HQ")
     assert resp.status_code == 200
     assert "Site / Location: HQ" in resp.get_data(as_text=True)
+
+
+def test_report_includes_the_baseline_comparison_and_meeting_windows(client, db):
+    """Defect: the report routes passed neither, so the client report never
+    had a baseline comparison or a meeting window section."""
+    baseline_id = db.create_tscm_baseline("Empty boardroom", wifi_networks=[{"bssid": "AA:AA:AA:AA:AA:AA"}])
+    sweep_id = db.create_tscm_sweep("standard", baseline_id=baseline_id)
+    meeting_id = db.start_meeting_window(sweep_id, name="Board meeting")
+    db.end_meeting_window(meeting_id)
+    results = {"wifi_devices": [{"bssid": "AA:AA:AA:AA:AA:AA"}, {"bssid": "BB:BB:BB:BB:BB:BB", "essid": "New AP"}]}
+    db.update_tscm_sweep(sweep_id, status="completed", results=results, completed=True)
+
+    caps = MagicMock()
+    caps.to_dict.return_value = {}
+    with patch("utils.tscm.advanced.detect_sweep_capabilities", return_value=caps):
+        text = client.get(f"/tscm/report/text?sweep_id={sweep_id}").get_data(as_text=True)
+        html = client.get(f"/tscm/report/print?sweep_id={sweep_id}").get_data(as_text=True)
+        annex = client.get(f"/tscm/report/annex?sweep_id={sweep_id}").get_json()["annex"]
+
+    assert "BASELINE COMPARISON (vs 'Empty boardroom'):" in text
+    assert "  - New devices: 1" in text
+    assert "Meeting: Board meeting" in text
+    assert "Board meeting" in html and "Empty boardroom" in html
+    assert annex["sweep_details"]["baseline_name"] == "Empty boardroom"
+    assert annex["baseline_diff"]["summary"]["new_devices"] == 1
+    assert [m["name"] for m in annex["meeting_windows"]] == ["Board meeting"]
 
 
 def test_presets_and_details(client):
@@ -193,3 +219,54 @@ def test_baseline_age_reads_stored_utc_correctly(client, db, monkeypatch):
         time.tzset()
     assert health["age_hours"] < 0.1
     assert diff["age"]["hours"] < 0.1
+
+
+def test_past_sweeps_are_listed_newest_first_with_what_they_detected(client, db):
+    """There was no way to list sweeps: only the current process's latest
+    was reachable, and none at all after a restart."""
+    first = db.create_tscm_sweep("quick")
+    db.update_tscm_sweep(
+        first,
+        status="completed",
+        results={"wifi_devices": [{"bssid": "AA:AA:AA:AA:AA:AA"}], "bt_devices": [{}, {}], "rf_count": 3},
+        completed=True,
+    )
+    running = db.create_tscm_sweep("standard")
+
+    sweeps = client.get("/tscm/sweeps").get_json()["sweeps"]
+    assert [s["id"] for s in sweeps] == [running, first]
+    assert sweeps[0]["has_results"] is False and sweeps[0]["detected"] is None
+    assert sweeps[1]["detected"] == {"wifi": 1, "wifi_clients": 0, "bluetooth": 2, "rf": 3}
+    assert "results" not in sweeps[1]  # summaries, not the device lists
+
+    assert [s["id"] for s in client.get("/tscm/sweeps?limit=1").get_json()["sweeps"]] == [running]
+    assert len(client.get("/tscm/sweeps?limit=0").get_json()["sweeps"]) == 1  # clamped to at least one
+
+
+def test_meeting_windows_are_compared_on_the_local_clock(monkeypatch):
+    """Defect: meeting windows are stored in UTC and device observations in
+    local time, and the two were compared directly. Outside UTC, a device
+    seen during the meeting was counted as outside it."""
+    import time
+    from datetime import datetime
+
+    from utils.tscm.advanced import DeviceObservation, DeviceTimeline, generate_meeting_summary
+
+    monkeypatch.setenv("TZ", "Europe/London")  # BST in September: UTC+1
+    time.tzset()
+    try:
+        seen = datetime(2026, 9, 24, 13, 30)  # local, as observations are recorded
+        timeline = DeviceTimeline(
+            identifier="AA:BB:CC:DD:EE:01",
+            protocol="bluetooth",
+            observations=[DeviceObservation(timestamp=seen)],
+            first_seen=seen,
+            last_seen=seen,
+        )
+        window = {"id": 1, "name": "Board", "start_time": "2026-09-24 12:00:00", "end_time": "2026-09-24 13:00:00"}
+        summary = generate_meeting_summary(window, [timeline], []).to_dict()
+    finally:
+        monkeypatch.undo()
+        time.tzset()
+    assert summary["start_time"] == "2026-09-24T13:00:00"
+    assert summary["summary"]["total_devices_active"] == 1

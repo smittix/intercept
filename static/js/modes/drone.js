@@ -207,9 +207,27 @@ var DroneMode = (function () {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ wifi_iface: iface, rtl_sdr_index: rtlIndex, use_hackrf: useHackrf }),
         })
-        .then(function (r) { return r.json(); })
-        .then(function () { _setRunningUI(true); _refreshStatus(); })
-        .catch(function () {});
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (res) {
+            var data = res.data || {};
+            var unavailable = data.unavailable || [];
+            if (!res.ok) {
+                _showStartNote(data.message || data.error || 'Drone detection failed to start');
+                return;
+            }
+            _showStartNote(unavailable.length ? 'Started without ' + unavailable.join('; ') : '');
+            _setRunningUI(true);
+            _refreshStatus();
+        })
+        .catch(function (err) { _showStartNote('Drone detection failed to start: ' + err.message); });
+    }
+
+    /** Why a start failed, or which sources did not start; text only. */
+    function _showStartNote(text) {
+        var el = document.getElementById('droneDeviceWarnings');
+        if (!el) return;
+        el.textContent = text;
+        el.style.display = text ? 'block' : 'none';
     }
 
     function _stop() {

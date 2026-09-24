@@ -16393,28 +16393,11 @@
             return params.join('&');
         }
 
-        async function tscmDownloadPdf() {
-            try {
-                const parts = [_tscmCategoryParam(), _tscmMetaParams()].filter(Boolean);
-                const response = await fetch(`/tscm/report/pdf${parts.length ? '?' + parts.join('&') : ''}`);
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `TSCM_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                } else {
-                    const data = await response.json();
-                    alert(data.message || 'Failed to generate PDF');
-                }
-            } catch (e) {
-                console.error('Failed to download PDF:', e);
-                alert('Failed to download PDF report');
-            }
+        // The client report opens as a printable page; the browser's Print,
+        // with "Save as PDF", makes the PDF.
+        function tscmDownloadPdf() {
+            const parts = [_tscmCategoryParam(), _tscmMetaParams()].filter(Boolean);
+            window.open(`/tscm/report/print${parts.length ? '?' + parts.join('&') : ''}`, '_blank', 'noopener');
         }
 
         async function tscmDownloadAnnex(format) {

@@ -151,13 +151,15 @@ class RFDetector:
         except Exception as exc:
             logger.warning("hackrf_sweep error: %s", exc)
 
-    def start(self, rtl_sdr_index: int = 0, use_hackrf: bool = True) -> None:
+    def start(self, rtl_sdr_index: int | None = 0, use_hackrf: bool = True) -> None:
+        """Start rtl_433 on rtl_sdr_index (None: not at all) and, if asked, hackrf_sweep."""
         if self.running:
             return
         self._stop_event.clear()
-        t1 = threading.Thread(target=self._run_rtl433, args=(rtl_sdr_index,), daemon=True)
-        t1.start()
-        self._threads.append(t1)
+        if rtl_sdr_index is not None:
+            t1 = threading.Thread(target=self._run_rtl433, args=(rtl_sdr_index,), daemon=True)
+            t1.start()
+            self._threads.append(t1)
         if use_hackrf:
             t2 = threading.Thread(target=self._run_hackrf, daemon=True)
             t2.start()

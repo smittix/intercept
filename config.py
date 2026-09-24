@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.14"
+VERSION = "2.33.15"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.15",
+        "date": "September 2026",
+        "highlights": [
+            "TSCM client report is a printable page: print it, or save it as a PDF. It now includes the baseline comparison and meeting windows, and past sweeps are listed in the survey.",
+            "Fix: drone detection claims its SDR and says which sources started; SubGHz and remote agents name a missing tool; meeting windows were compared an hour out in summer time.",
+        ],
+    },
     {
         "version": "2.33.14",
         "date": "September 2026",

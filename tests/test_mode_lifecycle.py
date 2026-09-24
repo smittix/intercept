@@ -93,12 +93,7 @@ MODES = {
         "/wifi/v2/scan/status",
         success="a deep scan needs root and a monitor-mode interface",
     ),
-    "drone": _mode(
-        "/drone/start",
-        "/drone/stop",
-        "/drone/status",
-        missing_tool="runs degraded by design: each detection source is optional",
-    ),
+    "drone": _mode("/drone/start", "/drone/stop", "/drone/status"),
     "bluetooth": _mode(
         "/api/bluetooth/scan/start",
         "/api/bluetooth/scan/stop",
@@ -433,6 +428,10 @@ class TestAgentLifecycle:
         assert result["status"] == "error"
         assert mode not in agent.running_modes
         assert agent.get_sdr_in_use(0) is None
+        # the missing tool is named, with advice, not a raw OSError
+        message = result["message"]
+        assert "not found" in message and "Errno" not in message, message
+        assert any(w in message for w in ("Install", "install", "See ", "package")), message
 
     def test_start_stop_start(self, agent, mode):
         with _decoders(installed=True):
@@ -495,3 +494,34 @@ class TestLifecycleRecord:
 
             client.post(spec["stop"], json={})
         assert self._record(client, "sensor")["started_at"] is None
+
+
+def test_drone_claims_its_sdr_and_reports_the_sources_it_started(client, lifecycle):
+    """Each drone source is optional, but the run reports which ones started,
+    and the RTL-SDR it uses is claimed until stop."""
+    spec = lifecycle("drone")
+    with _decoders(installed=True):
+        resp = client.post(spec["start"], json={"rtl_sdr_index": 0, "use_hackrf": False})
+        assert resp.status_code == 200, _message(resp)
+        assert resp.get_json()["vectors"] == ["RTL433"]
+        assert client.get("/drone/status").get_json()["vectors"] == ["RTL433"]
+        assert app_module.sdr_device_registry == {"rtlsdr:0": "drone"}
+
+        # another mode cannot take the SDR the drone detector is using
+        assert app_module.claim_sdr_device(0, "sensor") is not None
+
+        client.post(spec["stop"], json={})
+        assert app_module.sdr_device_registry == {}
+        assert client.get("/drone/status").get_json()["vectors"] == []
+
+
+@pytest.mark.parametrize("mode", ["subghz_receive", "subghz_decode", "subghz_sweep"])
+def test_subghz_missing_tool_is_not_a_conflict(client, lifecycle, mode):
+    """A missing HackRF tool is a 400 with install advice, like every other
+    mode; 409 is kept for a start that conflicts with one already running."""
+    spec = lifecycle(mode)
+    with _decoders(installed=False):
+        resp = client.post(spec["start"], json=spec["body"])
+    assert resp.status_code == 400, (resp.status_code, _message(resp))
+    assert resp.get_json()["error_type"] == "TOOL_MISSING"
+    assert "not found" in _message(resp)

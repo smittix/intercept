@@ -31,6 +31,15 @@ logger = get_logger("intercept.subghz")
 
 subghz_bp = Blueprint("subghz", __name__, url_prefix="/subghz")
 
+
+def _start_status(result: dict) -> int:
+    """HTTP status for a start result: a missing tool is the operator's to
+    fix (400); anything else refused a start that conflicts (409)."""
+    if result.get("status") != "error":
+        return 200
+    return 400 if result.get("error_type") == "TOOL_MISSING" else 409
+
+
 # SSE queue for streaming events to frontend
 _subghz_queue: queue.Queue = queue.Queue(maxsize=200)
 
@@ -167,8 +176,7 @@ def start_receive():
         device_serial=device_serial,
     )
 
-    status_code = 200 if result.get("status") != "error" else 409
-    return jsonify(result), status_code
+    return jsonify(result), _start_status(result)
 
 
 @subghz_bp.route("/receive/stop", methods=["POST"])
@@ -209,8 +217,7 @@ def start_decode():
         device_serial=device_serial,
     )
 
-    status_code = 200 if result.get("status") != "error" else 409
-    return jsonify(result), status_code
+    return jsonify(result), _start_status(result)
 
 
 @subghz_bp.route("/decode/stop", methods=["POST"])
@@ -302,8 +309,7 @@ def start_sweep():
         device_serial=device_serial,
     )
 
-    status_code = 200 if result.get("status") != "error" else 409
-    return jsonify(result), status_code
+    return jsonify(result), _start_status(result)
 
 
 @subghz_bp.route("/sweep/stop", methods=["POST"])
