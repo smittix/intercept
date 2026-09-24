@@ -310,6 +310,8 @@
                 <div class="control-group-items">
                     <label title="Show aircraft trails"><input type="checkbox" id="showTrails" checked onchange="toggleTrails()"> Trails</label>
                     <label title="Show range rings"><input type="checkbox" id="showRangeRings" checked onchange="drawRangeRings()"> Rings</label>
+                    <label title="Outline of the furthest contact heard in each direction"><input type="checkbox" id="showReach" checked onchange="receptionOutline && receptionOutline.setVisible(this.checked)"> Reach</label>
+                    <button type="button" class="reach-reset" title="Forget the reception outline for this location" onclick="receptionOutline && receptionOutline.reset()">&#8634;</button>
                     <label title="Audio alerts for military/emergency"><input type="checkbox" id="alertToggle" checked onchange="toggleAlerts()"> Alerts</label>
                     <label title="Sound when new aircraft detected"><input type="checkbox" id="detectionSoundToggle" onchange="toggleDetectionSound()"> Ping</label>
                     <select id="aircraftFilter" onchange="applyFilter()" title="Filter aircraft">
@@ -431,6 +433,7 @@
         // STATE
         // ============================================
         let radarMap = null;
+        let receptionOutline = null;  // components/reception-outline.js
         let mapOverlays = null;
         let aircraft = {};
         let markers = {};
@@ -1078,6 +1081,7 @@
                 if (distance > stats.maxRange) {
                     stats.maxRange = distance;
                 }
+                if (receptionOutline) receptionOutline.add(ac.lat, ac.lon);
             }
 
             // Message rate
@@ -2122,6 +2126,13 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                 },
                 scaleBar: true,
             });
+
+            if (window.ReceptionOutline) {
+                receptionOutline = ReceptionOutline.create(radarMap, {
+                    key: 'adsb', observer: () => observerLocation, color: '#4a9eff',
+                    visible: document.getElementById('showReach')?.checked !== false,
+                });
+            }
         }
 
         // Handle window resize for map (especially important on mobile)
@@ -5597,6 +5608,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
     <script src="{{ url_for('static', filename='js/core/agents.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/global-nav.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/strip-spark.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/reception-outline.js') }}"></script>
     <script>StripSpark.attach('stripAircraftNow', { title: 'Aircraft in view, over the last 15 minutes' });</script>
     <script>
         // ADS-B specific agent integration
