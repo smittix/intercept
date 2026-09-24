@@ -110,6 +110,9 @@
     let radiosondeEventSource = null;
     let radiosondeBalloons = {};
     let radiosondeWaveform = null;
+    // Each sonde's readings as received, for its ascent profile: id -> [{alt, temp}]
+    const radiosondeProfiles = new Map();
+    const RADIOSONDE_PROFILE_MAX = 3000;
 
     // Initialise signal waveform once the component script has loaded
     function initRadiosondeWaveform() {
@@ -223,6 +226,7 @@
             const stripUpdate = document.getElementById('radiosondeStripUpdate');
             if (stripUpdate) stripUpdate.textContent = '--:--:--';
             radiosondeBalloons = {};
+            radiosondeProfiles.clear();
             // Clear map markers
             if (typeof radiosondeMap !== 'undefined' && radiosondeMap) {
                 radiosondeMarkers.forEach(m => radiosondeMap.removeLayer(m));
@@ -250,6 +254,12 @@
                 if (data.type === 'balloon') {
                     if (radiosondeWaveform) radiosondeWaveform.ping();
                     radiosondeBalloons[data.id] = data;
+                    if (data.alt != null) {
+                        const profile = radiosondeProfiles.get(data.id) || [];
+                        profile.push({ alt: data.alt, temp: data.temp });
+                        if (profile.length > RADIOSONDE_PROFILE_MAX) profile.shift();
+                        radiosondeProfiles.set(data.id, profile);
+                    }
                     const balloonCount = Object.keys(radiosondeBalloons).length;
                     document.getElementById('radiosondeBalloonCount').textContent = balloonCount;
                     const stripBalloons = document.getElementById('radiosondeStripBalloons');
@@ -435,6 +445,41 @@
         }
     }
 
+    // Ascent profile: temperature against altitude, as a sounding is drawn,
+    // plus where it burst once it is coming down.
+    function radiosondeProfileSvg(id) {
+        const points = (radiosondeProfiles.get(id) || []).filter(p => p.temp != null);
+        if (points.length < 2) {
+            return '<div class="radiosonde-profile-empty">Profile builds as readings arrive</div>';
+        }
+        const maxAlt = Math.max(1000, ...points.map(p => p.alt));
+        let minT = Math.min(...points.map(p => p.temp));
+        let maxT = Math.max(...points.map(p => p.temp));
+        if (maxT - minT < 10) { const mid = (maxT + minT) / 2; minT = mid - 5; maxT = mid + 5; }
+        const x = (t) => (4 + (t - minT) / (maxT - minT) * 92).toFixed(1);
+        const y = (a) => (96 - a / maxAlt * 92).toFixed(1);
+        const line = points.map(p => `${x(p.temp)},${y(p.alt)}`).join(' ');
+        const last = points[points.length - 1];
+        const zero = minT < 0 && maxT > 0
+            ? `<line class="radiosonde-profile-zero" x1="${x(0)}" x2="${x(0)}" y1="4" y2="96"/>` : '';
+        return `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${zero}
+                <polyline points="${line}"/></svg>
+            <span class="radiosonde-profile-dot" style="left:${x(last.temp)}%;top:${y(last.alt)}%"></span>
+            <span class="radiosonde-profile-top">${(maxAlt / 1000).toFixed(1)} km</span>
+            <span class="radiosonde-profile-min">${Math.round(minT)}°</span>
+            <span class="radiosonde-profile-max">${Math.round(maxT)}°</span>`;
+    }
+
+    function radiosondePhase(b) {
+        const points = radiosondeProfiles.get(b.id) || [];
+        const peak = Math.max(0, ...points.map(p => p.alt));
+        if (b.vel_v != null && b.vel_v < -1 && peak - (b.alt || 0) > 300) {
+            return `<span class="radiosonde-phase down">Descending · burst ${Math.round(peak).toLocaleString()} m</span>`;
+        }
+        if (b.vel_v != null && b.vel_v > 1) return '<span class="radiosonde-phase up">Ascending</span>';
+        return '';
+    }
+
     function updateRadiosondeCards() {
         const container = document.getElementById('radiosondeCardContainer');
         if (!container) return;
@@ -459,8 +504,10 @@
                 <div class="radiosonde-card" onclick="radiosondeMap && radiosondeMap.setView([${b.lat || 0}, ${b.lon || 0}], 10)">
                     <div class="radiosonde-card-header">
                         <span class="radiosonde-serial">${b.id}</span>
+                        ${radiosondePhase(b)}
                         <span class="radiosonde-type">${b.sonde_type || '??'}</span>
                     </div>
+                    <div class="radiosonde-card-body">
                     <div class="radiosonde-stats">
                         <div class="radiosonde-stat">
                             <span class="radiosonde-stat-value">${alt}</span>
@@ -490,6 +537,8 @@
                             <span class="radiosonde-stat-value">${dist}</span>
                             <span class="radiosonde-stat-label">DIST</span>
                         </div>
+                    </div>
+                    <div class="radiosonde-profile" title="Temperature by altitude">${radiosondeProfileSvg(b.id)}</div>
                     </div>
                 </div>
             `;

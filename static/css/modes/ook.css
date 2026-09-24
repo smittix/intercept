@@ -108,3 +108,72 @@
     width: auto;
     margin: 0;
 }
+
+/* Pulse train: the latest frame's bits as the keyed signal (OokMode.renderPulseTrain) */
+.ook-pulse {
+    flex: 0 0 auto;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-card, #0a0f16);
+}
+
+.ook-pulse-head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.ook-pulse-meta {
+    font-family: var(--font-mono);
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text-secondary);
+}
+
+.ook-pulse svg {
+    display: block;
+    width: 100%;
+    height: 60px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.ook-pulse-line {
+    fill: none;
+    stroke: var(--accent-green);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 0 3px var(--accent-green));
+}
+
+.ook-pulse.idle .ook-pulse-line {
+    stroke: var(--text-dim);
+    opacity: 0.35;
+    filter: none;
+}
+
+.ook-pulse-byte {
+    stroke: rgba(255, 255, 255, 0.07);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+
+.ook-pulse-bytes {
+    display: flex;
+    min-height: 14px;
+    margin-top: 3px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--accent-cyan);
+}
+
+.ook-pulse-bytes span {
+    flex: 0 0 auto;
+    text-align: center;
+}

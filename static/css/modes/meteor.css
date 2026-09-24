@@ -148,6 +148,37 @@
     display: block;
 }
 
+/* Idle: what the panel will show (MeteorScatter._initStarfield) */
+.ms-idle-note {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 2;
+    transform: translate(-50%, -50%);
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 16px;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.55);
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+.ms-idle-note strong {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.ms-idle-note[hidden] {
+    display: none;
+}
+
 /* Starfield canvas behind the waterfall */
 .ms-starfield-canvas {
     position: absolute;

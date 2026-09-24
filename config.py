@@ -7,10 +7,19 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.20"
+VERSION = "2.33.21"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.21",
+        "date": "September 2026",
+        "highlights": [
+            "A second polish pass: a status card and section icons in the sidebar, Run State in the header, one kind of pop-up, and a live card on the welcome page.",
+            "433 MHz plots each packet it hears (level, SNR, device) in place of a made-up waveform; OOK draws its last frame as a pulse train; radiosondes get an ascent profile.",
+            "System Health heat grid and gauges, a TSCM threat gauge, ADS-B history traffic by hour, Agents health rings, and maps that open on you.",
+        ],
+    },
     {
         "version": "2.33.20",
         "date": "September 2026",

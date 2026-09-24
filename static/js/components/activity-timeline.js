@@ -477,9 +477,7 @@ const ActivityTimeline = (function() {
                 <div class="activity-timeline-axis"></div>
                 <div class="activity-timeline-lanes">
                     <div class="activity-timeline-empty">
-                        <div class="activity-timeline-empty-icon">◯</div>
-                        <div>No activity recorded</div>
-                        <div style="margin-top: 4px; font-size: 9px;">Activity will appear here as events are observed</div>
+                        No activity in this window
                     </div>
                 </div>
                 <div class="activity-timeline-annotations" style="display: none;"></div>
@@ -735,9 +733,7 @@ const ActivityTimeline = (function() {
         if (items.length === 0) {
             lanesContainer.innerHTML = `
                 <div class="activity-timeline-empty">
-                    <div class="activity-timeline-empty-icon">◯</div>
-                    <div>No activity recorded</div>
-                    <div style="margin-top: 4px; font-size: 9px;">Activity will appear here as events are observed</div>
+                    No activity in this window
                 </div>
             `;
         } else {

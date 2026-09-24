@@ -152,6 +152,7 @@ const LiveEmptyState = (function () {
     const STYLE = '.live-empty-state{display:flex;align-items:center;justify-content:center;gap:14px;padding:16px 18px;' +
         'margin:8px;border:1px dashed var(--border-color,#263246);border-radius:8px;color:var(--text-secondary,#9fb0c7);' +
         'font-size:12px;text-align:left;grid-column:1/-1}' +
+        '.live-empty-state[hidden]{display:none}' +
         '.live-empty-state .les-text{display:flex;flex-direction:column;gap:2px;min-width:0}' +
         '.live-empty-state .les-headline{font-size:11px;letter-spacing:.12em;text-transform:uppercase}' +
         '.live-empty-state .les-detail{overflow-wrap:anywhere}' +
@@ -215,6 +216,12 @@ window.LiveEmptyState = LiveEmptyState;
         try { return typeof currentAgent === 'undefined' || currentAgent === 'local'; } catch (err) { return true; }  // eslint-disable-line no-undef
     };
     const onlyLocal = (mode) => () => (local() ? mode : null);  // an agent's decoder is not in /health
+    const tscm = () => {
+        try {
+            if (Object.values(tscmFilters).some((v) => v !== 'all')) return null;  // eslint-disable-line no-undef
+        } catch (err) { /* not the main page */ }
+        return local() ? 'tscm' : null;
+    };
 
     const FEED = {
         pager: { decoder: 'rtl_fm → multimon-ng', things: 'messages', label: 'Pager' },
@@ -252,6 +259,11 @@ window.LiveEmptyState = LiveEmptyState;
         acarsMessages: { mode: 'acars', decoder: 'acarsdec', things: 'messages', label: 'ACARS' },
         vesselList: { mode: 'ais', decoder: 'AIS-catcher', things: 'vessels', label: 'AIS', items: '.vessel-item' },
         dscMessageList: { mode: 'dsc', decoder: 'DSC decoder', things: 'messages', label: 'DSC' },
+        // TSCM sweep panels; with a filter set, the panel's own "no match" message stands.
+        tscmWifiList: { mode: tscm, decoder: 'TSCM sweep', things: 'networks', label: 'TSCM sweep' },
+        tscmWifiClientList: { mode: tscm, decoder: 'TSCM sweep', things: 'clients', label: 'TSCM sweep' },
+        tscmBtList: { mode: tscm, decoder: 'TSCM sweep', things: 'devices', label: 'TSCM sweep' },
+        tscmRfList: { mode: tscm, decoder: 'TSCM sweep', things: 'signals', label: 'TSCM sweep' },
     };
 
     function attachAll() {

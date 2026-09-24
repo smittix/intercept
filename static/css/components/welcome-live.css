@@ -1,0 +1,197 @@
+/* Welcome page live card (static/js/core/welcome-live.js) */
+
+.wl-card {
+    margin: 0 0 20px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-cyan);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(var(--accent-cyan-rgb, 74, 163, 255), 0.06), transparent), var(--bg-card);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wl-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.welcome-content .wl-top .wl-title {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.wl-uptime {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+}
+
+.wl-light {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--accent-green);
+    box-shadow: 0 0 6px var(--accent-green);
+}
+
+.wl-light.idle {
+    background: var(--text-dim);
+    box-shadow: none;
+}
+
+.wl-running {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.wl-none {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.wl-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 11px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.wl-chip:hover {
+    border-color: var(--accent-cyan);
+}
+
+.wl-chip .wl-light {
+    width: 6px;
+    height: 6px;
+}
+
+.wl-chip-time {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+}
+
+.wl-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 12px;
+}
+
+.wl-label {
+    min-width: 58px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.wl-value {
+    color: var(--text-primary);
+}
+
+.wl-activity {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.wl-activity:hover .wl-bars rect[data-source] {
+    opacity: 1;
+}
+
+.wl-bars {
+    width: 100%;
+    height: 44px;
+    display: block;
+}
+
+.wl-bars rect[data-source] {
+    fill: var(--source-color, var(--text-dim));
+    opacity: 0.85;
+}
+
+.wl-bar-base {
+    fill: rgba(255, 255, 255, 0.08);
+}
+
+.wl-axis {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-dim);
+}
+
+.wl-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.wl-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.wl-legend-item i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--source-color, var(--text-dim));
+}
+
+/* The same source colours as the Activity feed (static/css/modes/activity.css) */
+.wl-card [data-source="adsb"] { --source-color: var(--accent-cyan); }
+.wl-card [data-source="ais"] { --source-color: #3b82f6; }
+.wl-card [data-source="wifi"] { --source-color: var(--accent-green); }
+.wl-card [data-source="bluetooth"] { --source-color: var(--accent-purple); }
+.wl-card [data-source="sensor"] { --source-color: var(--accent-orange); }
+.wl-card [data-source="meshtastic"] { --source-color: var(--accent-yellow); }
+.wl-card [data-source="aprs"] { --source-color: #ec4899; }
+.wl-card [data-source="dsc"] { --source-color: var(--accent-red); }
+.wl-card [data-source="pager"] { --source-color: var(--accent-amber); }
+.wl-card [data-source="rtlamr"] { --source-color: #14b8a6; }
+
+/* Mode tiles whose decoder is running */
+#welcomePage .mode-card.is-running {
+    position: relative;
+    border-color: rgba(var(--accent-green-rgb, 34, 197, 94), 0.5);
+}
+
+#welcomePage .mode-card.is-running::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    box-shadow: 0 0 6px var(--accent-green);
+}

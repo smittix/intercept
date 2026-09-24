@@ -27,7 +27,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
     padding: 4px 0;
 }
@@ -37,11 +37,11 @@
     background: var(--bg-card, #1a1e2e);
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    padding: 10px 12px;
+    padding: 10px 12px 18px;
     cursor: pointer;
-    flex: 1 1 280px;
-    min-width: 260px;
-    max-width: 400px;
+    flex: 1 1 360px;
+    min-width: 320px;
+    max-width: 480px;
     transition: border-color 0.2s ease, background 0.2s ease;
 }
 
@@ -77,6 +77,75 @@
     border-radius: 3px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Stats beside the ascent profile */
+.radiosonde-card-body {
+    display: grid;
+    grid-template-columns: 1fr 104px;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.radiosonde-phase {
+    margin-left: auto;
+    margin-right: 8px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+}
+
+.radiosonde-phase.up { color: var(--accent-green); }
+.radiosonde-phase.down { color: var(--accent-amber); }
+
+/* Ascent profile: temperature (x) by altitude (y) */
+.radiosonde-profile {
+    position: relative;
+    min-height: 96px;
+    border-left: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-dim);
+}
+
+.radiosonde-profile svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.radiosonde-profile polyline {
+    fill: none;
+    stroke: var(--accent-orange, #ff9900);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+}
+
+.radiosonde-profile-zero {
+    stroke: rgba(255, 255, 255, 0.12);
+    stroke-dasharray: 2 2;
+    vector-effect: non-scaling-stroke;
+}
+
+.radiosonde-profile-dot {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    margin: -3px 0 0 -3px;
+    border-radius: 50%;
+    background: var(--accent-orange, #ff9900);
+    box-shadow: 0 0 6px var(--accent-orange, #ff9900);
+}
+
+.radiosonde-profile-top { position: absolute; top: 0; left: 3px; }
+.radiosonde-profile-min { position: absolute; bottom: -12px; left: 0; }
+.radiosonde-profile-max { position: absolute; bottom: -12px; right: 0; }
+
+.radiosonde-profile-empty {
+    padding: 6px;
+    text-align: center;
+    line-height: 1.4;
 }
 
 /* Telemetry stat grid */

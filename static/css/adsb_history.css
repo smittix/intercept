@@ -881,3 +881,89 @@ html[data-ui-tier="lean"] {
 .status-pill.active  { background: var(--accent-cyan);  color: #000; }
 .status-pill.warn    { background: var(--accent-orange, #e06c00); color: #fff; }
 .status-pill.error   { background: var(--accent-red, #c0392b); color: #fff; }
+
+/* Summary sparklines and the traffic strip (loadTraffic in adsb_history.html) */
+.summary-spark {
+    height: 24px;
+    margin-top: 8px;
+}
+
+.summary-spark svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.summary-spark polyline {
+    fill: none;
+    stroke: var(--accent-cyan);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+}
+
+.summary-spark polygon {
+    fill: var(--accent-cyan);
+    opacity: 0.12;
+}
+
+.traffic-strip {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px 16px 8px;
+}
+
+.traffic-strip[hidden] {
+    display: none;
+}
+
+.traffic-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.traffic-title {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1.3px;
+}
+
+.traffic-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.traffic-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 64px;
+}
+
+.traffic-bar {
+    flex: 1;
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(to top, var(--accent-cyan) var(--h), rgba(255, 255, 255, 0.04) var(--h));
+    opacity: 0.8;
+}
+
+.traffic-bar:hover,
+.traffic-bar.peak {
+    opacity: 1;
+}
+
+.traffic-bar.peak {
+    background: linear-gradient(to top, var(--accent-green) var(--h), rgba(255, 255, 255, 0.04) var(--h));
+}
+
+.traffic-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 10px;
+    color: var(--text-dim);
+}

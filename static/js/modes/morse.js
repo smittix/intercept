@@ -889,6 +889,58 @@ var MorseMode = (function () {
         scopeHistory = [];
         scopeWaiting = false;
         waitingStart = 0;
+        drawIdleScope();
+    }
+
+    // Idle: what the scope will show, faintly. "CQ" keyed as a tone envelope,
+    // the threshold that separates marks from gaps, and a caption.
+    var IDLE_PATTERN = '-.-. --.-';
+
+    function drawIdleScope() {
+        var canvas = el('morseScopeCanvas');
+        if (!canvas || scopeAnim) return;
+        var rect = canvas.getBoundingClientRect();
+        if (!rect.width) return;
+        var dpr = window.devicePixelRatio || 1;
+        var w = rect.width, h = 80;
+        canvas.width = Math.max(1, Math.floor(w * dpr));
+        canvas.height = Math.max(1, Math.floor(h * dpr));
+        var ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = '#050510';
+        ctx.fillRect(0, 0, w, h);
+
+        // Units: dit 1, dah 3, gap 1 within a letter, 3 between letters
+        var units = [];
+        for (var i = 0; i < IDLE_PATTERN.length; i++) {
+            var c = IDLE_PATTERN[i];
+            if (c === ' ') { units.push(0, 0); continue; }
+            var len = c === '-' ? 3 : 1;
+            for (var k = 0; k < len; k++) units.push(1);
+            units.push(0);
+        }
+        var unitW = Math.min(18, (w * 0.6) / units.length);
+        var x0 = (w - unitW * units.length) / 2;
+        var threshY = h * 0.55;
+        for (var u = 0; u < units.length; u++) {
+            var on = units[u] === 1;
+            var barH = on ? h * 0.7 : h * 0.12;
+            ctx.fillStyle = on ? 'rgba(0, 255, 136, 0.22)' : 'rgba(51, 68, 85, 0.5)';
+            ctx.fillRect(x0 + u * unitW, h - barH, Math.max(unitW - 1, 1), barH);
+        }
+        ctx.strokeStyle = 'rgba(255, 68, 68, 0.35)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(0, threshY);
+        ctx.lineTo(w, threshY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = '#556677';
+        ctx.font = '11px ' + (getComputedStyle(document.body).getPropertyValue('--font-mono') || 'monospace');
+        ctx.textAlign = 'left';
+        ctx.fillText('Idle · tone level shows here: marks above the threshold, gaps below', 10, 16);
     }
 
     function appendDiagLine(text) {
@@ -990,6 +1042,7 @@ var MorseMode = (function () {
 
         var scopePanel = el('morseScopePanel');
         if (scopePanel) scopePanel.style.display = 'block';
+        if (!running && !starting) drawIdleScope();
 
         var outputPanel = el('morseOutputPanel');
         if (outputPanel) outputPanel.style.display = 'block';

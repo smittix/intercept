@@ -146,7 +146,7 @@
 
 .sys-gauge-arc .arc-bg {
     fill: none;
-    stroke: var(--bg-primary, #0d0d1a);
+    stroke: rgba(255, 255, 255, 0.07);
     stroke-width: 8;
     stroke-linecap: round;
 }
@@ -235,6 +235,116 @@
     font-family: var(--font-mono, 'JetBrains Mono', monospace);
     color: var(--text-primary, #e0e0ff);
     margin-bottom: 4px;
+}
+
+/* Memory: a small gauge each for RAM and swap */
+.sys-mini-gauges {
+    display: flex;
+    justify-content: space-around;
+    gap: 12px;
+}
+
+.sys-mini-gauge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.sys-mini-gauge .sys-gauge-arc {
+    width: 96px;
+    height: 96px;
+}
+
+.sys-mini-gauge .sys-gauge-label {
+    font-size: 18px;
+}
+
+.sys-mini-gauge-name {
+    margin-top: -10px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+/* CPU and RAM history */
+.sys-history {
+    margin-top: 14px;
+}
+
+.sys-history-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+/* Temperatures: one tile per sensor, tinted by heat */
+.sys-temp-source {
+    margin-left: 8px;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-dim);
+}
+
+.sys-heat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.sys-heat-tile {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 6px;
+    padding: 5px 7px;
+    border-radius: 4px;
+    border-left: 3px solid var(--heat);
+    background: color-mix(in srgb, var(--heat) 14%, transparent);
+    font-size: 10px;
+}
+
+.sys-heat-tile.cool { --heat: var(--accent-cyan, #00d4ff); }
+.sys-heat-tile.normal { --heat: var(--accent-green, #00ff88); }
+.sys-heat-tile.warm { --heat: var(--accent-amber, #f59e0b); }
+.sys-heat-tile.hot { --heat: var(--accent-red, #ff3366); }
+
+.sys-heat-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-secondary);
+}
+
+.sys-heat-value {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.sys-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.sys-chip {
+    padding: 3px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.sys-chip b {
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
 /* Network interface rows */

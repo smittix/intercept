@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/agents.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}?v={{ version }}&r=maptheme17">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/help-modal.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/ux-platform.css') }}">
     <style>
         .agents-container {
             max-width: 1200px;
@@ -24,18 +25,115 @@
             padding: 20px;
         }
 
+        .agents-page-header {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            padding: 14px 20px;
+        }
+
+        .agents-page-title {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .agents-page-title > span {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
         .agents-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border-color);
+            gap: 12px;
+            margin-bottom: 16px;
         }
 
-        .agents-header h1 {
-            font-size: 24px;
-            color: var(--accent-cyan);
+        #agentsSummary {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .agents-header .agent-btn {
+            flex: 0 0 auto;
+        }
+
+        /* Health ring: how quickly the agent answered, from /controller/agents/health */
+        .agent-ring {
+            position: relative;
+            flex: 0 0 auto;
+            width: 48px;
+            height: 48px;
+            --ring: var(--text-dim);
+        }
+
+        .agent-ring.good { --ring: var(--accent-green); }
+        .agent-ring.fair { --ring: var(--accent-amber); }
+        .agent-ring.slow,
+        .agent-ring.down { --ring: var(--accent-red); }
+
+        .agent-ring svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .agent-ring circle {
+            fill: none;
+            stroke-width: 4;
+        }
+
+        .agent-ring .track { stroke: rgba(255, 255, 255, 0.08); }
+        .agent-ring .arc { stroke: var(--ring); stroke-linecap: round; filter: drop-shadow(0 0 3px var(--ring)); }
+
+        .agent-ring-value {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1;
+            color: var(--text-primary);
+        }
+
+        .agent-ring-value small {
+            font-size: 8px;
+            font-weight: 400;
+            color: var(--text-dim);
+        }
+
+        .agent-title {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .agent-title .agent-url {
+            margin: 2px 0 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .agent-running {
+            margin-bottom: 12px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .agent-running b {
+            color: var(--accent-green);
+            font-weight: 600;
         }
 
         .agents-grid {
@@ -63,8 +161,8 @@
 
         .agent-card-header {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
+            gap: 12px;
             margin-bottom: 15px;
         }
 
@@ -177,14 +275,18 @@
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
+            padding: 14px 20px;
+            margin-bottom: 20px;
         }
 
-        .add-agent-section h2 {
+        .add-agent-section summary {
             font-size: 16px;
-            margin-bottom: 15px;
             color: var(--accent-cyan);
+            cursor: pointer;
+        }
+
+        .add-agent-section[open] summary {
+            margin-bottom: 15px;
         }
 
         .form-row {
@@ -232,73 +334,28 @@
             opacity: 0.5;
         }
 
-        /* Toast notifications */
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 14px;
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-        }
-
-        .toast.success {
-            border-color: var(--accent-green);
-        }
-
-        .toast.error {
-            border-color: var(--accent-red);
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
     </style>
 </head>
 
 <body>
-    <header style="padding: 15px 20px; display: flex; align-items: center; gap: 12px;">
-        <div class="logo">
-            <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 30 Q5 50, 15 70" stroke="#00d4ff" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
-                <path d="M22 35 Q14 50, 22 65" stroke="#00d4ff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.7"/>
-                <path d="M29 40 Q23 50, 29 60" stroke="#00d4ff" stroke-width="2" fill="none" stroke-linecap="round"/>
-                <path d="M85 30 Q95 50, 85 70" stroke="#00d4ff" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
-                <path d="M78 35 Q86 50, 78 65" stroke="#00d4ff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.7"/>
-                <path d="M71 40 Q77 50, 71 60" stroke="#00d4ff" stroke-width="2" fill="none" stroke-linecap="round"/>
-                <circle cx="50" cy="22" r="6" fill="#00ff88"/>
-                <rect x="44" y="35" width="12" height="45" rx="2" fill="#00d4ff"/>
-                <rect x="38" y="35" width="24" height="4" rx="1" fill="#00d4ff"/>
-                <rect x="38" y="76" width="24" height="4" rx="1" fill="#00d4ff"/>
-            </svg>
+    <header class="agents-page-header">
+        <div class="agents-page-title">
+            Remote Agents
+            <span>// <span class="brand-i"><svg viewBox="36 14 28 68" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="20" r="6" fill="#00ff88"/><rect x="44" y="33" width="12" height="45" rx="2" fill="#00d4ff"/><rect x="38" y="33" width="24" height="4" rx="1" fill="#00d4ff"/><rect x="38" y="74" width="24" height="4" rx="1" fill="#00d4ff"/></svg></span>NTERCEPT</span>
         </div>
-        <h1 style="margin: 0;">
-            <span class="brand-i"><svg viewBox="36 14 28 68" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="20" r="6" fill="#00ff88"/><rect x="44" y="33" width="12" height="45" rx="2" fill="#00d4ff"/><rect x="38" y="33" width="24" height="4" rx="1" fill="#00d4ff"/><rect x="38" y="74" width="24" height="4" rx="1" fill="#00d4ff"/></svg></span>NTERCEPT <span class="tagline">// Remote Agents</span>
-        </h1>
     </header>
 
     {% include 'partials/nav.html' with context %}
 
     <div class="agents-container">
         <div class="agents-header">
-            <h1>Remote Agents</h1>
+            <span id="agentsSummary">Loading agents…</span>
+            <button type="button" class="agent-btn" onclick="refreshAllAgents()">Refresh all</button>
         </div>
 
-        <!-- Add Agent Form -->
-        <div class="add-agent-section">
-            <h2>Register New Agent</h2>
+        <!-- Add Agent Form: open until there is an agent, then folded away -->
+        <details class="add-agent-section" id="addAgentSection" open>
+            <summary>Register New Agent</summary>
             <form id="addAgentForm" onsubmit="return addAgent(event)">
                 <div class="form-row">
                     <div class="form-group">
@@ -325,12 +382,9 @@
                     <button type="submit" class="agent-btn primary" style="width: auto; padding: 10px 24px;">
                         Register Agent
                     </button>
-                    <button type="button" class="agent-btn" style="width: auto; padding: 10px 24px;" onclick="refreshAllAgents()">
-                        Refresh All
-                    </button>
                 </div>
             </form>
-        </div>
+        </details>
 
         <!-- Agents Grid -->
         <div id="agentsGrid" class="agents-grid">
@@ -354,6 +408,8 @@
     <script>
         // Agent management functions
         let agents = [];
+        let agentHealth = {};  // id -> /controller/agents/health result
+        let formFolded = false;
 
         async function loadAgents() {
             try {
@@ -363,15 +419,55 @@
                 const data = await response.json();
                 agents = data.agents || [];
                 renderAgents();
+                loadHealth();
             } catch (error) {
                 console.error('Failed to load agents:', error);
                 showToast('Failed to load agents', 'error');
             }
         }
 
+        async function loadHealth() {
+            if (!agents.length) return;
+            try {
+                const response = await fetch('/controller/agents/health', { credentials: 'same-origin' });
+                const data = await response.json();
+                agentHealth = {};
+                (data.agents || []).forEach(h => { agentHealth[h.id] = h; });
+                renderAgents();
+            } catch (error) {
+                // Cards keep the registry's view
+            }
+        }
+
+        function healthRing(agent, isOnline) {
+            const h = agentHealth[agent.id];
+            const ms = h && h.healthy ? h.response_time_ms : null;
+            const cls = !isOnline ? 'down' : ms == null ? 'unknown' : ms < 150 ? 'good' : ms < 600 ? 'fair' : 'slow';
+            // Full for an instant answer, emptying towards a second
+            const fill = !isOnline ? 1 : ms == null ? 0 : Math.max(0.08, 1 - Math.min(ms, 1000) / 1000);
+            const c = 2 * Math.PI * 20;
+            const title = !isOnline ? 'Not answering' : ms == null ? 'Checking response time' : `Answered in ${Math.round(ms)} ms`;
+            const value = !isOnline ? '!' : ms == null ? '··' : `${Math.round(ms)}<small>ms</small>`;
+            return `<div class="agent-ring ${cls}" title="${title}">
+                    <svg viewBox="0 0 48 48" aria-hidden="true">
+                        <circle class="track" cx="24" cy="24" r="20"/>
+                        <circle class="arc" cx="24" cy="24" r="20" stroke-dasharray="${(fill * c).toFixed(1)} ${c.toFixed(1)}"/>
+                    </svg>
+                    <span class="agent-ring-value">${value}</span>
+                </div>`;
+        }
+
         function renderAgents() {
             const grid = document.getElementById('agentsGrid');
             const emptyState = document.getElementById('emptyState');
+            const online = agents.filter(a => a.healthy !== false && a.is_active).length;
+            document.getElementById('agentsSummary').textContent = agents.length
+                ? `${agents.length} agent${agents.length === 1 ? '' : 's'} · ${online} online`
+                : 'No agents registered';
+            if (!formFolded) {
+                document.getElementById('addAgentSection').open = agents.length === 0;
+                formFolded = true;
+            }
 
             if (agents.length === 0) {
                 grid.innerHTML = '';
@@ -396,16 +492,25 @@
                     ? new Date(agent.last_seen).toLocaleString()
                     : 'Never';
 
+                const health = agentHealth[agent.id];
+                const modes = health && health.running_modes ? health.running_modes : null;
+                const running = !isOnline || !modes ? ''
+                    : `<div class="agent-running">${modes.length ? 'Running <b>' + modes.map(escapeHtml).join(', ') + '</b>' : 'Nothing running'}</div>`;
+
                 return `
                     <div class="agent-card ${statusClass}">
                         <div class="agent-card-header">
-                            <span class="agent-name">${escapeHtml(agent.name)}</span>
+                            ${healthRing(agent, isOnline)}
+                            <div class="agent-title">
+                                <span class="agent-name">${escapeHtml(agent.name)}</span>
+                                <div class="agent-url">${escapeHtml(agent.base_url)}</div>
+                            </div>
                             <span class="agent-status">
                                 <span class="agent-status-dot ${statusClass}"></span>
                                 ${statusText}
                             </span>
                         </div>
-                        <div class="agent-url">${escapeHtml(agent.base_url)}</div>
+                        ${running}
                         <div class="agent-capabilities">
                             ${capBadges || '<span class="capability-badge disabled">No capabilities detected</span>'}
                         </div>
@@ -545,15 +650,7 @@
         }
 
         function showToast(message, type = 'info') {
-            // Remove existing toasts
-            document.querySelectorAll('.toast').forEach(t => t.remove());
-
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-
-            setTimeout(() => toast.remove(), 3000);
+            AppFeedback.toast({ type, message, durationMs: 4000 });
         }
 
         function escapeHtml(text) {
@@ -574,5 +671,6 @@
 
     <script src="{{ url_for('static', filename='js/core/settings-manager.js') }}?v={{ version }}&r=maptheme17"></script>
     <script src="{{ url_for('static', filename='js/core/global-nav.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/ui-feedback.js') }}" data-global-handlers="off"></script>
 </body>
 </html>

@@ -12,9 +12,12 @@ const SystemHealth = (function () {
     let connected = false;
     let lastMetrics = null;
 
-    // Temperature sparkline ring buffer (last 20 readings)
+    // Sparkline ring buffers: temperature, CPU and RAM (one reading per 3 s update)
     const SPARKLINE_SIZE = 20;
+    const HISTORY_SIZE = 100;
     let tempHistory = [];
+    let cpuHistory = [];
+    let ramHistory = [];
 
     // Network I/O delta tracking
     let prevNetIo = null;
@@ -111,11 +114,11 @@ const SystemHealth = (function () {
     // Temperature Sparkline
     // -----------------------------------------------------------------------
 
-    function sparklineSvg(values) {
+    function sparklineSvg(values, lo, hi) {
         if (!values || values.length < 2) return '';
         var w = 200, h = 40;
-        var min = Math.min.apply(null, values);
-        var max = Math.max.apply(null, values);
+        var min = lo != null ? lo : Math.min.apply(null, values);
+        var max = hi != null ? hi : Math.max.apply(null, values);
         var range = max - min || 1;
         var step = w / (values.length - 1);
 
@@ -148,6 +151,7 @@ const SystemHealth = (function () {
         if (!cpu) { el.innerHTML = '<div class="sys-card-body"><span class="sys-metric-na">psutil not available</span></div>'; return; }
 
         var pct = Math.round(cpu.percent);
+        pushHistory(cpuHistory, cpu.percent);
         var coreHtml = '';
         if (cpu.per_core && cpu.per_core.length) {
             coreHtml = '<div class="sys-core-bars">';
@@ -180,7 +184,41 @@ const SystemHealth = (function () {
             freqHtml +
             '</div></div>' +
             coreHtml +
+            historyHtml(cpuHistory, 'CPU') +
             '</div>';
+    }
+
+    function pushHistory(buffer, value) {
+        buffer.push(value);
+        if (buffer.length > HISTORY_SIZE) buffer.shift();
+    }
+
+    // A 0-100 % sparkline with its time span, for CPU and RAM
+    function historyHtml(buffer, label) {
+        if (buffer.length < 2) return '';
+        var minutes = Math.max(1, Math.round(buffer.length * 3 / 60));
+        return '<div class="sys-history">' +
+            '<div class="sys-history-head"><span>' + label + ' history</span><span>last ' + minutes + ' min</span></div>' +
+            '<div class="sys-sparkline-wrap">' + sparklineSvg(buffer, 0, 100) + '</div>' +
+            '</div>';
+    }
+
+    function gaugeHtml(pct, label, detail) {
+        var rounded = Math.round(pct);
+        return '<div class="sys-mini-gauge">' +
+            '<div class="sys-gauge-arc">' + arcGaugeSvg(rounded) +
+            '<div class="sys-gauge-label">' + rounded + '%</div></div>' +
+            '<div class="sys-mini-gauge-name">' + label + '</div>' +
+            '<div class="sys-card-detail">' + detail + '</div>' +
+            '</div>';
+    }
+
+    // Heat tint for a sensor tile: cool, normal, warm, hot
+    function heatClass(c) {
+        if (c >= 80) return 'hot';
+        if (c >= 65) return 'warm';
+        if (c >= 40) return 'normal';
+        return 'cool';
     }
 
     // -----------------------------------------------------------------------
@@ -193,13 +231,15 @@ const SystemHealth = (function () {
         var mem = m.memory;
         if (!mem) { el.innerHTML = '<div class="sys-card-body"><span class="sys-metric-na">N/A</span></div>'; return; }
         var swap = m.swap || {};
+        pushHistory(ramHistory, mem.percent);
         el.innerHTML =
             '<div class="sys-card-header">Memory</div>' +
             '<div class="sys-card-body">' +
-            barHtml(mem.percent, 'RAM') +
-            '<div class="sys-card-detail">' + formatBytes(mem.used) + ' / ' + formatBytes(mem.total) + '</div>' +
-            (swap.total > 0 ? barHtml(swap.percent, 'Swap') +
-                '<div class="sys-card-detail">' + formatBytes(swap.used) + ' / ' + formatBytes(swap.total) + '</div>' : '') +
+            '<div class="sys-mini-gauges">' +
+            gaugeHtml(mem.percent, 'RAM', formatBytes(mem.used) + ' / ' + formatBytes(mem.total)) +
+            (swap.total > 0 ? gaugeHtml(swap.percent, 'Swap', formatBytes(swap.used) + ' / ' + formatBytes(swap.total)) : '') +
+            '</div>' +
+            historyHtml(ramHistory, 'RAM') +
             '</div>';
     }
 
@@ -231,35 +271,41 @@ const SystemHealth = (function () {
             tempHistory.push(temp.current);
             if (tempHistory.length > SPARKLINE_SIZE) tempHistory.shift();
 
-            html += '<div class="sys-temp-big">' + Math.round(temp.current) + '&deg;C</div>';
+            html += '<div class="sys-temp-big">' + Math.round(temp.current) + '&deg;C' +
+                (temp.label ? '<span class="sys-temp-source">' + escHtml(temp.label) + '</span>' : '') + '</div>';
             html += '<div class="sys-sparkline-wrap">' + sparklineSvg(tempHistory) + '</div>';
 
-            // Additional sensors
+            // Every sensor as a tile tinted by its heat
             if (m.temperatures) {
+                html += '<div class="sys-heat-grid">';
                 for (var chip in m.temperatures) {
                     m.temperatures[chip].forEach(function (s) {
-                        html += '<div class="sys-card-detail">' + escHtml(s.label) + ': ' + Math.round(s.current) + '&deg;C</div>';
+                        var name = s.label && s.label !== chip ? s.label : chip;
+                        html += '<div class="sys-heat-tile ' + heatClass(s.current) + '" title="' + escHtml(chip + ' ' + (s.label || '')) + '">' +
+                            '<span class="sys-heat-name">' + escHtml(name) + '</span>' +
+                            '<span class="sys-heat-value">' + Math.round(s.current) + '&deg;</span></div>';
                     });
                 }
+                html += '</div>';
             }
         } else {
             html += '<span class="sys-metric-na">No temperature sensors</span>';
         }
 
-        // Fans
+        // Fans and battery, as chips
+        var chips = [];
         if (m.fans) {
             for (var fChip in m.fans) {
                 m.fans[fChip].forEach(function (f) {
-                    html += '<div class="sys-card-detail">Fan ' + escHtml(f.label) + ': ' + f.current + ' RPM</div>';
+                    chips.push('Fan ' + escHtml(f.label || fChip) + ' <b>' + f.current + ' RPM</b>');
                 });
             }
         }
-
-        // Battery
         if (m.battery) {
-            html += '<div class="sys-card-detail" style="margin-top:8px">' +
-                'Battery: ' + Math.round(m.battery.percent) + '%' +
-                (m.battery.plugged ? ' (plugged)' : '') + '</div>';
+            chips.push('Battery <b>' + Math.round(m.battery.percent) + '%</b>' + (m.battery.plugged ? ' plugged in' : ''));
+        }
+        if (chips.length) {
+            html += '<div class="sys-chips">' + chips.map(function (c) { return '<span class="sys-chip">' + c + '</span>'; }).join('') + '</div>';
         }
 
         // Throttle flags (Pi)

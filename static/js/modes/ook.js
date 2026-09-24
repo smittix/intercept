@@ -39,6 +39,7 @@ var OokMode = (function () {
         }
         state.initialized = true;
         renderPresets();
+        renderPulseTrain(null);
         checkStatus();
     }
 
@@ -192,6 +193,56 @@ var OokMode = (function () {
         if (barEl) barEl.textContent = state.frameCount + ' frames';
 
         appendFrameEntry(msg, state.bitOrder);
+        renderPulseTrain(msg);
+    }
+
+    // ---- Pulse train: the latest frame as the keyed signal it came from ----
+
+    var PULSE_MAX_BITS = 128;
+    // Shown faintly until a frame arrives
+    var PULSE_IDLE_BITS = '1010110010110100110101001011001011010011';
+
+    function renderPulseTrain(msg) {
+        var el = document.getElementById('ookPulseTrain');
+        if (!el) return;
+        var bits = msg && msg.bits ? msg.bits : PULSE_IDLE_BITS;
+        var shown = bits.slice(0, PULSE_MAX_BITS);
+        var n = shown.length;
+        var step = 1000 / n;
+        var hi = 8, lo = 52;
+
+        var d = 'M0 ' + lo;
+        var level = lo;
+        for (var i = 0; i < n; i++) {
+            var next = shown[i] === '1' ? hi : lo;
+            if (next !== level) { d += ' V' + next; level = next; }
+            d += ' H' + ((i + 1) * step).toFixed(1);
+        }
+        var ticks = '';
+        for (var b = 8; b < n; b += 8) {
+            var x = (b * step).toFixed(1);
+            ticks += '<line class="ook-pulse-byte" x1="' + x + '" x2="' + x + '" y1="0" y2="60"/>';
+        }
+
+        var head = msg
+            ? '<span>Last frame</span><span class="ook-pulse-meta">' + _esc(msg.timestamp || '') + ' · ' + msg.bit_count + ' bits' +
+              (msg.rssi !== undefined && msg.rssi !== null ? ' · ' + Number(msg.rssi).toFixed(1) + ' dB' : '') +
+              (bits.length > PULSE_MAX_BITS ? ' · first ' + PULSE_MAX_BITS + ' shown' : '') + '</span>'
+            : '<span>Last frame</span><span class="ook-pulse-meta">Waiting for a frame</span>';
+
+        var bytes = '';
+        if (msg) {
+            var hex = interpretBits(shown, state.bitOrder).hex;
+            for (var k = 0; k * 2 < hex.length; k++) {
+                bytes += '<span style="width:' + (8 * 100 / n).toFixed(3) + '%">' + hex.substr(k * 2, 2) + '</span>';
+            }
+        }
+
+        el.classList.toggle('idle', !msg);
+        el.innerHTML = '<div class="ook-pulse-head">' + head + '</div>' +
+            '<svg viewBox="0 0 1000 60" preserveAspectRatio="none" aria-hidden="true">' + ticks +
+            '<path class="ook-pulse-line" d="' + d + '"/></svg>' +
+            '<div class="ook-pulse-bytes">' + bytes + '</div>';
     }
 
     // ---- Bit interpretation ----
@@ -323,6 +374,7 @@ var OokMode = (function () {
         state.frames.forEach(function (msg) {
             appendFrameEntry(msg, order);
         });
+        renderPulseTrain(state.frames.length ? state.frames[state.frames.length - 1] : null);
     }
 
     // ---- Output panel ----
@@ -337,11 +389,7 @@ var OokMode = (function () {
         var barEl = document.getElementById('ookStatusBarFrames');
         if (barEl) barEl.textContent = '0 frames';
 
-        // Hide output panel if not currently running (no frames to show)
-        if (!state.running) {
-            var outputPanel = document.getElementById('ookOutputPanel');
-            if (outputPanel) outputPanel.style.display = 'none';
-        }
+        renderPulseTrain(null);
     }
 
     function exportLog() {
@@ -613,12 +661,9 @@ var OokMode = (function () {
         if (indicator) indicator.style.background = running ? '#00ff88' : 'var(--text-dim)';
         if (statusText) statusText.textContent = running ? 'Listening' : 'Standby';
 
-        // Keep output panel visible if there are frames to review (even after stopping)
+        // Always shown: idle, it says it is stopped and shows what a frame will look like
         var outputPanel = document.getElementById('ookOutputPanel');
-        if (outputPanel) {
-            var showPanel = running || state.frames.length > 0;
-            outputPanel.style.display = showPanel ? 'flex' : 'none';
-        }
+        if (outputPanel) outputPanel.style.display = 'flex';
     }
 
     // ---- Public API ----

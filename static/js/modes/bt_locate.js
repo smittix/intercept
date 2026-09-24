@@ -197,9 +197,13 @@ const BtLocate = (function() {
         // Init map
         const mapEl = document.getElementById('btLocateMap');
         if (mapEl && typeof L !== 'undefined' && typeof MapUtils !== 'undefined') {
+            // Open on the observer, not the whole world: the target is nearby.
+            // 0,0 is the unset default (DEFAULT_LAT/LON), not a place to look.
+            const found = resolveFallbackLocation();
+            const home = found && !(found.lat === 0 && found.lon === 0) ? found : null;
             map = MapUtils.init('btLocateMap', {
-                center: [0, 0],
-                zoom: 2,
+                center: home ? [home.lat, home.lon] : [0, 0],
+                zoom: home ? 15 : 2,
             });
             ensureHeatLayer();
             syncMovementLayer();
@@ -1338,6 +1342,9 @@ const BtLocate = (function() {
     function updateMovementStats() {
         const statsEl = document.getElementById('btLocateTrackStats');
         if (!statsEl) return;
+
+        const waiting = document.getElementById('btLocateMapWaiting');
+        if (waiting) waiting.hidden = trailPoints.length > 0;
 
         const points = trailPoints.map(p => L.latLng(p.lat, p.lon));
         if (points.length < 2) {

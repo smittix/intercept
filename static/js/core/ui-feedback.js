@@ -164,13 +164,14 @@ const AppFeedback = (function() {
 
     function normalizeType(type) {
         const t = String(type || 'info').toLowerCase();
-        if (t === 'error' || t === 'warning') return t;
+        if (t === 'error' || t === 'warning' || t === 'success') return t;
         return 'info';
     }
 
     function defaultTitle(type) {
         if (type === 'error') return 'Error';
         if (type === 'warning') return 'Warning';
+        if (type === 'success') return 'Done';
         return 'Notice';
     }
 
@@ -438,6 +439,10 @@ window.isTransientOrOffline = function(error) {
     return AppFeedback.isTransientOrOffline(error);
 };
 
+// A page can use the toasts without the global error handlers by loading
+// this script with data-global-handlers="off" (the dashboards do).
+const appFeedbackScript = document.currentScript;
 document.addEventListener('DOMContentLoaded', () => {
+    if (appFeedbackScript && appFeedbackScript.dataset.globalHandlers === 'off') return;
     AppFeedback.init();
 });

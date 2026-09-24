@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import json
-import math
 import queue
 import subprocess
 import threading
@@ -43,36 +42,6 @@ sensor_rssi_history: dict[str, list[tuple[float, float]]] = {}
 _MAX_RSSI_HISTORY = 60
 
 
-def _build_scope_waveform(rssi: float, snr: float, noise: float, points: int = 256) -> list[int]:
-    """Synthesize a compact waveform from rtl_433 level metrics."""
-    points = max(32, min(points, 512))
-
-    # rssi is usually negative; stronger signals are closer to 0 dBm.
-    rssi_norm = min(max(abs(rssi) / 40.0, 0.0), 1.0)
-    snr_norm = min(max((snr + 5.0) / 35.0, 0.0), 1.0)
-    noise_norm = min(max(abs(noise) / 40.0, 0.0), 1.0)
-
-    amplitude = max(0.06, min(1.0, (0.6 * rssi_norm + 0.4 * snr_norm) - (0.22 * noise_norm)))
-    cycles = 3.0 + (snr_norm * 8.0)
-    harmonic = 0.25 + (0.35 * snr_norm)
-    hiss = 0.08 + (0.18 * noise_norm)
-    phase = (time.monotonic() * (1.4 + (snr_norm * 2.2))) % (2.0 * math.pi)
-
-    waveform: list[int] = []
-    for i in range(points):
-        t = i / (points - 1)
-        base = math.sin((2.0 * math.pi * cycles * t) + phase)
-        overtone = math.sin((2.0 * math.pi * (cycles * 2.4) * t) + (phase * 0.7))
-        noise_wobble = math.sin((2.0 * math.pi * (cycles * 7.0) * t) + (phase * 2.1))
-
-        sample = amplitude * (base + (harmonic * overtone) + (hiss * noise_wobble))
-        sample /= 1.0 + harmonic + hiss
-        packed = int(round(max(-1.0, min(1.0, sample)) * 127.0))
-        waveform.append(max(-127, min(127, packed)))
-
-    return waveform
-
-
 def stream_sensor_output(process: subprocess.Popen[bytes]) -> None:
     """Stream rtl_433 JSON output to queue."""
     try:
@@ -109,31 +78,6 @@ def stream_sensor_output(process: subprocess.Popen[bytes]) -> None:
                     hist.append((time.time(), float(_rssi_val)))
                     if len(hist) > _MAX_RSSI_HISTORY:
                         del hist[: len(hist) - _MAX_RSSI_HISTORY]
-
-                # Push scope event when signal level data is present
-                rssi = data.get("rssi")
-                snr = data.get("snr")
-                noise = data.get("noise")
-                if rssi is not None or snr is not None:
-                    try:
-                        rssi_value = float(rssi) if rssi is not None else 0.0
-                        snr_value = float(snr) if snr is not None else 0.0
-                        noise_value = float(noise) if noise is not None else 0.0
-                        app_module.sensor_queue.put_nowait(
-                            {
-                                "type": "scope",
-                                "rssi": rssi_value,
-                                "snr": snr_value,
-                                "noise": noise_value,
-                                "waveform": _build_scope_waveform(
-                                    rssi=rssi_value,
-                                    snr=snr_value,
-                                    noise=noise_value,
-                                ),
-                            }
-                        )
-                    except (TypeError, ValueError, queue.Full):
-                        pass
 
                 # Log if enabled
                 if app_module.logging_enabled:
