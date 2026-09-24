@@ -1217,6 +1217,8 @@ def kill_all() -> Response:
             cleanup_ook(emit_status=False)
         except Exception:
             if ook_process:
+                from utils.process import safe_terminate, unregister_process
+
                 safe_terminate(ook_process)
                 unregister_process(ook_process)
             ook_process = None
