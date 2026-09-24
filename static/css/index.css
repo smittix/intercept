@@ -3851,20 +3851,10 @@ header h1 .tagline {
     color: var(--text-dim);
 }
 
-.wifi-zone.near .wifi-zone-count { color: var(--accent-red); }
+/* Strong to weak, as on the Bluetooth radar */
+.wifi-zone.near .wifi-zone-count { color: var(--accent-green); }
 .wifi-zone.mid .wifi-zone-count { color: var(--accent-amber); }
-.wifi-zone.far .wifi-zone-count { color: var(--accent-green); }
-
-.wifi-radar-sweep {
-    transform-box: view-box;
-    transform-origin: 105px 105px;
-    animation: wifi-radar-rotate 3s linear infinite;
-}
-
-@keyframes wifi-radar-rotate {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
-}
+.wifi-zone.far .wifi-zone-count { color: var(--accent-red); }
 
 /* WiFi Analysis Panel */
 .wifi-analysis-panel {
