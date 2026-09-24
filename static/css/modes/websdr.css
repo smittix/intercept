@@ -1,0 +1,162 @@
+/* WebSDR: receiver list and globe tooltips (static/js/modes/websdr.js) */
+
+.wsdr-summary {
+    margin-bottom: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.wsdr-legend {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 10px;
+    color: var(--text-dim);
+}
+
+.wsdr-legend span::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: 5px;
+    border-radius: 50%;
+    background: var(--load);
+}
+
+[data-load="free"] { --load: var(--accent-green); }
+[data-load="busy"] { --load: var(--accent-amber); }
+[data-load="full"] { --load: var(--accent-red); }
+
+.wsdr-tools {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.wsdr-tools input,
+.wsdr-tools select {
+    min-width: 0;
+    padding: 5px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 11px;
+}
+
+.wsdr-empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.wsdr-rx {
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-left: 3px solid var(--load);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.wsdr-rx + .wsdr-rx {
+    margin-top: 4px;
+}
+
+.wsdr-rx:hover {
+    background: rgba(var(--accent-cyan-rgb), 0.06);
+    border-color: rgba(var(--accent-cyan-rgb), 0.25);
+    border-left-color: var(--load);
+}
+
+.wsdr-rx.selected {
+    background: rgba(var(--accent-cyan-rgb), 0.12);
+    border-color: rgba(var(--accent-cyan-rgb), 0.45);
+    border-left-color: var(--accent-cyan);
+}
+
+.wsdr-rx-top {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.wsdr-rx-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.wsdr-rx.selected .wsdr-rx-name {
+    color: var(--accent-cyan);
+}
+
+.wsdr-rx-dist {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.wsdr-rx-sub {
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10px;
+    color: var(--text-dim);
+}
+
+.wsdr-rx-slots {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+    font-size: 9px;
+    color: var(--text-dim);
+}
+
+.wsdr-rx-bar {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(var(--accent-cyan-rgb), 0.12);
+    overflow: hidden;
+}
+
+.wsdr-rx-bar i {
+    display: block;
+    height: 100%;
+    background: var(--load);
+}
+
+/* Globe hover tooltip (globe.gl pointLabel) */
+.wsdr-tip {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 260px;
+    padding: 6px 9px;
+    border: 1px solid rgba(var(--accent-cyan-rgb), 0.35);
+    border-radius: 6px;
+    background: rgba(4, 10, 14, 0.92);
+    font-size: 11px;
+    color: #c8d4e0;
+}
+
+.wsdr-tip b {
+    color: var(--accent-cyan);
+}
+
+@media (max-width: 900px) {
+    .wsdr-layout {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: minmax(280px, 1fr) auto;
+    }
+}

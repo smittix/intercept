@@ -17,6 +17,7 @@ let websdrGlobeScriptPromise = null;
 let websdrResizeObserver = null;
 let websdrResizeHooked = false;
 let websdrGlobeFallbackNotified = false;
+let websdrHoverIndex = null;  // list card under the pointer, highlighted on the globe
 
 const WEBSDR_GLOBE_SCRIPT_URLS = [
     'https://cdn.jsdelivr.net/npm/globe.gl@2.33.1/dist/globe.gl.min.js',
@@ -102,6 +103,8 @@ function searchReceivers(refresh) {
 
     let url = '/websdr/receivers?available=true';
     if (freqKhz > 0) url += `&freq_khz=${freqKhz}`;
+    const home = websdrHome();
+    if (home) url += `&lat=${home.lat}&lon=${home.lon}`;  // nearest first, with distance and bearing
     if (refresh) url += '&refresh=true';
 
     fetch(url)
@@ -116,9 +119,61 @@ function searchReceivers(refresh) {
 
                 const countEl = document.getElementById('websdrReceiverCount');
                 if (countEl) countEl.textContent = `${websdrReceivers.length} found`;
+                renderWebsdrSummary();
             }
         })
         .catch(err => console.error('[WEBSDR] Search error:', err));
+}
+
+// ============== HELPERS ==============
+
+/** The observer's location, or null when none is set (0,0 is the unset default). */
+function websdrHome() {
+    const loc = window.ObserverLocation && ObserverLocation.getShared ? ObserverLocation.getShared() : null;
+    if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lon) || (loc.lat === 0 && loc.lon === 0)) return null;
+    return loc;
+}
+
+/** How busy a receiver is: 'free' under half its slots used, 'busy' more, 'full' none left. */
+function websdrLoad(rx) {
+    const max = Number(rx.users_max) || 0;
+    const used = Number(rx.users) || 0;
+    if (max && used >= max) return 'full';
+    return max && used / max >= 0.5 ? 'busy' : 'free';
+}
+
+function websdrLoadColor(load) {
+    const css = getComputedStyle(document.documentElement);
+    const pick = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
+    if (load === 'full') return pick('--accent-red', '#e25d5d');
+    if (load === 'busy') return pick('--accent-amber', '#d6a85c');
+    return pick('--accent-green', '#38c180');
+}
+
+function websdrCompass(bearing) {
+    const points = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    return points[Math.round(bearing / 22.5) % 16];
+}
+
+function websdrDistanceText(rx) {
+    if (rx.distance_km == null) return '';
+    const km = rx.distance_km >= 100 ? Math.round(rx.distance_km).toLocaleString() : rx.distance_km;
+    return `${km} km` + (rx.bearing != null ? ` ${websdrCompass(rx.bearing)}` : '');
+}
+
+/** "100 receivers · 312 free slots · nearest 42 km NW", above the list. */
+function renderWebsdrSummary() {
+    const el = document.getElementById('websdrSummary');
+    if (!el) return;
+    if (!websdrReceivers.length) { el.textContent = ''; return; }
+    const free = websdrReceivers.reduce((n, rx) => n + Math.max(0, (Number(rx.users_max) || 0) - (Number(rx.users) || 0)), 0);
+    const nearest = websdrReceivers.filter(rx => rx.distance_km != null)
+        .sort((a, b) => a.distance_km - b.distance_km)[0];
+    el.textContent = [
+        `${websdrReceivers.length} receivers`,
+        `${free} free slots`,
+        nearest ? `nearest ${websdrDistanceText(nearest)}` : '',
+    ].filter(Boolean).join(' · ');
 }
 
 // ============== MAP ==============
@@ -137,10 +192,11 @@ function plotReceiversOnMap(receivers) {
     receivers.forEach((rx, idx) => {
         if (rx.lat == null || rx.lon == null) return;
 
+        const loadColor = websdrLoadColor(websdrLoad(rx));
         const marker = L.circleMarker([rx.lat, rx.lon], {
             radius: 6,
-            fillColor: rx.available ? (getComputedStyle(document.documentElement).getPropertyValue('--accent-cyan').trim() || '#00d4ff') : '#666',
-            color: rx.available ? (getComputedStyle(document.documentElement).getPropertyValue('--accent-cyan').trim() || '#00d4ff') : '#666',
+            fillColor: loadColor,
+            color: loadColor,
             weight: 1,
             opacity: 0.8,
             fillOpacity: 0.6,
@@ -273,6 +329,7 @@ function initWebsdrGlobe(mapEl) {
     mapEl.style.cursor = 'grab';
 
     const _wsdrAccent = getComputedStyle(document.documentElement).getPropertyValue('--accent-cyan').trim() || '#3bb9ff';
+    const _wsdrAccentRgb = getComputedStyle(document.documentElement).getPropertyValue('--accent-cyan-rgb').trim() || '59, 185, 255';
     websdrGlobe = window.Globe()(mapEl)
         .backgroundColor('rgba(0,0,0,0)')
         .globeImageUrl(WEBSDR_GLOBE_TEXTURE_URL)
@@ -283,6 +340,25 @@ function initWebsdrGlobe(mapEl) {
         .pointAltitude('altitude')
         .pointColor('color')
         .pointsTransitionDuration(250)
+        // Latitude and longitude lines every 30 degrees
+        .pathsData(websdrGraticule())
+        .pathPoints(line => line)
+        .pathPointLat(p => p[0])
+        .pathPointLng(p => p[1])
+        .pathColor(() => `rgba(${_wsdrAccentRgb}, 0.16)`)
+        .pathTransitionDuration(0)
+        // Pulse on the selected receiver and on you
+        .ringColor(ring => t => ring.color.replace('ALPHA', String(1 - t)))
+        .ringMaxRadius(ring => ring.maxRadius)
+        .ringPropagationSpeed(2)
+        .ringRepeatPeriod(ring => ring.period)
+        // Great-circle path from you to the selected receiver
+        .arcColor(() => [`rgba(${_wsdrAccentRgb}, 0.25)`, `rgba(${_wsdrAccentRgb}, 0.95)`])
+        .arcStroke(0.5)
+        .arcDashLength(0.4)
+        .arcDashGap(0.15)
+        .arcDashAnimateTime(2200)
+        .arcAltitudeAutoScale(0.35)
         .pointLabel(point => point.label || '')
         .onPointHover(point => {
             mapEl.style.cursor = point ? 'pointer' : 'grab';
@@ -302,6 +378,12 @@ function initWebsdrGlobe(mapEl) {
         controls.rotateSpeed = 0.7;
         controls.zoomSpeed = 0.8;
     }
+
+    // Tint the dark earth towards the accent, so land reads against the sea
+    try {
+        const material = websdrGlobe.globeMaterial();
+        if (material && material.color) material.color.setStyle('#9cc9cf');
+    } catch (err) { /* keep the plain texture */ }
 
     ensureWebsdrGlobePopup(mapEl);
     resizeWebsdrGlobe();
@@ -397,40 +479,71 @@ function resizeWebsdrGlobe() {
     websdrGlobe.height(height);
 }
 
-function plotReceiversOnGlobe(receivers) {
+function websdrGraticule() {
+    const lines = [];
+    for (let lat = -60; lat <= 60; lat += 30) {
+        lines.push(Array.from({ length: 73 }, (_, i) => [lat, -180 + i * 5]));
+    }
+    for (let lng = -180; lng < 180; lng += 30) {
+        lines.push(Array.from({ length: 37 }, (_, i) => [-90 + i * 5, lng]));
+    }
+    return lines;
+}
+
+/**
+ * Receivers as flat dots on the surface, coloured by how busy they are;
+ * the selected one (or the one hovered in the list) larger and pulsing, you
+ * as a white dot with a slow pulse, and a path from you to the selection.
+ */
+function plotReceiversOnGlobe(receivers, options) {
     if (!websdrGlobe) return;
+    const opts = options || {};
+    const accentRgb = getComputedStyle(document.documentElement).getPropertyValue('--accent-cyan-rgb').trim() || '59, 185, 255';
 
     const points = [];
     receivers.forEach((rx, idx) => {
+        if (rx.lat == null || rx.lon == null) return;  // Number(null) is 0: no position is not 0,0
         const lat = Number(rx.lat);
         const lon = Number(rx.lon);
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 
         const selected = idx === websdrSelectedReceiverIndex;
+        const hovered = idx === websdrHoverIndex;
         points.push({
             lat: lat,
             lng: lon,
             receiverIndex: idx,
-            radius: selected ? 0.52 : 0.38,
-            altitude: selected ? 0.1 : 0.04,
-            color: selected ? '#00ff88' : (rx.available ? (getComputedStyle(document.documentElement).getPropertyValue('--accent-cyan').trim() || '#00d4ff') : '#5f6976'),
+            radius: selected ? 0.6 : hovered ? 0.55 : 0.32,
+            altitude: 0.006,
+            color: hovered || selected ? '#ffffff' : websdrLoadColor(websdrLoad(rx)),
             label: buildWebsdrPointLabel(rx, idx),
         });
     });
 
+    const home = websdrHome();
+    if (home) {
+        points.push({ lat: home.lat, lng: home.lon, receiverIndex: null, radius: 0.4, altitude: 0.008, color: '#ffffff', label: '<div class="wsdr-tip"><b>You</b></div>' });
+    }
     websdrGlobe.pointsData(points);
 
-    if (points.length > 0) {
-        if (websdrSelectedReceiverIndex != null) {
-            const selectedPoint = points.find(point => point.receiverIndex === websdrSelectedReceiverIndex);
-            if (selectedPoint) {
-                websdrGlobe.pointOfView({ lat: selectedPoint.lat, lng: selectedPoint.lng, altitude: 1.45 }, 900);
-                return;
-            }
-        }
+    const rings = [];
+    const focus = points.find(point => point.receiverIndex != null && point.receiverIndex === (websdrHoverIndex ?? websdrSelectedReceiverIndex));
+    if (focus) rings.push({ lat: focus.lat, lng: focus.lng, color: `rgba(${accentRgb}, ALPHA)`, maxRadius: 3, period: 900 });
+    if (home) rings.push({ lat: home.lat, lng: home.lon, color: 'rgba(255, 255, 255, ALPHA)', maxRadius: 2, period: 2400 });
+    websdrGlobe.ringsData(rings);
 
-        const center = computeWebsdrGlobeCenter(points);
-        websdrGlobe.pointOfView(center, 900);
+    const selectedPoint = points.find(point => point.receiverIndex != null && point.receiverIndex === websdrSelectedReceiverIndex);
+    websdrGlobe.arcsData(home && selectedPoint
+        ? [{ startLat: home.lat, startLng: home.lon, endLat: selectedPoint.lat, endLng: selectedPoint.lng }]
+        : []);
+
+    if (opts.keepView || !points.length) return;
+    if (selectedPoint) {
+        websdrGlobe.pointOfView({ lat: selectedPoint.lat, lng: selectedPoint.lng, altitude: 1.3 }, 900);
+    } else if (home) {
+        websdrGlobe.pointOfView({ lat: home.lat, lng: home.lon, altitude: 1.5 }, 900);
+    } else {
+        websdrGlobe.pointOfView(computeWebsdrGlobeCenter(points), 900);
     }
 }
 
@@ -472,7 +585,8 @@ function computeWebsdrGlobeCenter(points) {
     });
     meanAngularDistance /= count;
 
-    const altitude = Math.min(2.9, Math.max(1.35, 1.35 + (meanAngularDistance / 45)));
+    // Close enough that the globe fills the panel
+    const altitude = Math.min(2.2, Math.max(1.2, 1.1 + (meanAngularDistance / 60)));
     return { lat: centerLat, lng: centerLng, altitude: altitude };
 }
 
@@ -531,7 +645,7 @@ function showWebsdrGlobePopup(point, event) {
         </div>
         ${rx.location ? `<div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 3px;">${escapeHtmlWebsdr(rx.location)}</div>` : ''}
         <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 2px;">Antenna: ${escapeHtmlWebsdr(rx.antenna || 'Unknown')}</div>
-        <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 10px;">Users: ${rx.users}/${rx.users_max}</div>
+        <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 10px;">Listeners: ${rx.users} of ${rx.users_max}${rx.distance_km != null ? ' · ' + websdrDistanceText(rx) + ' from you' : ''}</div>
         <button type="button" data-websdr-listen style="width: 100%; padding: 5px 10px; background: var(--accent-cyan); color: #041018; border: none; border-radius: 4px; cursor: pointer; font-weight: 700;">Listen</button>
     `;
     websdrGlobePopup.style.display = 'block';
@@ -567,49 +681,70 @@ function hideWebsdrGlobePopup() {
 }
 
 function buildWebsdrPointLabel(rx, idx) {
-    const location = rx.location ? escapeHtmlWebsdr(rx.location) : 'Unknown location';
-    const antenna = escapeHtmlWebsdr(rx.antenna || 'Unknown antenna');
+    const where = [rx.location, websdrDistanceText(rx)].filter(Boolean).map(escapeHtmlWebsdr).join(' · ');
     return `
-        <div style="padding: 4px 6px; font-size: 11px; background: rgba(4, 12, 19, 0.9); border: 1px solid var(--border-glow); border-radius: 4px;">
-            <div style="color: var(--accent-cyan); font-weight: 600;">${escapeHtmlWebsdr(rx.name)}</div>
-            <div style="color: #a5b1c3;">${location}</div>
-            <div style="color: #8f9fb3;">${antenna} · ${rx.users}/${rx.users_max}</div>
-            <div style="color: #7a899b; margin-top: 2px;">Receiver #${idx + 1}</div>
+        <div class="wsdr-tip">
+            <b>${escapeHtmlWebsdr(rx.name)}</b>
+            ${where ? `<span>${where}</span>` : ''}
+            <span>${escapeHtmlWebsdr(rx.antenna || 'Antenna not given')} · ${rx.users} of ${rx.users_max} listening</span>
         </div>
     `;
 }
 
 // ============== RECEIVER LIST ==============
 
+/** Cards: name, distance and direction, place and antenna, and a slots bar. */
 function renderReceiverList(receivers) {
     const container = document.getElementById('websdrReceiverList');
     if (!container) return;
 
     if (receivers.length === 0) {
-        container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">No receivers found</div>';
+        container.innerHTML = '<div class="wsdr-empty">No receivers found</div>';
         return;
     }
 
-    container.innerHTML = receivers.slice(0, 50).map((rx, idx) => {
+    const query = (document.getElementById('websdrSearch')?.value || '').trim().toLowerCase();
+    const sort = document.getElementById('websdrSort')?.value || 'distance';
+    const free = rx => (Number(rx.users_max) || 0) - (Number(rx.users) || 0);
+    const rows = receivers.map((rx, idx) => ({ rx, idx }))
+        .filter(({ rx }) => !query || [rx.name, rx.location, rx.antenna].some(v => String(v || '').toLowerCase().includes(query)));
+    if (sort === 'free') rows.sort((a, b) => free(b.rx) - free(a.rx));
+    else if (sort === 'name') rows.sort((a, b) => String(a.rx.name).localeCompare(String(b.rx.name)));
+    else rows.sort((a, b) => (a.rx.distance_km ?? Infinity) - (b.rx.distance_km ?? Infinity));
+
+    if (!rows.length) {
+        container.innerHTML = '<div class="wsdr-empty">No receivers match</div>';
+        return;
+    }
+
+    container.innerHTML = rows.map(({ rx, idx }) => {
         const selected = idx === websdrSelectedReceiverIndex;
-        const _wsdrRxRgb = getComputedStyle(document.documentElement).getPropertyValue('--accent-cyan-rgb').trim() || '0, 212, 255';
-        const baseBg = selected ? `rgba(${_wsdrRxRgb},0.14)` : 'transparent';
-        const hoverBg = selected ? `rgba(${_wsdrRxRgb},0.18)` : `rgba(${_wsdrRxRgb},0.05)`;
+        const load = websdrLoad(rx);
+        const max = Number(rx.users_max) || 0;
+        const usedPct = max ? Math.min(100, (Number(rx.users) || 0) / max * 100) : 0;
+        const sub = [rx.location, rx.antenna].filter(Boolean).map(escapeHtmlWebsdr).join(' · ');
         return `
-        <div style="padding: 8px 8px 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s; border-left: 2px solid ${selected ? 'var(--accent-cyan)' : 'transparent'}; background: ${baseBg};"
-             onmouseover="this.style.background='${hoverBg}'" onmouseout="this.style.background='${baseBg}'"
-             onclick="selectReceiver(${idx})">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <strong style="font-size: 11px; color: ${selected ? 'var(--accent-cyan)' : 'var(--text-primary)'};">${escapeHtmlWebsdr(rx.name)}</strong>
-                <span style="font-size: 9px; padding: 1px 6px; background: ${rx.available ? 'rgba(0,230,118,0.15)' : 'rgba(158,158,158,0.15)'}; color: ${rx.available ? '#00e676' : '#9e9e9e'}; border-radius: 3px;">${rx.users}/${rx.users_max}</span>
+        <div class="wsdr-rx${selected ? ' selected' : ''}" data-load="${load}" onclick="selectReceiver(${idx})"
+             onmouseenter="hoverWebsdrReceiver(${idx})" onmouseleave="hoverWebsdrReceiver(null)">
+            <div class="wsdr-rx-top">
+                <span class="wsdr-rx-name">${escapeHtmlWebsdr(rx.name)}</span>
+                <span class="wsdr-rx-dist">${escapeHtmlWebsdr(websdrDistanceText(rx))}</span>
             </div>
-            <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">
-                ${rx.location ? escapeHtmlWebsdr(rx.location) + ' · ' : ''}${escapeHtmlWebsdr(rx.antenna || '')}
-                ${rx.distance_km !== undefined ? ` · ${rx.distance_km} km` : ''}
+            ${sub ? `<div class="wsdr-rx-sub">${sub}</div>` : ''}
+            <div class="wsdr-rx-slots" title="${rx.users} of ${rx.users_max} listener slots in use">
+                <span class="wsdr-rx-bar"><i style="width: ${usedPct.toFixed(0)}%"></i></span>
+                <span>${Math.max(0, free(rx))} of ${max} free</span>
             </div>
         </div>
     `;
     }).join('');
+}
+
+/** Highlight a list card's receiver on the globe, without moving the view. */
+function hoverWebsdrReceiver(index) {
+    if (websdrHoverIndex === index) return;
+    websdrHoverIndex = index;
+    if (websdrMapType === 'globe' && websdrGlobe) plotReceiversOnGlobe(websdrReceivers, { keepView: true });
 }
 
 // ============== SELECT RECEIVER ==============
@@ -633,6 +768,7 @@ function selectReceiver(index) {
 }
 
 function focusReceiverOnMap(rx) {
+    if (rx.lat == null || rx.lon == null) return;
     const lat = Number(rx.lat);
     const lon = Number(rx.lon);
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
