@@ -15,6 +15,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}">
     <!-- Core CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core/variables.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/ux-platform.css') }}">
+    <!-- Toasts top right here: the bottom holds the tracking controls -->
+    <style>.app-toast-stack { top: 156px; bottom: auto; }</style>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core/map-utils.css') }}">
@@ -29,6 +32,8 @@
         window.INTERCEPT_DEFAULT_LON = {{ default_longitude | tojson }};
     </script>
     <script src="{{ url_for('static', filename='js/core/utils.js') }}"></script>
+    <!-- Toasts only: the global error handlers stay on the main page -->
+    <script src="{{ url_for('static', filename='js/core/ui-feedback.js') }}" data-global-handlers="off"></script>
     <script defer src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
     <script defer src="{{ url_for('static', filename='js/core/observer-location.js') }}"></script>
 </head>
@@ -755,21 +760,17 @@
             }
         }
 
-        function showAlertBanner(message, color) {
-            const banner = document.createElement('div');
-            banner.style.cssText = `
-                position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
-                background: ${color}; color: white; padding: 10px 20px; border-radius: 6px;
-                font-weight: bold; font-size: 13px; z-index: 10000;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.5); animation: slideDown 0.3s ease-out;
-            `;
-            banner.textContent = message;
-            document.body.appendChild(banner);
-            setTimeout(() => {
-                banner.style.opacity = '0';
-                banner.style.transition = 'opacity 0.3s';
-                setTimeout(() => banner.remove(), 300);
-            }, 5000);
+        function showAlertBanner(message) {
+            // Emergencies as errors, confirmations as notices, the rest as warnings
+            const emergency = /^EMERGENCY/.test(message);
+            const notice = /^Added /.test(message);
+            AppFeedback.toast({
+                type: emergency ? 'error' : notice ? 'info' : 'warning',
+                title: emergency ? 'Emergency squawk' : notice ? 'Watchlist' : 'Aircraft alert',
+                message,
+                durationMs: emergency ? 0 : 8000,
+                actions: emergency ? [{ label: 'Dismiss' }] : [],
+            });
         }
 
         function toggleAlerts() {
@@ -1966,91 +1967,40 @@ ACARS: ${r.statistics.acarsMessages} messages`;
         function showDvbDriverWarning(loadedModules) {
             // Don't show if already dismissed this session
             if (sessionStorage.getItem('dvb_warning_dismissed')) return;
-
-            const warning = document.createElement('div');
-            warning.id = 'dvbDriverWarning';
-            warning.style.cssText = `
-                position: fixed;
-                top: 70px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(239, 68, 68, 0.95);
-                color: white;
-                padding: 15px 20px;
-                border-radius: 8px;
-                font-size: 13px;
-                z-index: 10000;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-                max-width: 500px;
-                text-align: center;
-            `;
-
-            warning.innerHTML = `
-                <div style="font-weight: bold; margin-bottom: 8px;">⚠️ DVB Driver Conflict Detected</div>
-                <div style="margin-bottom: 10px;">
-                    Kernel DVB drivers are claiming your RTL-SDR devices, preventing them from working properly.
-                    <br><small>Loaded modules: ${loadedModules.join(', ')}</small>
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button onclick="fixDvbDrivers()" style="background: white; color: #dc2626; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">
-                        Fix Now
-                    </button>
-                    <button onclick="dismissDvbWarning()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                        Dismiss
-                    </button>
-                </div>
-            `;
-            document.body.appendChild(warning);
+            AppFeedback.toast({
+                type: 'error',
+                title: 'DVB driver conflict',
+                message: 'Kernel DVB drivers are claiming your RTL-SDR devices, so they cannot be used.\n'
+                    + 'Loaded modules: ' + loadedModules.join(', '),
+                durationMs: 0,
+                actions: [
+                    { label: 'Fix now', onClick: fixDvbDrivers },
+                    { label: 'Dismiss', onClick: dismissDvbWarning },
+                ],
+            });
         }
 
         function fixDvbDrivers() {
-            const warning = document.getElementById('dvbDriverWarning');
-            if (warning) {
-                warning.innerHTML = '<div>Applying fix...</div>';
-            }
-
+            AppFeedback.toast({ title: 'DVB drivers', message: 'Applying fix…', durationMs: 3000 });
             fetch('/settings/rtlsdr/blacklist-drivers', { method: 'POST' })
                 .then(r => r.json())
                 .then(data => {
-                    if (data.status === 'success' || data.status === 'partial') {
-                        if (warning) {
-                            warning.style.background = 'rgba(34, 197, 94, 0.95)';
-                            warning.innerHTML = `
-                                <div style="font-weight: bold;">✓ DVB Drivers Disabled</div>
-                                <div style="margin-top: 8px;">${data.message}</div>
-                                <button onclick="this.parentElement.remove()" style="margin-top: 10px; background: white; color: #16a34a; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                                    OK
-                                </button>
-                            `;
-                        }
-                    } else {
-                        if (warning) {
-                            warning.innerHTML = `
-                                <div style="font-weight: bold;">Manual Fix Required</div>
-                                <div style="margin-top: 8px;">${data.message}</div>
-                                <button onclick="this.parentElement.remove()" style="margin-top: 10px; background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                                    Close
-                                </button>
-                            `;
-                        }
-                    }
+                    const fixed = data.status === 'success' || data.status === 'partial';
+                    AppFeedback.toast({
+                        type: fixed ? 'success' : 'warning',
+                        title: fixed ? 'DVB drivers disabled' : 'Manual fix required',
+                        message: data.message || '',
+                        durationMs: fixed ? 10000 : 0,
+                        actions: fixed ? [] : [{ label: 'Close' }],
+                    });
                 })
                 .catch(err => {
-                    if (warning) {
-                        warning.innerHTML = `
-                            <div>Error: ${err.message}</div>
-                            <button onclick="this.parentElement.remove()" style="margin-top: 10px; background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                                Close
-                            </button>
-                        `;
-                    }
+                    AppFeedback.toast({ type: 'error', title: 'DVB fix failed', message: err.message, durationMs: 0, actions: [{ label: 'Close' }] });
                 });
         }
 
         function dismissDvbWarning() {
             sessionStorage.setItem('dvb_warning_dismissed', 'true');
-            const warning = document.getElementById('dvbDriverWarning');
-            if (warning) warning.remove();
         }
 
         function checkAdsbTools(devices = []) {
@@ -2095,139 +2045,48 @@ ACARS: ${r.statistics.acarsMessages} messages`;
         }
 
         function showAircraftDbBanner(type, version) {
-            // Remove any existing banner
-            const existing = document.getElementById('aircraftDbBanner');
-            if (existing) existing.remove();
-
-            const _dbTier = document.documentElement.getAttribute('data-ui-tier') || 'enhanced';
-            const _dbBg = _dbTier === 'enhanced'
-                ? (type === 'not_installed' ? 'rgba(4, 22, 26, 0.97)' : 'rgba(4, 22, 26, 0.97)')
-                : (type === 'not_installed' ? 'rgba(59, 130, 246, 0.95)' : 'rgba(34, 197, 94, 0.95)');
-            const _dbBorder = _dbTier === 'enhanced'
-                ? (type === 'not_installed' ? '1px solid rgba(46, 125, 138, 0.45)' : '1px solid rgba(46, 125, 138, 0.45)')
-                : 'none';
-            const _dbBtnColor = _dbTier === 'enhanced'
-                ? (type === 'not_installed' ? '#2e7d8a' : '#38c180')
-                : (type === 'not_installed' ? '#3b82f6' : '#22c55e');
-
-            const banner = document.createElement('div');
-            banner.id = 'aircraftDbBanner';
-            banner.style.cssText = `
-                position: fixed;
-                top: 70px;
-                right: 20px;
-                background: ${_dbBg};
-                border: ${_dbBorder};
-                color: white;
-                padding: 12px 16px;
-                border-radius: 8px;
-                font-size: 12px;
-                z-index: 10000;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                max-width: 320px;
-                font-family: var(--font-sans);
-            `;
-
-            if (type === 'not_installed') {
-                banner.innerHTML = `
-                    <div style="font-weight: bold; margin-bottom: 6px;">Aircraft Database Not Installed</div>
-                    <div style="margin-bottom: 10px; font-size: 11px; opacity: 0.9;">Download to see aircraft types, registrations, and model info.</div>
-                    <button onclick="downloadAircraftDb()" style="background: rgba(0,0,0,0.35); color: ${_dbBtnColor}; border: 1px solid ${_dbBtnColor}; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 11px;">Download Database</button>
-                    <button onclick="this.parentElement.remove()" style="position: absolute; top: 6px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 14px;">×</button>
-                `;
-            } else {
-                banner.innerHTML = `
-                    <div style="font-weight: bold; margin-bottom: 6px;">Database Update Available</div>
-                    <div style="margin-bottom: 10px; font-size: 11px; opacity: 0.9;">New version: ${version || 'latest'}</div>
-                    <button onclick="downloadAircraftDb()" style="background: rgba(0,0,0,0.35); color: ${_dbBtnColor}; border: 1px solid ${_dbBtnColor}; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 11px;">Update Now</button>
-                    <button onclick="this.parentElement.remove()" style="position: absolute; top: 6px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 14px;">×</button>
-                `;
-            }
-
-            document.body.appendChild(banner);
+            const missing = type === 'not_installed';
+            AppFeedback.toast({
+                title: missing ? 'Aircraft database not installed' : 'Aircraft database update available',
+                message: missing
+                    ? 'Download it to see aircraft types, registrations and model details.'
+                    : 'New version: ' + (version || 'latest'),
+                durationMs: 20000,
+                actions: [
+                    { label: missing ? 'Download database' : 'Update now', onClick: downloadAircraftDb },
+                    { label: 'Later' },
+                ],
+            });
         }
 
         function downloadAircraftDb() {
-            const banner = document.getElementById('aircraftDbBanner');
-            if (banner) {
-                banner.innerHTML = `
-                    <div style="font-weight: bold;">Downloading...</div>
-                    <div style="font-size: 11px; opacity: 0.9;">This may take a moment</div>
-                `;
-            }
-
+            AppFeedback.toast({ title: 'Aircraft database', message: 'Downloading… this may take a moment.', durationMs: 4000 });
             fetch('/adsb/aircraft-db/download', { method: 'POST' })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        if (banner) {
-                            banner.style.background = 'rgba(34, 197, 94, 0.95)';
-                            banner.innerHTML = `
-                                <div style="font-weight: bold;">Database Installed</div>
-                                <div style="font-size: 11px; opacity: 0.9;">${data.message}</div>
-                            `;
-                            setTimeout(() => banner.remove(), 3000);
-                        }
                         aircraftDbStatus.installed = true;
+                        AppFeedback.toast({ type: 'success', title: 'Aircraft database installed', message: data.message || '' });
                     } else {
-                        if (banner) {
-                            banner.style.background = 'rgba(239, 68, 68, 0.95)';
-                            banner.innerHTML = `
-                                <div style="font-weight: bold;">Download Failed</div>
-                                <div style="font-size: 11px;">${data.error || 'Unknown error'}</div>
-                                <button onclick="this.parentElement.remove()" style="position: absolute; top: 6px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 14px;">×</button>
-                            `;
-                        }
+                        AppFeedback.toast({ type: 'error', title: 'Download failed', message: data.error || data.message || 'Unknown error', durationMs: 0, actions: [{ label: 'Close' }] });
                     }
                 })
                 .catch(err => {
-                    if (banner) {
-                        banner.style.background = 'rgba(239, 68, 68, 0.95)';
-                        banner.innerHTML = `
-                            <div style="font-weight: bold;">Download Failed</div>
-                            <div style="font-size: 11px;">${err.message}</div>
-                            <button onclick="this.parentElement.remove()" style="position: absolute; top: 6px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 14px;">×</button>
-                        `;
-                    }
+                    AppFeedback.toast({ type: 'error', title: 'Download failed', message: err.message, durationMs: 0, actions: [{ label: 'Close' }] });
                 });
         }
 
         function showReadsbWarning(sdrTypes) {
             const typeList = sdrTypes.join(', ') || 'SoapySDR device';
-            const warning = document.createElement('div');
-            warning.id = 'readsbWarning';
-            warning.style.cssText = `
-                position: fixed;
-                bottom: 80px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(245, 158, 11, 0.95);
-                color: #000;
-                padding: 15px 25px;
-                border-radius: 8px;
-                font-size: 12px;
-                z-index: 10000;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-                max-width: 500px;
-                text-align: left;
-                font-family: var(--font-sans);
-            `;
-            warning.innerHTML = `
-                <div style="font-weight: bold; margin-bottom: 8px;">⚠️ ${typeList} Detected - readsb Required</div>
-                <div style="margin-bottom: 10px;">ADS-B tracking with ${typeList} requires <strong>readsb</strong> compiled with SoapySDR support.</div>
-                <details style="font-size: 11px;">
-                    <summary style="cursor: pointer; margin-bottom: 8px;">Installation Instructions</summary>
-                    <div style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 4px; margin-top: 5px;">
-                        <div style="margin-bottom: 6px;">Install a C toolchain and the SoapySDR and librtlsdr development packages for your system, then:</div>
-                        <code style="display: block; white-space: pre-wrap; font-family: var(--font-mono); font-size: 10px;">git clone https://github.com/wiedehopf/readsb.git
-cd readsb
-make HAVE_SOAPYSDR=1
-sudo make install</code>
-                    </div>
-                </details>
-                <button onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 12px; background: none; border: none; color: #000; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>
-            `;
-            document.body.appendChild(warning);
+            AppFeedback.toast({
+                type: 'warning',
+                title: typeList + ' detected: readsb required',
+                message: 'ADS-B with ' + typeList + ' needs readsb built with SoapySDR support. Install a C toolchain '
+                    + 'and the SoapySDR and librtlsdr development packages, then:\n'
+                    + 'git clone https://github.com/wiedehopf/readsb.git\ncd readsb\nmake HAVE_SOAPYSDR=1\nsudo make install',
+                durationMs: 0,
+                actions: [{ label: 'Dismiss' }],
+            });
         }
 
         function updateClock() {
@@ -3798,55 +3657,18 @@ sudo make install</code>
         }
 
         function showAirbandWarning(missingTools) {
-            const warning = document.createElement('div');
-            warning.id = 'airbandWarning';
-            warning.style.cssText = `
-                position: fixed;
-                bottom: 70px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(239, 68, 68, 0.95);
-                color: white;
-                padding: 12px 20px;
-                border-radius: 8px;
-                font-size: 12px;
-                z-index: 10000;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-                max-width: 400px;
-                text-align: center;
-            `;
-
-            const toolList = missingTools.join(', ');
-            warning.innerHTML = `
-                <div style="font-weight: bold; margin-bottom: 6px;">⚠️ Airband Listen Unavailable</div>
-                <div>Missing required tools: <strong>${toolList}</strong></div>
-                <div class="airband-install-hints" style="margin-top: 8px; font-size: 10px; opacity: 0.9;"></div>
-                <button onclick="this.parentElement.remove()" style="position: absolute; top: 5px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 14px;">×</button>
-            `;
-            document.body.appendChild(warning);
             // Install advice for this platform, from the dependency map.
+            const show = (hints) => AppFeedback.toast({
+                type: 'warning',
+                title: 'Airband listen unavailable',
+                message: 'Missing: ' + missingTools.join(', ') + '\n'
+                    + missingTools.map(tool => tool + ': ' + (hints[tool] || 'install ' + tool + " with your system's package manager.")).join('\n'),
+                durationMs: 15000,
+            });
             fetch('/dependencies')
                 .then(r => r.json())
-                .then(data => {
-                    const hints = (data && data.install_hints) || {};
-                    const box = warning.querySelector('.airband-install-hints');
-                    if (!box) return;
-                    missingTools.forEach(tool => {
-                        const line = document.createElement('div');
-                        line.textContent = `${tool}: ${hints[tool] || `install ${tool} with your system's package manager.`}`;
-                        box.appendChild(line);
-                    });
-                })
-                .catch(() => {});
-
-            // Auto-dismiss after 15 seconds
-            setTimeout(() => {
-                if (warning.parentElement) {
-                    warning.style.opacity = '0';
-                    warning.style.transition = 'opacity 0.3s';
-                    setTimeout(() => warning.remove(), 300);
-                }
-            }, 15000);
+                .then(data => show((data && data.install_hints) || {}))
+                .catch(() => show({}));
         }
 
         function updateAirbandFreq() {

@@ -417,6 +417,10 @@
     border-left-color: var(--accent-orange, #d6a85e);
 }
 
+.app-toast.success {
+    border-left-color: var(--accent-green, #38c180);
+}
+
 .app-toast-title {
     font-size: 11px;
     color: var(--text-primary, #e6edf5);
@@ -426,6 +430,8 @@
 
 .app-toast-msg {
     color: var(--text-secondary, #b1c2d4);
+    white-space: pre-line;
+    overflow-wrap: anywhere;
 }
 
 .app-toast-actions {
