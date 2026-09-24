@@ -25,7 +25,6 @@ from utils.constants import (
     SUBPROCESS_TIMEOUT_SHORT,
 )
 from utils.dependencies import check_tool, get_tool_path
-from utils.event_pipeline import process_event
 from utils.logging import wifi_logger as logger
 from utils.process import is_valid_channel, is_valid_mac
 from utils.responses import api_error, api_success
@@ -1138,16 +1137,12 @@ def get_wifi_networks():
 def stream_wifi():
     """SSE stream for WiFi events."""
 
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("wifi", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=app_module.wifi_queue,
             channel_key="wifi",
             timeout=1.0,
             keepalive_interval=30.0,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

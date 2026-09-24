@@ -9,12 +9,10 @@ from __future__ import annotations
 import contextlib
 import queue
 from pathlib import Path
-from typing import Any
 
 from flask import Blueprint, Response, jsonify, request, send_file
 
 import app as app_module
-from utils.event_pipeline import process_event
 from utils.logging import get_logger
 from utils.responses import api_error, start_failure
 from utils.sse import sse_stream_fanout
@@ -361,16 +359,12 @@ def delete_all_images():
 def stream_progress():
     """SSE stream of SSTV decode progress."""
 
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("sstv_general", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=_sstv_general_queue,
             channel_key="sstv_general",
             timeout=1.0,
             keepalive_interval=30.0,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

@@ -62,7 +62,7 @@ from utils.constants import (
     SSE_KEEPALIVE_INTERVAL,
     SSE_QUEUE_TIMEOUT,
 )
-from utils.event_pipeline import process_event
+from utils.event_pipeline import process_event, submit
 from utils.flight_correlator import get_flight_correlator
 from utils.logging import adsb_logger as logger
 from utils.process import cleanup_stale_dump1090, clear_dump1090_pid, write_dump1090_pid
@@ -458,7 +458,9 @@ def _build_export_csv(
 
 
 def _broadcast_adsb_update(payload: dict[str, Any]) -> None:
-    """Fan out a payload to all active ADS-B SSE subscribers."""
+    """Fan out a payload to all active ADS-B SSE subscribers, and send it
+    through the event pipeline once, whether or not any are connected."""
+    submit("adsb", payload, payload.get("type"))
     with _adsb_stream_subscribers_lock:
         subscribers = tuple(_adsb_stream_subscribers)
 
@@ -1316,8 +1318,6 @@ def stream_adsb():
                 try:
                     msg = client_queue.get(timeout=SSE_QUEUE_TIMEOUT)
                     last_keepalive = time.time()
-                    with contextlib.suppress(Exception):
-                        process_event("adsb", msg, msg.get("type"))
                     yield format_sse(msg)
                 except queue.Empty:
                     now = time.time()

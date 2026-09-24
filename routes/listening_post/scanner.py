@@ -9,7 +9,6 @@ import struct
 import subprocess
 import threading
 import time
-from typing import Any
 
 from flask import Response, jsonify, request
 
@@ -30,7 +29,6 @@ from . import (
     find_rx_fm,
     logger,
     normalize_modulation,
-    process_event,
     receiver_bp,
     scanner_config,
     scanner_lock,
@@ -741,16 +739,12 @@ def scanner_status() -> Response:
 def stream_scanner_events() -> Response:
     """SSE stream for scanner events."""
 
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("receiver_scanner", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=scanner_queue,
             channel_key="receiver_scanner",
             timeout=SSE_QUEUE_TIMEOUT,
             keepalive_interval=SSE_KEEPALIVE_INTERVAL,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

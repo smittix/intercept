@@ -21,6 +21,15 @@ class _QueueFanoutChannel:
     subscribers: set[queue.Queue] = field(default_factory=set)
     lock: threading.Lock = field(default_factory=threading.Lock)
     distributor: threading.Thread | None = None
+    # Called once for every message taken from the source queue, with or
+    # without subscribers: the place for work that must happen once per event.
+    on_ingest: Callable[[Any], None] | None = None
+
+
+def _ingest(channel: _QueueFanoutChannel, msg: Any) -> None:
+    if channel.on_ingest is not None:
+        with contextlib.suppress(Exception):
+            channel.on_ingest(msg)
 
 
 _fanout_channels: dict[str, _QueueFanoutChannel] = {}
@@ -48,7 +57,7 @@ def _run_fanout(channel: _QueueFanoutChannel) -> None:
             drained = 0
             for _ in range(idle_drain_batch):
                 try:
-                    src.get_nowait()
+                    _ingest(channel, src.get_nowait())
                     drained += 1
                 except queue.Empty:
                     break
@@ -61,6 +70,7 @@ def _run_fanout(channel: _QueueFanoutChannel) -> None:
             msg = src.get(timeout=channel.source_timeout)
         except queue.Empty:
             continue
+        _ingest(channel, msg)
 
         for subscriber in subscribers:
             try:
@@ -105,6 +115,20 @@ def _ensure_distributor_running(channel: _QueueFanoutChannel, channel_key: str) 
                 name=f"sse-fanout-{channel_key}",
             )
             channel.distributor.start()
+
+
+def register_ingest(
+    source_queue: queue.Queue,
+    channel_key: str,
+    on_ingest: Callable[[Any], None],
+    source_timeout: float = 1.0,
+) -> None:
+    """Run on_ingest once for every message of a fan-out channel's source
+    queue, and start draining it now rather than when a browser first
+    subscribes, so messages are handled with no page open."""
+    channel = _ensure_fanout_channel(channel_key, source_queue, source_timeout)
+    channel.on_ingest = on_ingest
+    _ensure_distributor_running(channel, channel_key)
 
 
 def subscribe_fanout_queue(

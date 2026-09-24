@@ -1275,7 +1275,11 @@ class UnifiedWiFiScanner:
     # =========================================================================
 
     def _queue_event(self, event: dict):
-        """Add event to the SSE queue."""
+        """Add event to the SSE queue, and send it through the event
+        pipeline once, whether or not a browser is subscribed."""
+        from utils.event_pipeline import submit
+
+        submit("wifi", event, event.get("type"))
         try:
             self._event_queue.put_nowait(event)
         except queue.Full:

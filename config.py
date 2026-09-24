@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.15"
+VERSION = "2.33.16"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.16",
+        "date": "September 2026",
+        "highlights": [
+            "Alerts, recording, MQTT and the activity feed now handle each event once, whether or not a page is open. Before, they ran once per open browser tab, and not at all with none.",
+        ],
+    },
     {
         "version": "2.33.15",
         "date": "September 2026",

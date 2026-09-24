@@ -14,7 +14,6 @@ from typing import Any
 from flask import Blueprint, Response, jsonify, request
 
 import app as app_module
-from utils.event_pipeline import process_event
 from utils.logging import sensor_logger as logger
 from utils.morse import (
     decode_morse_wav_file,
@@ -1019,16 +1018,12 @@ def morse_status() -> Response:
 
 @morse_bp.route("/morse/stream")
 def morse_stream() -> Response:
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("morse", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=app_module.morse_queue,
             channel_key="morse",
             timeout=1.0,
             keepalive_interval=30.0,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

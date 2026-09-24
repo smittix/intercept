@@ -11,7 +11,6 @@ import socket
 import subprocess
 import threading
 import time
-from typing import Any
 
 from flask import Blueprint, Response, jsonify, render_template, request
 
@@ -518,16 +517,12 @@ def stop_ais():
 def stream_ais():
     """SSE stream for AIS vessels."""
 
-    def _on_msg(msg: dict[str, Any]) -> None:
-        process_event("ais", msg, msg.get("type"))
-
     response = Response(
         sse_stream_fanout(
             source_queue=app_module.ais_queue,
             channel_key="ais",
             timeout=SSE_QUEUE_TIMEOUT,
             keepalive_interval=SSE_KEEPALIVE_INTERVAL,
-            on_message=_on_msg,
         ),
         mimetype="text/event-stream",
     )

@@ -2,6 +2,18 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.16] - 2026-09-24
+
+### Fixed
+
+- **Alerts, recordings, MQTT and the activity feed depended on how many browser tabs were open.** Each decoded event was processed by every open SSE stream: with two tabs, alerts fired twice and MQTT messages went out twice; with none, nothing was alerted, recorded or published. Events are now processed once, when decoded, whether or not a page is open. This applies to every mode that streams through the shared fan-out, and to ADS-B, Bluetooth and Wi-Fi.
+
+### Changed
+
+- **If you relied on alerts or MQTT only while a page was open,** they now also run with no page open, for as long as the mode is running.
+
+---
+
 ## [2.33.15] - 2026-09-24
 
 ### Added
