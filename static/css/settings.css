@@ -75,7 +75,9 @@
 /* Settings Tabs */
 .settings-tabs {
     display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    /* One row, however many tabs there are (a ninth, About, wrapped alone) */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     border-bottom: 1px solid var(--border-color, #1a1a2e);
     padding: 0 20px;
     gap: 0;
@@ -589,7 +591,8 @@ html[data-ui-tier="enhanced"]:not([data-theme="light"]).map-cyber-enabled .leafl
 /* Responsive */
 @media (max-width: 1023px) {
     .settings-tabs {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-auto-flow: row;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 }
 
@@ -604,7 +607,7 @@ html[data-ui-tier="enhanced"]:not([data-theme="light"]).map-cyber-enabled .leafl
 
     .settings-tabs {
         padding: 0 10px;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .settings-tab {
