@@ -53,7 +53,7 @@ const RunState = (function() {
         refresh();
 
         if (!refreshTimer) {
-            refreshTimer = window.setInterval(refresh, REFRESH_MS);
+            refreshTimer = VisibleInterval.set(refresh, REFRESH_MS);
         }
 
         document.addEventListener('visibilitychange', () => {
@@ -254,7 +254,7 @@ const RunState = (function() {
 
     function destroy() {
         if (refreshTimer) {
-            clearInterval(refreshTimer);
+            VisibleInterval.clear(refreshTimer);
             refreshTimer = null;
         }
     }

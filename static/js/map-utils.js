@@ -360,7 +360,7 @@ const MapUtils = {
             clockEl.textContent = new Date().toISOString().substring(11, 19) + ' UTC';
         };
         updateClock();
-        const clockInterval = setInterval(updateClock, 1000);
+        const clockInterval = VisibleInterval.set(updateClock, 1000);
 
         return {
             updateCount(n) {
@@ -370,7 +370,7 @@ const MapUtils = {
                 dotEl.className = `map-hud-dot ${online === true ? 'online' : online === false ? 'offline' : ''}`;
             },
             remove() {
-                clearInterval(clockInterval);
+                VisibleInterval.clear(clockInterval);
                 tl.remove();
                 tr.remove();
             },

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
 <head>
+    <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AIRCRAFT RADAR // INTERCEPT - See the Invisible</title>
@@ -1148,8 +1149,8 @@
                 stats.sessionStart = Date.now();
                 sessionLog.startTime = new Date().toISOString();
             }
-            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
-            sessionTimerInterval = setInterval(updateSessionTimer, 1000);
+            if (sessionTimerInterval) VisibleInterval.clear(sessionTimerInterval);
+            sessionTimerInterval = VisibleInterval.set(updateSessionTimer, 1000);
         }
 
         function stopSessionTimer() {
@@ -1730,7 +1731,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
             if (agentPollTimer) { clearInterval(agentPollTimer); agentPollTimer = null; }
             if (acarsPollTimer) { clearInterval(acarsPollTimer); acarsPollTimer = null; }
             if (vdl2PollTimer) { clearInterval(vdl2PollTimer); vdl2PollTimer = null; }
-            if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+            if (clockInterval) { VisibleInterval.clear(clockInterval); clockInterval = null; }
             if (cleanupInterval) { clearInterval(cleanupInterval); cleanupInterval = null; }
             if (delayedGpsInitTimer) { clearTimeout(delayedGpsInitTimer); delayedGpsInitTimer = null; }
             if (delayedDriverCheckTimer) { clearTimeout(delayedDriverCheckTimer); delayedDriverCheckTimer = null; }
@@ -1798,7 +1799,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
 
             try {
                 updateClock();
-                clockInterval = setInterval(updateClock, 1000);
+                clockInterval = VisibleInterval.set(updateClock, 1000);
                 cleanupInterval = setInterval(cleanupOldAircraft, 10000);
             } catch (e) {
                 console.error('ADS-B timer bootstrap warning:', e);

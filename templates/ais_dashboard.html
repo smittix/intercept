@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
 <head>
+    <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VESSEL RADAR // INTERCEPT - See the Invisible</title>
@@ -433,7 +434,7 @@
             drawRangeRings();
             loadDevices();
             updateClock();
-            setInterval(updateClock, 1000);
+            VisibleInterval.set(updateClock, 1000);
             setInterval(cleanupStaleVessels, 10000);
         }
 
@@ -1093,22 +1094,22 @@
             if (!stats.sessionStart) {
                 stats.sessionStart = Date.now();
             }
-            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
-            sessionTimerInterval = setInterval(updateSessionTimer, 1000);
+            if (sessionTimerInterval) VisibleInterval.clear(sessionTimerInterval);
+            sessionTimerInterval = VisibleInterval.set(updateSessionTimer, 1000);
 
             // Start message rate tracking
-            if (messageRateInterval) clearInterval(messageRateInterval);
+            if (messageRateInterval) VisibleInterval.clear(messageRateInterval);
             lastMessageCount = stats.messagesReceived;
-            messageRateInterval = setInterval(updateMessageRate, 1000);
+            messageRateInterval = VisibleInterval.set(updateMessageRate, 1000);
         }
 
         function stopSessionTimer() {
             if (sessionTimerInterval) {
-                clearInterval(sessionTimerInterval);
+                VisibleInterval.clear(sessionTimerInterval);
                 sessionTimerInterval = null;
             }
             if (messageRateInterval) {
-                clearInterval(messageRateInterval);
+                VisibleInterval.clear(messageRateInterval);
                 messageRateInterval = null;
             }
         }

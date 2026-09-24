@@ -1359,8 +1359,8 @@ const WeatherSat = (function() {
      * Start the countdown interval timer
      */
     function startCountdownTimer() {
-        if (countdownInterval) clearInterval(countdownInterval);
-        countdownInterval = setInterval(updateCountdownFromPasses, 1000);
+        if (countdownInterval) VisibleInterval.clear(countdownInterval);
+        countdownInterval = VisibleInterval.set(updateCountdownFromPasses, 1000);
     }
 
     /**
@@ -2293,7 +2293,7 @@ const WeatherSat = (function() {
      */
     function suspend() {
         if (countdownInterval) {
-            clearInterval(countdownInterval);
+            VisibleInterval.clear(countdownInterval);
             countdownInterval = null;
         }
         // Only close the stream if nothing is actively capturing/scheduling —
@@ -2311,7 +2311,7 @@ const WeatherSat = (function() {
      */
     function destroy() {
         if (countdownInterval) {
-            clearInterval(countdownInterval);
+            VisibleInterval.clear(countdownInterval);
             countdownInterval = null;
         }
         if (isRunning) {

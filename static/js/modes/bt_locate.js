@@ -449,12 +449,12 @@ const BtLocate = (function() {
 
     function startDurationTimer() {
         stopDurationTimer();
-        durationTimer = setInterval(updateDuration, 1000);
+        durationTimer = VisibleInterval.set(updateDuration, 1000);
     }
 
     function stopDurationTimer() {
         if (durationTimer) {
-            clearInterval(durationTimer);
+            VisibleInterval.clear(durationTimer);
             durationTimer = null;
         }
     }
@@ -1902,7 +1902,7 @@ const BtLocate = (function() {
             pollTimer = null;
         }
         if (durationTimer) {
-            clearInterval(durationTimer);
+            VisibleInterval.clear(durationTimer);
             durationTimer = null;
         }
         if (mapStabilizeTimer) {

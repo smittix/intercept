@@ -133,7 +133,7 @@ const SubGhz = (function() {
     }
 
     function startStatusPolling() {
-        if (statusPollTimer) clearInterval(statusPollTimer);
+        if (statusPollTimer) VisibleInterval.clear(statusPollTimer);
         const refresh = () => {
             fetch('/subghz/status')
                 .then(r => r.json())
@@ -144,7 +144,7 @@ const SubGhz = (function() {
                 .catch(() => {});
         };
         refresh();
-        statusPollTimer = setInterval(refresh, 3000);
+        statusPollTimer = VisibleInterval.set(refresh, 3000);
     }
 
     // ------ DEVICE DETECTION ------
@@ -715,8 +715,8 @@ const SubGhz = (function() {
 
     function startStatusTimer() {
         rxStartTime = Date.now();
-        if (statusTimer) clearInterval(statusTimer);
-        statusTimer = setInterval(() => {
+        if (statusTimer) VisibleInterval.clear(statusTimer);
+        statusTimer = VisibleInterval.set(() => {
             const elapsed = (Date.now() - rxStartTime) / 1000;
             const formatted = formatDuration(elapsed);
 
@@ -738,7 +738,7 @@ const SubGhz = (function() {
 
     function stopStatusTimer() {
         if (statusTimer) {
-            clearInterval(statusTimer);
+            VisibleInterval.clear(statusTimer);
             statusTimer = null;
         }
         rxStartTime = null;
@@ -2420,7 +2420,7 @@ const SubGhz = (function() {
             eventSource = null;
         }
         if (statusPollTimer) {
-            clearInterval(statusPollTimer);
+            VisibleInterval.clear(statusPollTimer);
             statusPollTimer = null;
         }
         if (burstBadgeTimer) {

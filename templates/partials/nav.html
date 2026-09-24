@@ -620,7 +620,7 @@
                     if (el) el.textContent = now.toISOString().slice(11, 19);
                 }
             }
-            setInterval(updateNavUtcClock, 1000);
+            VisibleInterval.set(updateNavUtcClock, 1000);
             updateNavUtcClock();
             // React immediately when timezone/format changes in Settings
             if (typeof InterceptTime !== 'undefined' && InterceptTime.onChange) {
