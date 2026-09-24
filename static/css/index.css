@@ -4408,18 +4408,6 @@ header h1 .tagline {
     justify-content: center;
 }
 
-/* Bluetooth radar — CSS sweep animation (replaces rAF loop in proximity-radar.js) */
-.bt-radar-sweep {
-    transform-box: view-box;           /* required for consistent SVG transform-origin in Firefox */
-    transform-origin: 140px 140px;     /* CONFIG.size / 2 = 140 */
-    animation: bt-radar-rotate 3s linear infinite;
-}
-
-@keyframes bt-radar-rotate {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
-}
-
 /* Bluetooth Device Detail Panel */
 .bt-detail-panel {
     background: var(--bg-tertiary);
