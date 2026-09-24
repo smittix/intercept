@@ -8,7 +8,7 @@ const Settings = {
         'offline.enabled': false,
         'offline.assets_source': 'local',
         'offline.fonts_source': 'local',
-        'offline.tile_provider': 'cartodb_dark_cyan',
+        'offline.tile_provider': 'esri_world',
         'offline.tile_server_url': '',
         'offline.stadia_key': '',
         'offline.carto_key': '',
@@ -46,7 +46,10 @@ const Settings = {
         esri_world: {
             url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
             attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-            subdomains: null
+            subdomains: null,
+            // Imagery beyond zoom 18 is patchy, and a missing tile comes back as
+            // a "Map data not yet available" image; upscale zoom 18 instead.
+            options: { maxNativeZoom: 18 }
         },
         stadia_dark: {
             url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
