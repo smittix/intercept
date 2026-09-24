@@ -142,3 +142,30 @@ def test_a_backed_up_pipeline_drops_rather_than_blocking_the_decoder(monkeypatch
         event_pipeline.submit("adsb", {"type": "aircraft", "icao": f"{i:06X}"})
     assert time.monotonic() - started < 0.5
     assert event_pipeline._dropped == 2
+
+
+def test_every_wifi_v2_tab_receives_every_event():
+    """Each tab read the scanner's queue directly, so open tabs competed for
+    events: with two open, each saw about half the network updates."""
+    from utils.wifi.scanner import UnifiedWiFiScanner
+
+    scanner = UnifiedWiFiScanner.__new__(UnifiedWiFiScanner)
+    scanner._event_queue = queue.Queue(maxsize=10)
+    tabs = [scanner.get_event_stream() for _ in range(2)]
+    try:
+        for tab in tabs:
+            assert next(tab) == {"type": "keepalive"}  # subscribed, nothing queued yet
+        event = {"type": "network_update", "bssid": "AA:BB:CC:DD:EE:FF"}
+        scanner._event_queue.put(event)
+
+        def next_event(tab):
+            for _ in range(4):  # a starved tab yields keepalives for ever; give up after a few seconds
+                item = next(tab)
+                if item.get("type") != "keepalive":
+                    return item
+            return None
+
+        assert [next_event(tab) for tab in tabs] == [event, event]
+    finally:
+        for tab in tabs:
+            tab.close()

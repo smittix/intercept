@@ -1291,15 +1291,23 @@ class UnifiedWiFiScanner:
                 pass
 
     def get_event_stream(self) -> Generator[dict, None, None]:
-        """Generate events for SSE streaming."""
-        while True:
-            try:
-                event = self._event_queue.get(timeout=1.0)
-                yield event
-            except queue.Empty:
-                yield {"type": "keepalive"}
-            except Exception:
-                break
+        """Generate events for one SSE client.
+
+        Each client gets every event through the shared fan-out. Reading the
+        scanner's queue directly made open tabs compete for events, so with
+        two tabs each saw about half.
+        """
+        from utils.sse import subscribe_fanout_queue
+
+        subscriber, unsubscribe = subscribe_fanout_queue(self._event_queue, "wifi_v2")
+        try:
+            while True:
+                try:
+                    yield subscriber.get(timeout=1.0)
+                except queue.Empty:
+                    yield {"type": "keepalive"}
+        finally:
+            unsubscribe()
 
     # =========================================================================
     # Baseline Management
