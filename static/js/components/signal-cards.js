@@ -215,41 +215,6 @@ const SignalCards = (function() {
             } else {
                 return `With limited data, this signal may represent ${base}, or environmental factors`;
             }
-        },
-
-        /**
-         * Estimate range from RSSI (with heavy caveats)
-         */
-        estimateRange(rssi) {
-            if (rssi === null || rssi === undefined) {
-                return { estimate: 'Unknown', disclaimer: 'Insufficient signal data' };
-            }
-            const val = parseFloat(rssi);
-            let estimate, rangeMin, rangeMax;
-
-            if (val > -40) {
-                estimate = '< 3 meters';
-                rangeMin = 0; rangeMax = 3;
-            } else if (val > -55) {
-                estimate = '3-10 meters';
-                rangeMin = 3; rangeMax = 10;
-            } else if (val > -70) {
-                estimate = '5-20 meters';
-                rangeMin = 5; rangeMax = 20;
-            } else if (val > -85) {
-                estimate = '10-50 meters';
-                rangeMin = 10; rangeMax = 50;
-            } else {
-                estimate = '> 30 meters or heavily obstructed';
-                rangeMin = 30; rangeMax = null;
-            }
-
-            return {
-                estimate,
-                rangeMin,
-                rangeMax,
-                disclaimer: 'Range estimates are approximate and influenced by physical obstructions, interference, and transmitter power'
-            };
         }
     };
 
@@ -476,11 +441,9 @@ const SignalCards = (function() {
         // Build tooltip content
         let tooltipContent = '';
         if (showTooltip) {
-            const rangeEst = SignalClassification.estimateRange(rssi);
             tooltipContent = `
                 ${info.label} signal (${rssi} dBm)
                 ${info.description}
-                Est. range: ${rangeEst.estimate}
                 Confidence: ${info.confidence}
             `.trim();
         }
@@ -515,7 +478,6 @@ const SignalCards = (function() {
         const strengthInfo = SignalClassification.getStrengthInfo(rssi);
         const durationInfo = SignalClassification.getDurationInfo(durationSeconds);
         const confidence = SignalClassification.calculateConfidence(rssi, durationSeconds, observationCount);
-        const rangeEst = SignalClassification.estimateRange(rssi);
         const interpretation = SignalClassification.generateInterpretation(rssi, durationSeconds, observationCount);
 
         return `
@@ -535,16 +497,12 @@ const SignalCards = (function() {
                         <span class="signal-advanced-value">${durationInfo.label}</span>
                     </div>
                     <div class="signal-advanced-item">
-                        <span class="signal-advanced-label">Est. Range</span>
-                        <span class="signal-advanced-value">${rangeEst.estimate}</span>
-                    </div>
-                    <div class="signal-advanced-item">
                         <span class="signal-advanced-label">Confidence</span>
                         <span class="signal-advanced-value signal-confidence-${confidence}">${confidence.charAt(0).toUpperCase() + confidence.slice(1)}</span>
                     </div>
                 </div>
                 <div class="signal-assessment-caveat">
-                    Note: ${rangeEst.disclaimer}
+                    Note: signal strength depends on obstructions, interference and transmitter power; a single receiver cannot measure distance from it.
                 </div>
             </div>
         `;

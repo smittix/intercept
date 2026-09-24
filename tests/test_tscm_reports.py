@@ -640,3 +640,14 @@ def test_signal_descriptions_read_as_sentences():
             phrase
         )
         assert phrase[0].isupper() and "  " not in phrase, phrase
+
+
+def test_no_distance_is_derived_from_signal_strength():
+    """A single omnidirectional receiver cannot measure distance, and the
+    TSCM practitioner is exactly the reader who would act on a wrong one.
+    The signal cards showed "Est. range: < 3 meters" from RSSI alone."""
+    root = Path(__file__).resolve().parent.parent
+    for path in ("static/js/components/signal-cards.js", "utils/tscm/signal_classification.py"):
+        source = root.joinpath(path).read_text()
+        for derived in ("estimateRange", "_estimate_range", "range_estimate", "Est. range", "meters"):
+            assert derived not in source, f"{path}: {derived}"
