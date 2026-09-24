@@ -918,61 +918,25 @@
                         <div class="wifi-radar-panel">
                             <h5>Proximity Radar</h5>
                             <div id="wifiProximityRadar" class="wifi-radar-container">
-                                <svg width="100%" viewBox="0 0 210 210" id="wifiRadarSvg">
-                                    <defs>
-                                        <clipPath id="wifi-radar-clip">
-                                            <circle cx="105" cy="105" r="100"/>
-                                        </clipPath>
-                                        <filter id="wifi-glow-sm">
-                                            <feGaussianBlur stdDeviation="2.5" result="blur"/>
-                                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                                        </filter>
-                                        <filter id="wifi-glow-md">
-                                            <feGaussianBlur stdDeviation="4" result="blur"/>
-                                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                                        </filter>
-                                    </defs>
-
-                                    <!-- Background rings (static) -->
-                                    <circle cx="105" cy="105" r="100" fill="none" style="stroke:var(--accent-cyan)" stroke-width="0.5" opacity="0.12"/>
-                                    <circle cx="105" cy="105" r="70"  fill="none" style="stroke:var(--accent-cyan)" stroke-width="0.5" opacity="0.18"/>
-                                    <circle cx="105" cy="105" r="40"  fill="none" style="stroke:var(--accent-cyan)" stroke-width="0.5" opacity="0.25"/>
-                                    <circle cx="105" cy="105" r="15"  fill="none" style="stroke:var(--accent-cyan)" stroke-width="0.5" opacity="0.35"/>
-
-                                    <!-- Crosshairs -->
-                                    <line x1="5" y1="105" x2="205" y2="105" style="stroke:var(--accent-cyan)" stroke-width="0.3" opacity="0.1"/>
-                                    <line x1="105" y1="5" x2="105" y2="205" style="stroke:var(--accent-cyan)" stroke-width="0.3" opacity="0.1"/>
-
-                                    <!-- Rotating sweep group -->
-                                    <g class="wifi-radar-sweep" clip-path="url(#wifi-radar-clip)">
-                                        <!-- Primary trailing arc: 60° -->
-                                        <path d="M105,105 L105,5 A100,100 0 0,1 191.6,155 Z" style="fill:var(--accent-cyan)" opacity="0.08"/>
-                                        <!-- Secondary trailing arc: 90° -->
-                                        <path d="M105,105 L105,5 A100,100 0 0,1 205,105 Z" style="fill:var(--accent-cyan)" opacity="0.04"/>
-                                        <!-- Sweep line -->
-                                        <line x1="105" y1="105" x2="105" y2="5" style="stroke:var(--accent-cyan)" stroke-width="1.5" opacity="0.7"
-                                              filter="url(#wifi-glow-sm)"/>
-                                    </g>
-
-                                    <!-- Centre dot -->
-                                    <circle cx="105" cy="105" r="3" style="fill:var(--accent-cyan)" opacity="0.8"/>
-
-                                    <!-- Network dots (managed by renderRadar()) -->
+                                <!-- Face drawn by RadarFace (WiFiMode.init); nearer the centre = stronger -->
+                                <svg viewBox="0 0 210 210" id="wifiRadarSvg" class="proximity-radar-svg" role="img"
+                                     aria-label="Wi-Fi networks by signal strength">
                                     <g id="wifiRadarDots"></g>
                                 </svg>
                             </div>
+                            <div class="pr-caption">Nearer the centre = stronger signal. Not a distance.</div>
                             <div class="wifi-zone-summary">
                                 <div class="wifi-zone near">
                                     <span class="wifi-zone-count" id="wifiZoneImmediate">0</span>
-                                    <span class="wifi-zone-label">Close</span>
+                                    <span class="wifi-zone-label">Strong</span>
                                 </div>
                                 <div class="wifi-zone mid">
                                     <span class="wifi-zone-count" id="wifiZoneNear">0</span>
-                                    <span class="wifi-zone-label">Mid</span>
+                                    <span class="wifi-zone-label">Medium</span>
                                 </div>
                                 <div class="wifi-zone far">
                                     <span class="wifi-zone-count" id="wifiZoneFar">0</span>
-                                    <span class="wifi-zone-label">Far</span>
+                                    <span class="wifi-zone-label">Weak</span>
                                 </div>
                             </div>
                         </div>
@@ -1435,13 +1399,20 @@
                     <div class="gps-visuals-top">
                         <!-- Sky View Globe -->
                         <div class="gps-skyview-panel">
-                            <h4>Satellite Globe View</h4>
+                            <div class="gps-sky-header">
+                                <h4>Satellite Sky View</h4>
+                                <div class="gps-sky-toggle" role="group" aria-label="Sky view">
+                                    <button type="button" data-view="polar" onclick="GPS.setSkyView('polar')">Sky plot</button>
+                                    <button type="button" data-view="globe" onclick="GPS.setSkyView('globe')">3D globe</button>
+                                </div>
+                            </div>
                             <div class="gps-skyview-canvas-wrap" id="gpsSkyViewWrap">
+                                <div id="gpsSkyPolar" class="gps-sky-polar-view"></div>
                                 <div id="gpsSkyGlobe" class="gps-sky-globe" aria-label="GPS satellite globe"></div>
                                 <canvas id="gpsSkyCanvas" width="400" height="400" aria-label="GPS satellite sky fallback globe"></canvas>
                                 <div class="gps-sky-overlay" id="gpsSkyOverlay" aria-hidden="true"></div>
                             </div>
-                            <div class="gps-sky-hint">Drag to orbit globe | Scroll to zoom | Hover satellites for details</div>
+                            <div class="gps-sky-hint" id="gpsSkyHint">Drag to orbit globe | Scroll to zoom | Hover satellites for details</div>
                             <div class="gps-legend">
                                 <div class="gps-legend-item"><span class="gps-legend-dot" style="background:#ffffff;"></span> Observer</div>
                                 <div class="gps-legend-item"><span class="gps-legend-dot" style="background:#00d4ff;"></span> GPS</div>
@@ -2022,22 +1993,18 @@
                     <!-- Proximity HUD -->
                     <div class="btl-hud" id="btLocateHud" style="display: none;">
                         <div class="btl-hud-top">
-                            <div class="btl-hud-band" id="btLocateBand">---</div>
+                            <!-- Signal gauge (drawn by BtLocate): hotter / colder, not a distance -->
+                            <div class="btl-gauge" id="btLocateGauge" role="img" aria-label="Signal strength"></div>
                             <div class="btl-hud-metrics">
-                                <div class="btl-hud-metric btl-hud-metric-lg">
-                                    <span class="btl-hud-value" id="btLocateDistance">--</span>
-                                    <span class="btl-hud-unit">m</span>
-                                    <span class="btl-hud-label">Est. Distance</span>
-                                </div>
                                 <div class="btl-hud-metric">
                                     <span class="btl-hud-value" id="btLocateRssi">--</span>
                                     <span class="btl-hud-unit">dBm</span>
-                                    <span class="btl-hud-label">RSSI</span>
+                                    <span class="btl-hud-label">RSSI now</span>
                                 </div>
                                 <div class="btl-hud-metric">
-                                    <span class="btl-hud-value" id="btLocateRssiEma">--</span>
+                                    <span class="btl-hud-value" id="btLocateBest">--</span>
                                     <span class="btl-hud-unit">dBm</span>
-                                    <span class="btl-hud-label">RSSI avg</span>
+                                    <span class="btl-hud-label">Best</span>
                                 </div>
                                 <div class="btl-hud-separator"></div>
                                 <div class="btl-hud-metric">
@@ -2082,7 +2049,7 @@
                                 <span class="btl-hud-info-sep">&middot;</span>
                                 <span class="btl-hud-info-item" id="btLocateLastSeen">Last: --</span>
                                 <span class="btl-hud-info-sep">&middot;</span>
-                                <span class="btl-hud-info-item" id="btLocateConfidenceInfo">Confidence: --</span>
+                                <span class="btl-hud-info-item" id="btLocateConfidenceInfo">Signal spread: --</span>
                                 <span class="btl-hud-info-sep">&middot;</span>
                                 <span class="btl-hud-info-item" id="btLocateBestSignal">Best: --</span>
                             </div>
@@ -3076,10 +3043,6 @@
                             <span class="sw-header-label">SFI</span>
                         </div>
                         <div class="sw-header-stat">
-                            <span class="sw-header-value" id="swStripKp">--</span>
-                            <span class="sw-header-label">Kp</span>
-                        </div>
-                        <div class="sw-header-stat">
                             <span class="sw-header-value" id="swStripA">--</span>
                             <span class="sw-header-label">A-Index</span>
                         </div>
@@ -3087,14 +3050,13 @@
                             <span class="sw-header-value" id="swStripSsn">--</span>
                             <span class="sw-header-label">SSN</span>
                         </div>
-                        <div class="sw-header-stat">
-                            <span class="sw-header-value" id="swStripWind">--</span>
-                            <span class="sw-header-label">Wind</span>
-                        </div>
-                        <div class="sw-header-stat">
-                            <span class="sw-header-value" id="swStripBz">--</span>
-                            <span class="sw-header-label">Bz</span>
-                        </div>
+                    </div>
+
+                    <!-- Gauges: Kp, solar wind speed, Bz (drawn by SpaceWeather) -->
+                    <div class="sw-gauges">
+                        <div class="sw-gauge-card" id="swGaugeKp"></div>
+                        <div class="sw-gauge-card" id="swGaugeWind"></div>
+                        <div class="sw-gauge-card" id="swGaugeBz"></div>
                     </div>
 
                     <!-- NOAA G/S/R Scales -->
@@ -3707,6 +3669,7 @@
     <script src="{{ url_for('static', filename='js/components/meter-aggregator.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/message-card.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/device-card.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/radar-face.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/proximity-radar.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/timeline-heatmap.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/signal-waveform.js') }}"></script>

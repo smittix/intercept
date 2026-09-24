@@ -71,48 +71,75 @@
     padding: 14px 20px;
 }
 
-.btl-hud-band {
-    font-size: 22px;
-    font-weight: 800;
-    font-family: var(--font-mono);
-    letter-spacing: 2px;
-    padding: 14px 20px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    color: var(--text-dim);
-    text-align: center;
-    min-width: 130px;
-    transition: all 0.3s;
+/* Signal gauge: an arc from -100 to -30 dBm, the smoothed reading in the
+   middle, the trend beneath, and a tick at the best reading so far */
+.btl-gauge {
+    width: 150px;
     flex-shrink: 0;
 }
 
-.btl-hud-band.immediate {
-    color: #ef4444;
-    border-color: #ef4444;
-    background: rgba(239, 68, 68, 0.15);
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
-    animation: btl-pulse 1s ease-in-out infinite;
+.btl-gauge-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
 }
 
-.btl-hud-band.near {
-    color: #f97316;
-    border-color: #f97316;
-    background: rgba(249, 115, 22, 0.12);
-    box-shadow: 0 0 15px rgba(249, 115, 22, 0.15);
-    animation: btl-pulse 2s ease-in-out infinite;
+.btl-gauge-track,
+.btl-gauge-fill {
+    fill: none;
+    stroke-width: 9;
+    stroke-linecap: round;
 }
 
-.btl-hud-band.far {
-    color: #eab308;
-    border-color: #eab308;
-    background: rgba(234, 179, 8, 0.1);
-    box-shadow: 0 0 10px rgba(234, 179, 8, 0.1);
+.btl-gauge-track {
+    stroke: rgba(255, 255, 255, 0.07);
 }
 
-@keyframes btl-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+.btl-gauge-fill {
+    stroke: var(--accent-red);
+    filter: drop-shadow(0 0 4px currentColor);
+    transition: stroke 0.4s;
+}
+
+.btl-gauge-best {
+    stroke: var(--text-primary);
+    stroke-width: 2;
+    stroke-linecap: round;
+    opacity: 0.8;
+}
+
+.btl-gauge-value {
+    fill: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 700;
+    text-anchor: middle;
+    transition: fill 0.4s;
+}
+
+.btl-gauge-unit {
+    fill: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-anchor: middle;
+}
+
+.btl-gauge-trend {
+    fill: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-anchor: middle;
+}
+
+.btl-gauge-trend.stronger {
+    fill: var(--accent-green);
+}
+
+.btl-gauge-trend.weaker {
+    fill: var(--accent-red);
 }
 
 .btl-hud-metrics {
@@ -519,10 +546,9 @@
         gap: 10px;
     }
 
-    .btl-hud-band {
-        min-width: unset;
-        width: 100%;
-        font-size: 20px;
+    .btl-gauge {
+        width: 130px;
+        margin: 0 auto;
     }
 
     .btl-hud-metrics {

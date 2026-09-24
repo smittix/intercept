@@ -2,6 +2,21 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.19] - 2026-09-24
+
+A polish pass.
+
+### Changed
+
+- **The Wi-Fi radar matches the Bluetooth radar**: the same face (rings, bearing ticks, fading sweep), Strong / Medium / Weak bands instead of Close / Mid / Far, and the same colours. Its bands now use the list's signal thresholds, so a network the list shows as strong sits in the strong ring.
+- **BT Locate steers by a signal gauge** instead of an estimated distance. The arc fills with the smoothed signal, the trend beneath reads STRONGER, WEAKER or STEADY, and a tick marks the best reading so far, which shows when the target has been passed. "Confidence: +/- N m" and its map circle, a formula over distance estimates, are replaced by the signal's spread in dB.
+- **GPS has a sky plot**: centre overhead, edge the horizon, north up, satellites coloured by constellation and filled when used in the fix, with short trails. It needs neither WebGL nor the internet; the 3D globe is a toggle away.
+- **Space weather gauges**: Kp on a 0-9 arc labelled by storm level, solar wind speed on an arc, and Bz as a bar either side of zero labelled by what it means. The X-ray chart marks each flare class once and tints the M and X bands.
+- **Empty lists show when they are listening**: an icon and a headline (Listening, with a pulse; Stopped; Couldn't start) above the detail.
+- **The Run State strip shows what is running** and the mode in view, with the idle modes folded behind "+N idle". A chip opens its mode.
+
+---
+
 ## [2.33.18] - 2026-09-24
 
 ### Changed

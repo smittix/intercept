@@ -104,9 +104,36 @@ const LiveEmptyState = (function () {
                 if (isPlaceholder(el) || (itemSelector && !el.matches(itemSelector))) el.style.display = 'none';
             });
             target.slot.hidden = false;
-            target.slot.dataset.state = state.kind;
-            if (target.slot.textContent !== state.text) target.slot.textContent = state.text;
+            paint(target.slot, state);
         });
+    }
+
+    const HEADLINES = { running: 'Listening', failed: "Couldn't start", stopped: 'Stopped', unknown: 'Checking' };
+
+    /**
+     * An icon and two lines: what is happening, then the detail. Rebuilt only
+     * when the state changes, so the pulse animation is not restarted every
+     * second. Text (it can carry a server's error message) only ever goes in
+     * through textContent.
+     */
+    function paint(slot, state) {
+        if (slot.dataset.state !== state.kind || !slot.querySelector('.les-detail')) {
+            slot.dataset.state = state.kind;
+            const icon = document.createElement('span');
+            icon.className = 'les-icon';
+            icon.setAttribute('aria-hidden', 'true');
+            const headline = document.createElement('strong');
+            headline.className = 'les-headline';
+            headline.textContent = HEADLINES[state.kind] || '';
+            const detail = document.createElement('span');
+            detail.className = 'les-detail';
+            const text = document.createElement('span');
+            text.className = 'les-text';
+            text.append(headline, detail);
+            slot.replaceChildren(icon, text);
+        }
+        const detail = slot.querySelector('.les-detail');
+        if (detail.textContent !== state.text) detail.textContent = state.text;
     }
 
     async function poll() {
@@ -122,10 +149,30 @@ const LiveEmptyState = (function () {
         }
     }
 
-    const STYLE = '.live-empty-state{padding:14px 16px;margin:8px;border:1px dashed var(--border-color,#263246);' +
-        'border-radius:6px;color:var(--text-secondary,#9fb0c7);font-size:12px;text-align:center;grid-column:1/-1}' +
-        '.live-empty-state[data-state=running]{color:var(--accent-cyan,#4aa3ff)}' +
-        '.live-empty-state[data-state=failed]{color:var(--accent-red,#e25d5d);border-style:solid}';
+    const STYLE = '.live-empty-state{display:flex;align-items:center;justify-content:center;gap:14px;padding:16px 18px;' +
+        'margin:8px;border:1px dashed var(--border-color,#263246);border-radius:8px;color:var(--text-secondary,#9fb0c7);' +
+        'font-size:12px;text-align:left;grid-column:1/-1}' +
+        '.live-empty-state .les-text{display:flex;flex-direction:column;gap:2px;min-width:0}' +
+        '.live-empty-state .les-headline{font-size:11px;letter-spacing:.12em;text-transform:uppercase}' +
+        '.live-empty-state .les-detail{overflow-wrap:anywhere}' +
+        '.live-empty-state .les-icon{position:relative;flex:0 0 auto;width:26px;height:26px}' +
+        '.live-empty-state .les-icon::before,.live-empty-state .les-icon::after{content:"";position:absolute;inset:0;' +
+        'margin:auto;border-radius:50%}' +
+        // running: a dot with a ripple, like the radar's centre
+        '.live-empty-state[data-state=running]{color:var(--accent-cyan,#4aa3ff);border-color:rgba(74,163,255,.35)}' +
+        '.live-empty-state[data-state=running] .les-icon::before{width:8px;height:8px;background:currentColor;' +
+        'box-shadow:0 0 8px currentColor}' +
+        '.live-empty-state[data-state=running] .les-icon::after{width:8px;height:8px;border:1.5px solid currentColor;' +
+        'animation:les-ripple 2s ease-out infinite}' +
+        '@keyframes les-ripple{from{width:8px;height:8px;opacity:.8}to{width:26px;height:26px;opacity:0}}' +
+        // stopped: a hollow ring; failed: a solid warning mark
+        '.live-empty-state[data-state=stopped] .les-icon::before,.live-empty-state[data-state=unknown] .les-icon::before{' +
+        'width:14px;height:14px;border:1.5px solid currentColor;opacity:.6}' +
+        '.live-empty-state[data-state=failed]{color:var(--accent-red,#e25d5d);border-style:solid}' +
+        '.live-empty-state[data-state=failed] .les-icon::before{width:18px;height:18px;background:currentColor;opacity:.18}' +
+        '.live-empty-state[data-state=failed] .les-icon::after{content:"!";width:18px;height:18px;line-height:18px;' +
+        'text-align:center;font-weight:700;font-size:12px}' +
+        '@media (prefers-reduced-motion:reduce){.live-empty-state .les-icon::after{animation:none}}';
 
     function start() {
         if (started) return;

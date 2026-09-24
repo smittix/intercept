@@ -154,6 +154,7 @@ const WiFiMode = (function() {
         cacheDOM();
 
         if (firstInit) {
+            drawRadarFace();
             checkCapabilities();
             initScanModeTabs();
             initNetworkFilters();
@@ -1537,6 +1538,18 @@ const WiFiMode = (function() {
         return (hash >>> 0) / 0x100000000 * 2 * Math.PI;
     }
 
+    /** The radar's rings, ticks and sweep; the same face as Bluetooth's radar. */
+    function drawRadarFace() {
+        const svg = document.getElementById('wifiRadarSvg');
+        if (!svg || svg.dataset.face || typeof RadarFace === 'undefined') return;
+        // Band boundaries match renderRadar's zones (35 and 70 of a 100 radius)
+        svg.insertAdjacentHTML('afterbegin', RadarFace.markup({
+            id: 'wf', size: 210, padding: 5,
+            rings: [{ radius: 0.35, label: 'STRONG' }, { radius: 0.70, label: 'MEDIUM' }, { radius: 1.0, label: 'WEAK' }],
+        }));
+        svg.dataset.face = '1';
+    }
+
     function renderRadar(networksList) {
         const dotsGroup = document.getElementById('wifiRadarDots');
         if (!dotsGroup) return;
@@ -1546,19 +1559,23 @@ const WiFiMode = (function() {
 
         networksList.forEach(network => {
             const rssi = network.rssi_current ?? -100;
-            const strength = Math.max(0, Math.min(1, (rssi + 100) / 80));
-            const dotR = 5 + (1 - strength) * 90; // stronger = closer to centre
+            // Bands use the list's signal thresholds (strong above -55 dBm,
+            // medium above -70), so a network the list shows as strong sits
+            // in the strong ring; within its band, stronger is nearer the centre.
+            const band = rssi > -55 ? 0 : rssi > -70 ? 1 : 2;
+            const [bandTop, bandBottom] = [[-30, -55], [-55, -70], [-70, -100]][band];
+            const withinBand = Math.max(0, Math.min(1, (bandTop - rssi) / (bandTop - bandBottom)));
+            const dotR = [5, 35, 70][band] + withinBand * [28, 33, 25][band];
             const angle = bssidToAngle(network.bssid);
             const cx = 105 + dotR * Math.cos(angle);
             const cy = 105 + dotR * Math.sin(angle);
 
-            // Zone counts
-            if (dotR < 35)       zoneCounts.immediate++;
-            else if (dotR < 70)  zoneCounts.near++;
-            else                  zoneCounts.far++;
+            if (band === 0)      zoneCounts.immediate++;
+            else if (band === 1) zoneCounts.near++;
+            else                 zoneCounts.far++;
 
             // Visual radius by zone
-            const vr = dotR < 35 ? 6 : dotR < 70 ? 4.5 : 3;
+            const vr = [6, 4.5, 3][band];
 
             // Colour by security
             const sec = (network.security || '').toLowerCase();
@@ -1571,7 +1588,7 @@ const WiFiMode = (function() {
             <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${vr * 1.5}"
                     fill="${colour}" opacity="0.12"/>
             <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${vr}"
-                    fill="${colour}" opacity="0.9" filter="url(#wifi-glow-sm)"/>
+                    fill="${colour}" opacity="0.9" filter="url(#wf-glow)"/>
         `);
         });
 

@@ -220,6 +220,8 @@ const SpaceWeather = (function () {
             }
         }
 
+        _renderGauges(kp, wind, bz);
+
         _setText('swStripSfi', sfi);
         _setText('swStripKp', kp);
         _setText('swStripA', aIndex);
@@ -460,8 +462,24 @@ const SpaceWeather = (function () {
         }
 
         if (_xrayChart) { _xrayChart.destroy(); _xrayChart = null; }
+        // M and X flares cause HF radio blackouts: tint their bands
+        var flareBands = {
+            id: 'flareBands',
+            beforeDatasetsDraw: function (chart) {
+                var y = chart.scales.y, area = chart.chartArea, ctx = chart.ctx;
+                [[1e-5, 1e-4, 'rgba(255, 140, 0, 0.07)'], [1e-4, 1e-3, 'rgba(255, 51, 102, 0.10)']].forEach(function (band) {
+                    var top = y.getPixelForValue(band[1]), bottom = y.getPixelForValue(band[0]);
+                    ctx.save();
+                    ctx.fillStyle = band[2];
+                    ctx.fillRect(area.left, Math.max(area.top, top), area.right - area.left, Math.min(area.bottom, bottom) - Math.max(area.top, top));
+                    ctx.restore();
+                });
+            }
+        };
+
         _xrayChart = new Chart(canvas, {
             type: 'line',
+            plugins: [flareBands],
             data: {
                 labels: labels,
                 datasets: [{
@@ -486,23 +504,95 @@ const SpaceWeather = (function () {
                     y: {
                         display: true,
                         type: 'logarithmic',
+                        min: 1e-9,
+                        max: 1e-3,
+                        // One tick per flare class, at the flux where it starts;
+                        // a log axis otherwise ticks 2e-7, 3e-7, ... all labelled B
+                        afterBuildTicks: function (axis) {
+                            axis.ticks = [1e-8, 1e-7, 1e-6, 1e-5, 1e-4].map(function (v) { return { value: v }; });
+                        },
                         ticks: {
                             color: '#888',
-                            font: { size: 9 },
+                            font: { size: 10, weight: 'bold' },
                             callback: function (v) {
-                                if (v >= 1e-4) return 'X';
-                                if (v >= 1e-5) return 'M';
-                                if (v >= 1e-6) return 'C';
-                                if (v >= 1e-7) return 'B';
-                                if (v >= 1e-8) return 'A';
-                                return '';
+                                return { 1e-8: 'A', 1e-7: 'B', 1e-6: 'C', 1e-5: 'M', 1e-4: 'X' }[v] || '';
                             }
                         },
-                        grid: { color: '#ffffff08' }
+                        grid: { color: '#ffffff14' }
                     }
                 }
             }
         });
+    }
+
+    // -------------------------------------------------------------------
+    // Gauges: Kp, solar wind speed, Bz
+    // -------------------------------------------------------------------
+
+    function _arcPoint(deg, r) {
+        var a = deg * Math.PI / 180;
+        return [60 + Math.sin(a) * r, 58 - Math.cos(a) * r];
+    }
+
+    function _arc(fromDeg, toDeg, r) {
+        var p0 = _arcPoint(fromDeg, r), p1 = _arcPoint(toDeg, r);
+        return 'M' + p0[0].toFixed(2) + ',' + p0[1].toFixed(2) + ' A' + r + ',' + r + ' 0 '
+            + (toDeg - fromDeg > 180 ? 1 : 0) + ',1 ' + p1[0].toFixed(2) + ',' + p1[1].toFixed(2);
+    }
+
+    /** An arc gauge: value within [min, max], a colour and a one-line status. */
+    function _arcGauge(el, title, value, min, max, text, unit, colour, status) {
+        if (!el) return;
+        var span = 240, start = -span / 2;
+        var known = typeof value === 'number' && isFinite(value);
+        var f = known ? Math.max(0, Math.min(1, (value - min) / (max - min))) : 0;
+        el.innerHTML = '<div class="sw-gauge-title">' + title + '</div>'
+            + '<svg viewBox="0 0 120 84" class="sw-gauge-svg">'
+            + '<path d="' + _arc(start, -start, 46) + '" class="sw-gauge-track"/>'
+            + (known ? '<path d="' + _arc(start, start + Math.max(0.5, f * span), 46) + '" class="sw-gauge-fill" style="stroke:' + colour + '"/>' : '')
+            + '<text x="60" y="62" class="sw-gauge-value" style="fill:' + (known ? colour : 'var(--text-dim)') + '">' + text + '</text>'
+            + '<text x="60" y="76" class="sw-gauge-unit">' + unit + '</text>'
+            + '</svg>'
+            + '<div class="sw-gauge-status" style="color:' + (known ? colour : 'var(--text-dim)') + '">' + status + '</div>';
+    }
+
+    /** Bz: a bar either side of zero. South (negative) lets the solar wind couple into Earth's field. */
+    function _bzGauge(el, bz) {
+        if (!el) return;
+        var known = typeof bz === 'number' && isFinite(bz);
+        var limit = 20;
+        var f = known ? Math.max(-1, Math.min(1, bz / limit)) : 0;
+        var colour = !known ? 'var(--text-dim)' : bz <= -5 ? 'var(--neon-red)' : bz < 0 ? 'var(--neon-orange)' : 'var(--neon-green)';
+        var status = !known ? 'No data' : bz <= -5 ? 'Southward: storms more likely' : bz < 0 ? 'Slightly southward' : 'Northward: quiet';
+        var left = f < 0 ? 50 + f * 50 : 50, width = Math.abs(f) * 50;
+        el.innerHTML = '<div class="sw-gauge-title">IMF Bz</div>'
+            + '<div class="sw-bz-value" style="color:' + colour + '">' + (known ? bz.toFixed(1) : '--') + '<span> nT</span></div>'
+            + '<div class="sw-bz-bar"><div class="sw-bz-zero"></div>'
+            + '<div class="sw-bz-fill" style="left:' + left + '%;width:' + width + '%;background:' + colour + '"></div></div>'
+            + '<div class="sw-bz-scale"><span>S ' + limit + '</span><span>0</span><span>N ' + limit + '</span></div>'
+            + '<div class="sw-gauge-status" style="color:' + colour + '">' + status + '</div>';
+    }
+
+    function _renderGauges(kp, wind, bz) {
+        var kpNum = parseFloat(kp);
+        var kpKnown = isFinite(kpNum);
+        var kpColour = !kpKnown ? '' : kpNum >= 7 ? 'var(--neon-red)' : kpNum >= 5 ? 'var(--neon-orange)'
+            : kpNum >= 4 ? 'var(--neon-yellow)' : 'var(--neon-green)';
+        var kpStatus = !kpKnown ? 'No data' : kpNum >= 5 ? 'G' + Math.min(5, Math.floor(kpNum) - 4) + ' geomagnetic storm'
+            : kpNum >= 4 ? 'Unsettled' : 'Quiet';
+        _arcGauge(document.getElementById('swGaugeKp'), 'Planetary Kp', kpKnown ? kpNum : null, 0, 9,
+            kpKnown ? kpNum.toFixed(kpNum % 1 ? 2 : 0) : '--', 'of 9', kpColour, kpStatus);
+
+        var windNum = parseFloat(wind);
+        var windKnown = isFinite(windNum);
+        var windColour = !windKnown ? '' : windNum >= 700 ? 'var(--neon-red)' : windNum >= 500 ? 'var(--neon-orange)'
+            : windNum >= 400 ? 'var(--neon-yellow)' : 'var(--neon-green)';
+        var windStatus = !windKnown ? 'No data' : windNum >= 700 ? 'Very fast' : windNum >= 500 ? 'Fast'
+            : windNum >= 400 ? 'Moderate' : 'Slow';
+        _arcGauge(document.getElementById('swGaugeWind'), 'Solar wind', windKnown ? windNum : null, 250, 900,
+            windKnown ? String(Math.round(windNum)) : '--', 'km/s', windColour, windStatus);
+
+        _bzGauge(document.getElementById('swGaugeBz'), bz === '--' ? null : parseFloat(bz));
     }
 
     // -------------------------------------------------------------------
@@ -523,7 +613,7 @@ const SpaceWeather = (function () {
         html += '</tr></thead><tbody>';
         latest.forEach(function (row) {
             html += '<tr>';
-            html += '<td>' + _escHtml(row.date || '--') + '</td>';
+            html += '<td>' + _escHtml(row.date ? String(row.date).slice(0, 10) : '--') + '</td>';
             html += '<td>' + _escHtml(row.c_class_1_day || '--') + '%</td>';
             html += '<td>' + _escHtml(row.m_class_1_day || '--') + '%</td>';
             html += '<td>' + _escHtml(row.x_class_1_day || '--') + '%</td>';

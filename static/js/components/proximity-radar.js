@@ -65,75 +65,17 @@ const ProximityRadar = (function() {
      */
     function createSVG() {
         const size = CONFIG.size;
-        const c = size / 2;
-        const R = c - CONFIG.padding;
-        const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        // Bearing ticks every 10 degrees, longer every 30
-        const ticks = Array.from({ length: 36 }, (_, i) => {
-            const a = (i * 10) * Math.PI / 180;
-            const len = i % 3 === 0 ? 8 : 4;
-            const x1 = c + Math.sin(a) * R, y1 = c - Math.cos(a) * R;
-            const x2 = c + Math.sin(a) * (R - len), y2 = c - Math.cos(a) * (R - len);
-            return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
-                          class="pr-tick${i % 3 === 0 ? ' major' : ''}"/>`;
-        }).join('');
-
-        // Sweep: a wedge of thin slices fading behind the leading edge
-        const slices = 24, wedge = 60;
-        const sweep = Array.from({ length: slices }, (_, i) => {
-            const a0 = (-(i + 1) * wedge / slices) * Math.PI / 180;
-            const a1 = (-i * wedge / slices) * Math.PI / 180;
-            const p0 = `${(c + Math.sin(a0) * R).toFixed(1)},${(c - Math.cos(a0) * R).toFixed(1)}`;
-            const p1 = `${(c + Math.sin(a1) * R).toFixed(1)},${(c - Math.cos(a1) * R).toFixed(1)}`;
-            const opacity = (0.22 * Math.pow(1 - i / slices, 2)).toFixed(3);
-            return `<path d="M${c},${c} L${p0} A${R},${R} 0 0,1 ${p1} Z" fill="var(--accent-cyan)" fill-opacity="${opacity}"/>`;
-        }).join('');
-        const spin = reduceMotion ? '' : `<animateTransform attributeName="transform" type="rotate"
-                     from="0 ${c} ${c}" to="360 ${c} ${c}" dur="${CONFIG.sweepSeconds}s" repeatCount="indefinite"/>`;
-
         container.innerHTML = `
             <svg viewBox="0 0 ${size} ${size}" class="proximity-radar-svg" role="img"
                  aria-label="Bluetooth devices by signal strength">
-                <defs>
-                    <radialGradient id="pr-bg" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stop-color="var(--accent-cyan)" stop-opacity="0.10"/>
-                        <stop offset="70%" stop-color="var(--accent-cyan)" stop-opacity="0.03"/>
-                        <stop offset="100%" stop-color="var(--accent-cyan)" stop-opacity="0"/>
-                    </radialGradient>
-                    <filter id="pr-glow" x="-100%" y="-100%" width="300%" height="300%">
-                        <feGaussianBlur stdDeviation="2.5" result="blur"/>
-                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                    </filter>
-                </defs>
-
-                <circle cx="${c}" cy="${c}" r="${R}" class="pr-face" fill="url(#pr-bg)"/>
-
-                <g class="radar-rings">
-                    ${CONFIG.rings.map((ring) => `
-                        <circle cx="${c}" cy="${c}" r="${(ring.radius * R).toFixed(1)}" class="pr-ring"/>
-                        <text x="${c + 5}" y="${(c - ring.radius * R + 12).toFixed(1)}" class="pr-ring-label">${ring.label}</text>
-                    `).join('')}
-                    <circle cx="${c}" cy="${c}" r="${R}" class="pr-ring outer"/>
-                    <line x1="${c - R}" y1="${c}" x2="${c + R}" y2="${c}" class="pr-axis"/>
-                    <line x1="${c}" y1="${c - R}" x2="${c}" y2="${c + R}" class="pr-axis"/>
-                    ${ticks}
-                </g>
-
-                <g class="pr-sweep">
-                    ${sweep}
-                    <line x1="${c}" y1="${c}" x2="${c}" y2="${CONFIG.padding}" class="pr-sweep-edge" filter="url(#pr-glow)"/>
-                    ${spin}
-                </g>
-
-                <g class="pr-center">
-                    ${reduceMotion ? '' : `<circle cx="${c}" cy="${c}" r="${CONFIG.centerRadius}" class="pr-ripple">
-                        <animate attributeName="r" from="${CONFIG.centerRadius}" to="${CONFIG.centerRadius * 5}" dur="2.4s" repeatCount="indefinite"/>
-                        <animate attributeName="stroke-opacity" from="0.6" to="0" dur="2.4s" repeatCount="indefinite"/>
-                    </circle>`}
-                    <circle cx="${c}" cy="${c}" r="${CONFIG.centerRadius}" class="pr-you" filter="url(#pr-glow)"/>
-                </g>
-
+                ${RadarFace.markup({
+                    id: 'pr',
+                    size,
+                    padding: CONFIG.padding,
+                    rings: CONFIG.rings,
+                    sweepSeconds: CONFIG.sweepSeconds,
+                    centerRadius: CONFIG.centerRadius,
+                })}
                 <g class="radar-devices"></g>
             </svg>
             <div class="pr-caption">Nearer the centre = stronger signal. Not a distance.</div>

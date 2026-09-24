@@ -37,8 +37,13 @@ const RunState = (function() {
         meteor: 'Meteor',
     };
 
+    // Idle modes are folded behind a "+N idle" chip unless expanded.
+    const EXPANDED_KEY = 'intercept.runState.expanded';
+    const DASHBOARDS = { adsb: '/adsb/dashboard', ais: '/ais/dashboard' };
+
     let refreshTimer = null;
     let activeMode = null;
+    let expanded = readExpanded();
     let lastHealth = null;
     let lastErrorToastAt = 0;
 
@@ -90,7 +95,9 @@ const RunState = (function() {
                 activeMode = normalizeMode(String(mode));
             }
             const result = original.apply(this, arguments);
-            markActiveChip();
+            // The mode now in view is always shown, so redraw rather than re-mark
+            if (lastHealth) renderHealth(lastHealth);
+            else markActiveChip();
             return result;
         };
         wrapped.__runStateWrapped = true;
@@ -131,10 +138,41 @@ const RunState = (function() {
             return;
         }
 
+        // Running modes and the mode in view; the rest behind "+N idle"
         const processes = normalizeProcesses(data.processes || {});
-        for (const mode of CHIP_MODES) {
-            const isRunning = Boolean(processes[mode]);
-            chipsContainer.appendChild(buildChip(modeLabels[mode] || mode.toUpperCase(), isRunning, mode));
+        const current = normalizeMode(activeMode || inferCurrentMode());
+        const running = CHIP_MODES.filter((mode) => processes[mode]);
+        const shown = running.concat(CHIP_MODES.includes(current) && !running.includes(current) ? [current] : []);
+        const idle = CHIP_MODES.filter((mode) => !shown.includes(mode));
+
+        if (!running.length) {
+            const note = document.createElement('span');
+            note.className = 'run-state-note';
+            note.textContent = 'Nothing running';
+            chipsContainer.appendChild(note);
+        }
+        shown.forEach((mode) => {
+            chipsContainer.appendChild(buildChip(modeLabels[mode] || mode.toUpperCase(), Boolean(processes[mode]), mode));
+        });
+        if (expanded) {
+            idle.forEach((mode) => {
+                const chip = buildChip(modeLabels[mode] || mode.toUpperCase(), false, mode);
+                chip.classList.add('idle');
+                chipsContainer.appendChild(chip);
+            });
+        }
+        if (idle.length) {
+            const more = document.createElement('button');
+            more.type = 'button';
+            more.className = 'run-state-chip run-state-more';
+            more.setAttribute('aria-expanded', String(expanded));
+            more.textContent = expanded ? 'Show less' : `+${idle.length} idle`;
+            more.addEventListener('click', () => {
+                expanded = !expanded;
+                try { localStorage.setItem(EXPANDED_KEY, expanded ? '1' : '0'); } catch (err) { /* this visit only */ }
+                renderHealth(lastHealth);
+            });
+            chipsContainer.appendChild(more);
         }
 
         const counts = data.data || {};
@@ -142,11 +180,37 @@ const RunState = (function() {
         markActiveChip();
     }
 
+    function readExpanded() {
+        try { return localStorage.getItem(EXPANDED_KEY) === '1'; } catch (err) { return false; }
+    }
+
+    /** Go to a mode from its chip: ADS-B and AIS have their own dashboards. */
+    function openMode(mode) {
+        if (DASHBOARDS[mode]) {
+            window.location.href = DASHBOARDS[mode];
+        } else if (window.INTERCEPT_MODES && window.INTERCEPT_MODES[mode] && typeof window.switchMode === 'function') {
+            window.switchMode(mode);
+        }
+    }
+
     function buildChip(label, running, mode) {
         const chip = document.createElement('span');
         chip.className = `run-state-chip${running ? ' running' : ''}`;
         if (mode) {
             chip.dataset.mode = mode;
+            if (DASHBOARDS[mode] || (window.INTERCEPT_MODES && window.INTERCEPT_MODES[mode])) {
+                chip.classList.add('link');
+                chip.setAttribute('role', 'button');
+                chip.tabIndex = 0;
+                chip.title = running ? `${label} is running. Open it.` : `Open ${label}`;
+                chip.addEventListener('click', () => openMode(mode));
+                chip.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openMode(mode);
+                    }
+                });
+            }
         }
 
         const dot = document.createElement('span');

@@ -30,7 +30,6 @@ const BtLocate = (function() {
     let movementStartMarker = null;
     let movementHeadMarker = null;
     let strongestMarker = null;
-    let confidenceCircle = null;
     let heatmapEnabled = false;
     let movementEnabled = true;
     let autoFollowEnabled = true;
@@ -349,6 +348,7 @@ const BtLocate = (function() {
 
     function showActiveUI() {
         setStartButtonBusy(false);
+        resetGauge();
         const startBtn = document.getElementById('btLocateStartBtn');
         const stopBtn = document.getElementById('btLocateStopBtn');
         if (startBtn) startBtn.style.display = 'none';
@@ -651,30 +651,114 @@ const BtLocate = (function() {
     }
 
     function updateDetectionHud(d) {
-        const bandEl = document.getElementById('btLocateBand');
-        const distEl = document.getElementById('btLocateDistance');
         const rssiEl = document.getElementById('btLocateRssi');
-        const rssiEmaEl = document.getElementById('btLocateRssiEma');
-
-        if (bandEl) {
-            bandEl.textContent = d.proximity_band || '---';
-            const bandClass = (d.proximity_band || '').toLowerCase();
-            bandEl.className = bandClass ? 'btl-hud-band ' + bandClass : 'btl-hud-band';
-        }
-        if (distEl) {
-            if (typeof d.estimated_distance === 'number' && isFinite(d.estimated_distance)) {
-                distEl.textContent = d.estimated_distance.toFixed(1);
-            } else {
-                distEl.textContent = '--';
-            }
-        }
         if (rssiEl) rssiEl.textContent = d.rssi != null ? d.rssi : '--';
-        if (rssiEmaEl) {
-            if (typeof d.rssi_ema === 'number' && isFinite(d.rssi_ema)) {
-                rssiEmaEl.textContent = d.rssi_ema.toFixed(1);
-            } else {
-                rssiEmaEl.textContent = '--';
-            }
+        const smoothed = typeof d.rssi_ema === 'number' && isFinite(d.rssi_ema) ? d.rssi_ema : d.rssi;
+        if (typeof smoothed === 'number' && isFinite(smoothed)) updateGauge(smoothed);
+    }
+
+    // ------------------------------------------------------------------
+    // Signal gauge: hotter / colder. Signal strength cannot be turned into
+    // a distance with one receiver, but whether it is rising or falling is
+    // exactly what a search steers by, and the best reading so far says
+    // when the target has been passed.
+    // ------------------------------------------------------------------
+
+    const GAUGE_MIN = -100;
+    const GAUGE_MAX = -30;
+    const GAUGE_SPAN = 240;      // degrees of arc, opening at the bottom
+    const TREND_DB = 1.5;        // change that counts as stronger or weaker
+    let gaugeHistory = [];       // [{t, v}] smoothed dBm, last 8 s
+    let gaugeBest = null;
+
+    function gaugeAngle(dbm) {
+        const f = (Math.max(GAUGE_MIN, Math.min(GAUGE_MAX, dbm)) - GAUGE_MIN) / (GAUGE_MAX - GAUGE_MIN);
+        return -GAUGE_SPAN / 2 + f * GAUGE_SPAN;
+    }
+
+    function gaugePoint(deg, r) {
+        const a = deg * Math.PI / 180;
+        return [60 + Math.sin(a) * r, 60 - Math.cos(a) * r];
+    }
+
+    function gaugeArc(fromDeg, toDeg, r) {
+        const [x0, y0] = gaugePoint(fromDeg, r);
+        const [x1, y1] = gaugePoint(toDeg, r);
+        const large = toDeg - fromDeg > 180 ? 1 : 0;
+        return `M${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${large},1 ${x1.toFixed(2)},${y1.toFixed(2)}`;
+    }
+
+    function gaugeColour(dbm) {
+        return dbm > -55 ? 'var(--accent-green)' : dbm > -70 ? 'var(--accent-amber)' : 'var(--accent-red)';
+    }
+
+    function buildGauge() {
+        const el = document.getElementById('btLocateGauge');
+        if (!el) return;
+        const start = -GAUGE_SPAN / 2;
+        el.innerHTML = `
+            <svg viewBox="0 0 120 108" class="btl-gauge-svg">
+                <path d="${gaugeArc(start, GAUGE_SPAN / 2, 48)}" class="btl-gauge-track"/>
+                <path d="${gaugeArc(start, start + 0.01, 48)}" class="btl-gauge-fill" id="btLocateGaugeFill"/>
+                <line id="btLocateGaugeBest" class="btl-gauge-best" x1="60" y1="6" x2="60" y2="18" style="display:none"/>
+                <text x="60" y="58" class="btl-gauge-value" id="btLocateGaugeValue">--</text>
+                <text x="60" y="72" class="btl-gauge-unit">dBm</text>
+                <text x="60" y="100" class="btl-gauge-trend" id="btLocateGaugeTrend">WAITING</text>
+            </svg>`;
+    }
+
+    function resetGauge() {
+        gaugeHistory = [];
+        gaugeBest = null;
+        buildGauge();
+        const bestEl = document.getElementById('btLocateBest');
+        if (bestEl) bestEl.textContent = '--';
+    }
+
+    function gaugeTrend(now) {
+        const mean = (points) => points.reduce((sum, p) => sum + p.v, 0) / points.length;
+        const recent = gaugeHistory.filter((p) => now - p.t <= 2000);
+        const before = gaugeHistory.filter((p) => now - p.t > 3000);
+        if (!recent.length || !before.length) return 'steady';
+        const change = mean(recent) - mean(before);
+        return change > TREND_DB ? 'stronger' : change < -TREND_DB ? 'weaker' : 'steady';
+    }
+
+    function updateGauge(dbm) {
+        if (!document.getElementById('btLocateGaugeFill')) buildGauge();
+        const now = Date.now();
+        gaugeHistory.push({ t: now, v: dbm });
+        gaugeHistory = gaugeHistory.filter((p) => now - p.t <= 8000);
+        if (gaugeBest === null || dbm > gaugeBest) gaugeBest = dbm;
+
+        const start = -GAUGE_SPAN / 2;
+        const colour = gaugeColour(dbm);
+        const fill = document.getElementById('btLocateGaugeFill');
+        if (fill) {
+            fill.setAttribute('d', gaugeArc(start, Math.max(start + 0.01, gaugeAngle(dbm)), 48));
+            fill.style.stroke = colour;
+        }
+        const value = document.getElementById('btLocateGaugeValue');
+        if (value) {
+            value.textContent = Math.round(dbm);
+            value.style.fill = colour;
+        }
+        const best = document.getElementById('btLocateGaugeBest');
+        if (best) {
+            const [x1, y1] = gaugePoint(gaugeAngle(gaugeBest), 42);
+            const [x2, y2] = gaugePoint(gaugeAngle(gaugeBest), 55);
+            best.setAttribute('x1', x1.toFixed(2)); best.setAttribute('y1', y1.toFixed(2));
+            best.setAttribute('x2', x2.toFixed(2)); best.setAttribute('y2', y2.toFixed(2));
+            best.style.display = '';
+        }
+        const bestEl = document.getElementById('btLocateBest');
+        if (bestEl) bestEl.textContent = Math.round(gaugeBest);
+
+        const trend = gaugeTrend(now);
+        const trendEl = document.getElementById('btLocateGaugeTrend');
+        if (trendEl) {
+            trendEl.textContent = { stronger: '▲ STRONGER', weaker: '▼ WEAKER', steady: 'STEADY' }[trend];
+            trendEl.setAttribute('class', 'btl-gauge-trend ' + trend);
         }
     }
 
@@ -906,10 +990,6 @@ const BtLocate = (function() {
             map?.removeLayer(strongestMarker);
             strongestMarker = null;
         }
-        if (confidenceCircle) {
-            map?.removeLayer(confidenceCircle);
-            confidenceCircle = null;
-        }
         if (heatLayer) {
             try {
                 if (isMapRenderable()) {
@@ -985,59 +1065,26 @@ const BtLocate = (function() {
         strongestEl.textContent = 'Best: ' + strongest.rssi + ' dBm';
     }
 
+    /**
+     * How much the signal is fluctuating over the last few readings: the
+     * spread (standard deviation) of RSSI, in dB. It says how far to trust
+     * a single reading. It replaced a "Confidence: +/- N m" radius and map
+     * circle computed from distance estimates, which signal strength
+     * cannot give.
+     */
     function updateConfidenceLayer() {
-        if (!map) return;
-        const latest = trailPoints[trailPoints.length - 1];
-        const radius = computeConfidenceRadiusMeters();
-        if (!latest || radius == null) {
-            if (confidenceCircle) {
-                map.removeLayer(confidenceCircle);
-                confidenceCircle = null;
-            }
-            updateConfidenceInfo(null);
-            return;
-        }
-
-        if (!confidenceCircle) {
-            confidenceCircle = L.circle([latest.lat, latest.lon], {
-                radius: radius,
-                color: '#93c5fd',
-                weight: 1,
-                fillColor: '#60a5fa',
-                fillOpacity: 0.08,
-            }).addTo(map);
-        } else {
-            confidenceCircle.setLatLng([latest.lat, latest.lon]);
-            confidenceCircle.setRadius(radius);
-            if (!map.hasLayer(confidenceCircle)) {
-                confidenceCircle.addTo(map);
-            }
-        }
-        updateConfidenceInfo(radius);
-    }
-
-    function computeConfidenceRadiusMeters() {
-        if (trailPoints.length < 2) return null;
         const sample = trailPoints.slice(-CONFIDENCE_WINDOW_POINTS);
-        const distances = sample.map(p => p.estimated_distance).filter(v => typeof v === 'number' && isFinite(v) && v > 0);
         const rssis = sample.map(p => p.rssi).filter(v => typeof v === 'number' && isFinite(v));
-        if (distances.length < 2 && rssis.length < 2) return null;
-
-        const meanDistance = distances.length > 0 ? average(distances) : 20;
-        const stdDistance = distances.length > 1 ? standardDeviation(distances) : 0;
-        const stdRssi = rssis.length > 1 ? standardDeviation(rssis) : 0;
-        const confidence = (meanDistance * 0.35) + (stdDistance * 1.6) + (stdRssi * 0.9) + 3;
-        return Math.max(4, Math.min(150, confidence));
+        updateConfidenceInfo(rssis.length >= 3 ? standardDeviation(rssis) : null);
     }
 
-    function updateConfidenceInfo(radiusMeters) {
+    function updateConfidenceInfo(spreadDb) {
         const confidenceEl = document.getElementById('btLocateConfidenceInfo');
         if (!confidenceEl) return;
-        if (radiusMeters == null || !isFinite(radiusMeters)) {
-            confidenceEl.textContent = 'Confidence: --';
-            return;
-        }
-        confidenceEl.textContent = 'Confidence: +/-' + Math.round(radiusMeters) + ' m';
+        confidenceEl.textContent = spreadDb == null || !isFinite(spreadDb)
+            ? 'Signal spread: --'
+            : 'Signal spread: \u00b1' + spreadDb.toFixed(1) + ' dB';
+        confidenceEl.title = 'How much the signal varies between readings. A large spread means a single reading is unreliable.';
     }
 
     function buildDetectionKey(detection) {

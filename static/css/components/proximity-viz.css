@@ -55,7 +55,6 @@
 .proximity-radar-svg .pr-ring-label {
     fill: var(--text-dim, #6b7280);
     font-family: var(--font-mono, monospace);
-    font-size: 9px;
     letter-spacing: 0.08em;
 }
 
