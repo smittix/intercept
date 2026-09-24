@@ -219,3 +219,25 @@ def test_baseline_age_reads_stored_utc_correctly(client, db, monkeypatch):
         time.tzset()
     assert health["age_hours"] < 0.1
     assert diff["age"]["hours"] < 0.1
+
+
+def test_past_sweeps_are_listed_newest_first_with_what_they_detected(client, db):
+    """There was no way to list sweeps: only the current process's latest
+    was reachable, and none at all after a restart."""
+    first = db.create_tscm_sweep("quick")
+    db.update_tscm_sweep(
+        first,
+        status="completed",
+        results={"wifi_devices": [{"bssid": "AA:AA:AA:AA:AA:AA"}], "bt_devices": [{}, {}], "rf_count": 3},
+        completed=True,
+    )
+    running = db.create_tscm_sweep("standard")
+
+    sweeps = client.get("/tscm/sweeps").get_json()["sweeps"]
+    assert [s["id"] for s in sweeps] == [running, first]
+    assert sweeps[0]["has_results"] is False and sweeps[0]["detected"] is None
+    assert sweeps[1]["detected"] == {"wifi": 1, "wifi_clients": 0, "bluetooth": 2, "rf": 3}
+    assert "results" not in sweeps[1]  # summaries, not the device lists
+
+    assert [s["id"] for s in client.get("/tscm/sweeps?limit=1").get_json()["sweeps"]] == [running]
+    assert len(client.get("/tscm/sweeps?limit=0").get_json()["sweeps"]) == 1  # clamped to at least one

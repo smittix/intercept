@@ -117,6 +117,16 @@ def stop_sweep():
     return jsonify({"status": "success", "message": "Sweep stopped"})
 
 
+@tscm_bp.route("/sweeps")
+def list_sweeps():
+    """Recent sweeps, newest first, with what each detected (limit: 1-500, default 50)."""
+    from utils.database import get_tscm_sweeps
+
+    limit = request.args.get("limit", 50, type=int)
+    limit = max(1, min(50 if limit is None else limit, 500))
+    return jsonify({"status": "success", "sweeps": get_tscm_sweeps(limit)})
+
+
 @tscm_bp.route("/sweep/status")
 def sweep_status():
     """Get current sweep status."""

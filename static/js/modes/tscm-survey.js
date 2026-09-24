@@ -223,7 +223,36 @@ const TscmSurvey = (function () {
         } else {
             nodes.push(await renderDiff(activeBaseline.id, latestSweep.id));
         }
+
+        nodes.push(...await renderEarlierSweeps());
         return nodes;
+    }
+
+    /** Sweeps before the latest, each comparable with the active baseline from its stored results. */
+    async function renderEarlierSweeps() {
+        const { sweeps } = await api('/tscm/sweeps?limit=20');
+        const earlier = sweeps.filter((s) => !latestSweep || s.id !== latestSweep.id);
+        if (!earlier.length) return [];
+        const detected = (d) => d ? `${d.wifi} Wi-Fi, ${d.wifi_clients} clients, ${d.bluetooth} Bluetooth, ${d.rf} RF` : 'no results';
+        const comparison = el('div', {});
+        const rows = earlier.map((s) => el('tr', {},
+            el('td', {}, `#${s.id}`),
+            el('td', {}, localTime(s.started_at)),
+            el('td', {}, s.status),
+            el('td', {}, detected(s.detected)),
+            el('td', {}, activeBaseline && s.has_results
+                ? button('Compare with baseline', (e) => act(e.target, async () => {
+                    comparison.replaceChildren(el('h5', {}, `Sweep #${s.id} compared with the baseline`),
+                        await renderDiff(activeBaseline.id, s.id));
+                }), 'subtle')
+                : null)));
+        return [
+            el('h4', {}, 'Earlier sweeps'),
+            el('table', { class: 'tscm-survey-table' },
+                el('thead', {}, el('tr', {}, ['Sweep', 'Started', 'Status', 'Detected', ''].map((h) => el('th', {}, h)))),
+                el('tbody', {}, rows)),
+            comparison,
+        ];
     }
 
     async function renderDiff(baselineId, sweepId) {
