@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSCM Sweep Report {{ report.report_id }}</title>
+    <style>
+        @page { size: A4; margin: 18mm 16mm; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: #eef0f3;
+            color: #1a1d21;
+            font: 10.5pt/1.5 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .toolbar {
+            position: sticky; top: 0;
+            display: flex; gap: 12px; align-items: center; justify-content: space-between;
+            padding: 10px 16px; background: #1a1d21; color: #fff; font-size: 13px;
+        }
+        .toolbar button {
+            padding: 6px 14px; border: 0; border-radius: 4px; background: #2d7ff9; color: #fff;
+            font: inherit; font-weight: 600; cursor: pointer;
+        }
+        .page { max-width: 210mm; margin: 16px auto; padding: 18mm 16mm; background: #fff; }
+        h1 { font-size: 17pt; margin: 0 0 4px; letter-spacing: .01em; }
+        h2 {
+            font-size: 12pt; margin: 22px 0 8px; padding-bottom: 4px;
+            border-bottom: 1.5px solid #1a1d21; text-transform: uppercase; letter-spacing: .04em;
+        }
+        dl.meta { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 10px 0 0; }
+        dl.meta dt { color: #5a6270; }
+        dl.meta dd { margin: 0; }
+        .prose { white-space: pre-wrap; font-family: inherit; margin: 0; }
+        .finding { break-inside: avoid; padding: 8px 0 10px; border-bottom: 1px solid #d5d9df; }
+        .finding:last-child { border-bottom: 0; }
+        .finding h3 { font-size: 11pt; margin: 0 0 4px; }
+        .finding dl { display: grid; grid-template-columns: 9.5em 1fr; gap: 1px 10px; margin: 0; }
+        .finding dt { color: #5a6270; }
+        .finding dd { margin: 0; overflow-wrap: anywhere; }
+        .finding ul { margin: 0; padding-left: 1.1em; }
+        .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 9.5pt; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #d5d9df; vertical-align: top; }
+        th { font-weight: 600; color: #5a6270; }
+        .note { color: #5a6270; }
+        .disclaimer { break-inside: avoid; font-size: 9.5pt; }
+        @media print {
+            body { background: #fff; }
+            .toolbar { display: none; }
+            .page { margin: 0; padding: 0; max-width: none; }
+        }
+        @media (max-width: 640px) {
+            .page { margin: 0; padding: 16px; }
+            .finding dl { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <span>Client report for sweep #{{ report.sweep_id }}. Print it, or choose "Save as PDF" as the printer.</span>
+        <button type="button" onclick="window.print()">Print / Save as PDF</button>
+    </div>
+
+    <main class="page">
+        <h1>Technical Surveillance Countermeasures (TSCM) Sweep Report</h1>
+        <dl class="meta">
+            <dt>Report ID</dt><dd class="mono">{{ report.report_id }}</dd>
+            <dt>Generated</dt><dd>{{ generated }}</dd>
+            <dt>Sweep ID</dt><dd>{{ report.sweep_id }}</dd>
+            {% if report.location %}<dt>Site / Location</dt><dd>{{ report.location }}</dd>{% endif %}
+            {% if report.examiner_name %}<dt>Examiner</dt><dd>{{ report.examiner_name }}</dd>{% endif %}
+        </dl>
+
+        <h2>Executive summary</h2>
+        <pre class="prose">{{ executive_summary }}</pre>
+
+        {% for title, findings in sections %}
+        <h2>{{ title }}</h2>
+        {% for f in findings %}
+        <section class="finding">
+            <h3>{{ loop.index }}. {{ f.title }}</h3>
+            <dl>
+                <dt>Protocol</dt><dd>{{ f.protocol }}</dd>
+                <dt>Identifier</dt><dd class="mono">{{ f.identifier }}</dd>
+                {% if f.measurements %}<dt>Signal</dt><dd>{{ f.measurements }}</dd>{% endif %}
+                <dt>Assessment</dt><dd>{{ f.assessment }}</dd>
+                {% if f.indicators %}
+                <dt>Indicators</dt>
+                <dd><ul>{% for indicator in f.indicators %}<li>{{ indicator }}</li>{% endfor %}</ul></dd>
+                {% endif %}
+                <dt>Recommended action</dt><dd>{{ f.action }}</dd>
+                {% if f.reference %}<dt>Reference</dt><dd>{{ f.reference }}</dd>{% endif %}
+                {% if f.note %}<dt>Note</dt><dd>{{ f.note }}</dd>{% endif %}
+            </dl>
+        </section>
+        {% endfor %}
+        {% endfor %}
+
+        {% if meetings %}
+        <h2>Meeting window summary</h2>
+        <table>
+            <thead>
+                <tr><th>Meeting</th><th>Time</th><th>Duration</th><th>First seen during</th><th>Behaviour changes</th><th>High interest active</th></tr>
+            </thead>
+            <tbody>
+                {% for m in meetings %}
+                <tr>
+                    <td>{{ m.name or 'Unnamed' }}</td>
+                    <td>{{ m.start_time }} – {{ m.end_time or 'ongoing' }}</td>
+                    <td>{{ '%.0f' % m.duration_minutes }} min</td>
+                    <td>{{ m.devices_first_seen }}</td>
+                    <td>{{ m.behavior_changes }}</td>
+                    <td>{{ m.high_interest_devices }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p class="note">Meeting-correlated activity indicates temporal correlation only. Devices appearing during meetings may have legitimate explanations.</p>
+        {% endif %}
+
+        <h2>Sweep capabilities and limitations</h2>
+        {% if equipment %}
+        <p><strong>Equipment used</strong></p>
+        <ul>{% for item in equipment %}<li>{{ item }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if limitations %}
+        <p><strong>Limitations</strong></p>
+        <ul>{% for item in limitations %}<li>{{ item }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        <h2>Signal analysis methodology</h2>
+        <pre class="prose">{{ signal_note }}</pre>
+
+        <h2>Disclaimer</h2>
+        <pre class="prose disclaimer">{{ disclaimer }}</pre>
+    </main>
+</body>
+</html>

@@ -417,11 +417,31 @@ class TestReportRoutes:
         ):
             yield sweep
 
-    def test_pdf_route(self, client, sweep):
-        resp = client.get("/tscm/report/pdf?sweep_id=42&site_name=Boardroom")
+    def test_text_route(self, client, sweep):
+        resp = client.get("/tscm/report/text?sweep_id=42&site_name=Boardroom")
         assert resp.status_code == 200
         assert resp.headers["Content-Disposition"] == "attachment; filename=tscm_report_42.txt"
         assert "Site / Location: Boardroom" in resp.get_data(as_text=True)
+
+    def test_print_route_is_a_printable_page(self, client, sweep):
+        resp = client.get("/tscm/report/print?sweep_id=42&site_name=Boardroom")
+        assert resp.status_code == 200 and resp.mimetype == "text/html"
+        html = resp.get_data(as_text=True)
+        assert "Boardroom" in html and "window.print()" in html and "@page" in html
+
+    def test_print_route_escapes_what_it_shows(self, client, sweep):
+        """Site names are typed by the examiner and device names chosen by
+        whoever owns the device; neither may reach the page as markup."""
+        html = client.get("/tscm/report/print?sweep_id=42&site_name=<img src=x onerror=alert(1)>").get_data(
+            as_text=True
+        )
+        assert "<img src=x" not in html and "&lt;img src=x" in html
+
+    def test_pdf_route_now_leads_to_the_printable_page(self, client, sweep):
+        """It served plain text under the name .pdf; existing links now get the printable page."""
+        resp = client.get("/tscm/report/pdf?sweep_id=42&site_name=Boardroom")
+        assert resp.status_code == 302
+        assert resp.headers["Location"].endswith("/tscm/report/print?sweep_id=42&site_name=Boardroom")
 
     @pytest.mark.parametrize("fmt", ["json", "csv"])
     def test_annex_route(self, client, sweep, fmt):
@@ -430,7 +450,8 @@ class TestReportRoutes:
 
     def test_running_sweep_does_not_500(self, client, sweep):
         sweep.update(results=None, completed_at=None, status="running")
-        assert client.get("/tscm/report/pdf?sweep_id=42").status_code == 200
+        assert client.get("/tscm/report/print?sweep_id=42").status_code == 200
+        assert client.get("/tscm/report/text?sweep_id=42").status_code == 200
 
 
 class TestNothingDetected:

@@ -448,7 +448,8 @@ const TscmSurvey = (function () {
             el('div', { class: 'tscm-survey-actions' }, site, examiner),
             el('div', { class: 'tscm-survey-actions' }, tiers),
             el('div', { class: 'tscm-survey-actions' },
-                button(`Client report (sweep #${latestSweep.id})`, link('/tscm/report/pdf')),
+                button(`Client report (sweep #${latestSweep.id}): print or save as PDF`, link('/tscm/report/print')),
+                button('Client report (text)', link('/tscm/report/text'), 'subtle'),
                 button('Technical annex (JSON)', link('/tscm/report/annex', { format: 'json' }), 'subtle'),
                 button('Technical annex (CSV)', link('/tscm/report/annex', { format: 'csv' }), 'subtle')),
         ];

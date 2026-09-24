@@ -150,9 +150,35 @@ def test_practitioner_flow(client, surveyed):
     caps = MagicMock()
     caps.to_dict.return_value = {}
     with patch("utils.tscm.advanced.detect_sweep_capabilities", return_value=caps):
-        resp = client.get(f"/tscm/report/pdf?sweep_id={ids['sweep_id']}&site_name=HQ")
+        resp = client.get(f"/tscm/report/text?sweep_id={ids['sweep_id']}&site_name=HQ")
     assert resp.status_code == 200
     assert "Site / Location: HQ" in resp.get_data(as_text=True)
+
+
+def test_report_includes_the_baseline_comparison_and_meeting_windows(client, db):
+    """Defect: the report routes passed neither, so the client report never
+    had a baseline comparison or a meeting window section."""
+    baseline_id = db.create_tscm_baseline("Empty boardroom", wifi_networks=[{"bssid": "AA:AA:AA:AA:AA:AA"}])
+    sweep_id = db.create_tscm_sweep("standard", baseline_id=baseline_id)
+    meeting_id = db.start_meeting_window(sweep_id, name="Board meeting")
+    db.end_meeting_window(meeting_id)
+    results = {"wifi_devices": [{"bssid": "AA:AA:AA:AA:AA:AA"}, {"bssid": "BB:BB:BB:BB:BB:BB", "essid": "New AP"}]}
+    db.update_tscm_sweep(sweep_id, status="completed", results=results, completed=True)
+
+    caps = MagicMock()
+    caps.to_dict.return_value = {}
+    with patch("utils.tscm.advanced.detect_sweep_capabilities", return_value=caps):
+        text = client.get(f"/tscm/report/text?sweep_id={sweep_id}").get_data(as_text=True)
+        html = client.get(f"/tscm/report/print?sweep_id={sweep_id}").get_data(as_text=True)
+        annex = client.get(f"/tscm/report/annex?sweep_id={sweep_id}").get_json()["annex"]
+
+    assert "BASELINE COMPARISON (vs 'Empty boardroom'):" in text
+    assert "  - New devices: 1" in text
+    assert "Meeting: Board meeting" in text
+    assert "Board meeting" in html and "Empty boardroom" in html
+    assert annex["sweep_details"]["baseline_name"] == "Empty boardroom"
+    assert annex["baseline_diff"]["summary"]["new_devices"] == 1
+    assert [m["name"] for m in annex["meeting_windows"]] == ["Board meeting"]
 
 
 def test_presets_and_details(client):

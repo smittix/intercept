@@ -6,7 +6,6 @@ Handles /baseline/*, /baselines endpoints.
 
 from __future__ import annotations
 
-import json
 import logging
 from datetime import datetime
 
@@ -153,7 +152,7 @@ def get_baseline_diff(baseline_id: int, sweep_id: int):
     and baseline health assessment.
     """
     try:
-        from utils.tscm.advanced import calculate_baseline_diff
+        from utils.tscm.advanced import diff_sweep_against_baseline
 
         baseline = get_tscm_baseline(baseline_id)
         if not baseline:
@@ -163,27 +162,9 @@ def get_baseline_diff(baseline_id: int, sweep_id: int):
         if not sweep:
             return jsonify({"status": "error", "message": "Sweep not found"}), 404
 
-        # Get current devices from sweep results. A sweep has none until it
-        # completes, and diffing nothing would report every device missing.
-        results = sweep.get("results")
-        if results is None:
+        diff = diff_sweep_against_baseline(baseline, sweep)
+        if diff is None:
             return jsonify({"status": "error", "message": "Sweep has no results yet; compare once it completes"}), 409
-        if isinstance(results, str):
-            results = json.loads(results)
-
-        current_wifi = results.get("wifi_devices", [])
-        current_wifi_clients = results.get("wifi_clients", [])
-        current_bt = results.get("bt_devices", [])
-        current_rf = results.get("rf_signals", [])
-
-        diff = calculate_baseline_diff(
-            baseline=baseline,
-            current_wifi=current_wifi,
-            current_wifi_clients=current_wifi_clients,
-            current_bt=current_bt,
-            current_rf=current_rf,
-            sweep_id=sweep_id,
-        )
 
         return jsonify({"status": "success", "diff": diff.to_dict()})
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from flask import Response, jsonify, request
+from flask import Response, jsonify, redirect, render_template, request, url_for
 
 from routes.tscm import (
     _generate_assessment,
@@ -20,6 +20,8 @@ from routes.tscm import (
 from utils.database import (
     acknowledge_tscm_threat,
     get_active_tscm_baseline,
+    get_meeting_windows,
+    get_tscm_baseline,
     get_tscm_sweep,
     get_tscm_threat_summary,
     get_tscm_threats,
@@ -244,61 +246,105 @@ def generate_report():
     return jsonify({"status": "success", "report": report})
 
 
-@tscm_bp.route("/report/pdf")
-def get_pdf_report():
-    """
-    Generate client-safe PDF report.
+def _build_report():
+    """The report for the sweep in the request (default: the current one).
 
-    Contains executive summary, findings by risk tier, meeting window
-    summary, and mandatory disclaimers.
+    Returns (report, None), or (None, error response). Every client report
+    and annex is built here, with the sweep's baseline comparison and its
+    meeting windows.
+    """
+    from routes.tscm import _current_sweep_id
+    from utils.tscm.advanced import (
+        detect_sweep_capabilities,
+        diff_sweep_against_baseline,
+        generate_meeting_summary,
+        get_timeline_manager,
+    )
+    from utils.tscm.reports import generate_report
+
+    sweep_id = request.args.get("sweep_id", _current_sweep_id, type=int)
+    if not sweep_id:
+        return None, (jsonify({"status": "error", "message": "No sweep specified"}), 400)
+
+    sweep = get_tscm_sweep(sweep_id)
+    if not sweep:
+        return None, (jsonify({"status": "error", "message": "Sweep not found"}), 404)
+
+    correlation = get_correlation_engine()
+    profiles = [p.to_dict() for p in correlation.device_profiles.values()]
+    caps = detect_sweep_capabilities().to_dict()
+    timeline_objects = get_timeline_manager().get_all_timelines()
+
+    # The baseline this sweep ran against, if it ran against one.
+    baseline_diff = None
+    baseline = get_tscm_baseline(sweep["baseline_id"]) if sweep.get("baseline_id") else None
+    if baseline:
+        diff = diff_sweep_against_baseline(baseline, sweep)
+        if diff is not None:
+            baseline_diff = {**diff.to_dict(), "baseline_name": baseline.get("name") or f"#{baseline['id']}"}
+
+    meetings = [
+        generate_meeting_summary(window, timeline_objects, profiles).to_dict()
+        for window in get_meeting_windows(sweep_id)
+    ]
+
+    report = generate_report(
+        sweep_id=sweep_id,
+        sweep_data=sweep,
+        device_profiles=profiles,
+        capabilities=caps,
+        timelines=[t.to_dict() for t in timeline_objects],
+        baseline_diff=baseline_diff,
+        meeting_summaries=meetings,
+        categories=_parse_categories_param(request.args.get("categories", "")),
+        site_name=request.args.get("site_name", "").strip()[:200],
+        examiner_name=request.args.get("examiner_name", "").strip()[:200],
+    )
+    return report, None
+
+
+@tscm_bp.route("/report/print")
+def get_printable_report():
+    """
+    Client-safe report as a printable page: executive summary, findings by
+    risk tier, meeting windows, limitations and mandatory disclaimers. The
+    browser's Print, with "Save as PDF", makes the PDF.
     """
     try:
-        from routes.tscm import _current_sweep_id
-        from utils.tscm.advanced import detect_sweep_capabilities, get_timeline_manager
-        from utils.tscm.reports import generate_report, get_pdf_report
+        from utils.tscm.reports import report_html_context
 
-        sweep_id = request.args.get("sweep_id", _current_sweep_id, type=int)
-        if not sweep_id:
-            return jsonify({"status": "error", "message": "No sweep specified"}), 400
-
-        sweep = get_tscm_sweep(sweep_id)
-        if not sweep:
-            return jsonify({"status": "error", "message": "Sweep not found"}), 404
-
-        categories = _parse_categories_param(request.args.get("categories", ""))
-        site_name = request.args.get("site_name", "").strip()[:200]
-        examiner_name = request.args.get("examiner_name", "").strip()[:200]
-
-        # Get data for report
-        correlation = get_correlation_engine()
-        profiles = [p.to_dict() for p in correlation.device_profiles.values()]
-        caps = detect_sweep_capabilities().to_dict()
-
-        manager = get_timeline_manager()
-        timelines = [t.to_dict() for t in manager.get_all_timelines()]
-
-        # Generate report
-        report = generate_report(
-            sweep_id=sweep_id,
-            sweep_data=sweep,
-            device_profiles=profiles,
-            capabilities=caps,
-            timelines=timelines,
-            categories=categories,
-            site_name=site_name,
-            examiner_name=examiner_name,
-        )
-
-        pdf_content = get_pdf_report(report)
-
-        return Response(
-            pdf_content,
-            mimetype="text/plain",
-            headers={"Content-Disposition": f"attachment; filename=tscm_report_{sweep_id}.txt"},
-        )
-
+        report, error = _build_report()
+        if error:
+            return error
+        return render_template("tscm_report.html", **report_html_context(report))
     except Exception as e:
-        logger.error(f"Generate PDF report error: {e}")
+        logger.error(f"Generate printable report error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@tscm_bp.route("/report/pdf")
+def get_pdf_report():
+    """The printable report. Kept for existing links: it was plain text
+    served under this name, and never a PDF."""
+    return redirect(url_for("tscm.get_printable_report", **request.args))
+
+
+@tscm_bp.route("/report/text")
+def get_text_report():
+    """The client report as plain text."""
+    try:
+        from utils.tscm.reports import get_pdf_report
+
+        report, error = _build_report()
+        if error:
+            return error
+        return Response(
+            get_pdf_report(report),
+            mimetype="text/plain",
+            headers={"Content-Disposition": f"attachment; filename=tscm_report_{report.sweep_id}.txt"},
+        )
+    except Exception as e:
+        logger.error(f"Generate text report error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -311,54 +357,19 @@ def get_technical_annex():
     for audit purposes. No packet data included.
     """
     try:
-        from routes.tscm import _current_sweep_id
-        from utils.tscm.advanced import detect_sweep_capabilities, get_timeline_manager
-        from utils.tscm.reports import generate_report, get_csv_annex, get_json_annex
+        from utils.tscm.reports import get_csv_annex, get_json_annex
 
-        sweep_id = request.args.get("sweep_id", _current_sweep_id, type=int)
-        format_type = request.args.get("format", "json")
+        report, error = _build_report()
+        if error:
+            return error
 
-        if not sweep_id:
-            return jsonify({"status": "error", "message": "No sweep specified"}), 400
-
-        sweep = get_tscm_sweep(sweep_id)
-        if not sweep:
-            return jsonify({"status": "error", "message": "Sweep not found"}), 404
-
-        categories = _parse_categories_param(request.args.get("categories", ""))
-        site_name = request.args.get("site_name", "").strip()[:200]
-        examiner_name = request.args.get("examiner_name", "").strip()[:200]
-
-        # Get data for report
-        correlation = get_correlation_engine()
-        profiles = [p.to_dict() for p in correlation.device_profiles.values()]
-        caps = detect_sweep_capabilities().to_dict()
-
-        manager = get_timeline_manager()
-        timelines = [t.to_dict() for t in manager.get_all_timelines()]
-
-        # Generate report
-        report = generate_report(
-            sweep_id=sweep_id,
-            sweep_data=sweep,
-            device_profiles=profiles,
-            capabilities=caps,
-            timelines=timelines,
-            categories=categories,
-            site_name=site_name,
-            examiner_name=examiner_name,
-        )
-
-        if format_type == "csv":
-            csv_content = get_csv_annex(report)
+        if request.args.get("format", "json") == "csv":
             return Response(
-                csv_content,
+                get_csv_annex(report),
                 mimetype="text/csv",
-                headers={"Content-Disposition": f"attachment; filename=tscm_annex_{sweep_id}.csv"},
+                headers={"Content-Disposition": f"attachment; filename=tscm_annex_{report.sweep_id}.csv"},
             )
-        else:
-            annex = get_json_annex(report)
-            return jsonify({"status": "success", "annex": annex})
+        return jsonify({"status": "success", "annex": get_json_annex(report)})
 
     except Exception as e:
         logger.error(f"Generate technical annex error: {e}")

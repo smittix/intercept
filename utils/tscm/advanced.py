@@ -17,6 +17,7 @@ All claims are probabilistic pattern matches requiring professional verification
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import platform
@@ -521,6 +522,24 @@ def baseline_age_hours(created_at) -> float:
     if created.tzinfo is None:
         created = created.replace(tzinfo=timezone.utc)
     return (datetime.now(timezone.utc) - created).total_seconds() / 3600
+
+
+def diff_sweep_against_baseline(baseline: dict, sweep: dict) -> BaselineDiff | None:
+    """A completed sweep's results compared with a baseline, or None while the
+    sweep has no results (diffing nothing would report every device missing)."""
+    results = sweep.get("results")
+    if results is None:
+        return None
+    if isinstance(results, str):
+        results = json.loads(results)
+    return calculate_baseline_diff(
+        baseline=baseline,
+        current_wifi=results.get("wifi_devices", []),
+        current_wifi_clients=results.get("wifi_clients", []),
+        current_bt=results.get("bt_devices", []),
+        current_rf=results.get("rf_signals", []),
+        sweep_id=sweep["id"],
+    )
 
 
 def calculate_baseline_diff(
