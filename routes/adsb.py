@@ -67,8 +67,15 @@ from utils.flight_correlator import get_flight_correlator
 from utils.logging import adsb_logger as logger
 from utils.process import cleanup_stale_dump1090, clear_dump1090_pid, write_dump1090_pid
 from utils.sdr import SDRFactory, SDRType
+from utils.sdr.device_config import apply_device_defaults
 from utils.sse import format_sse
-from utils.validation import validate_device_index, validate_gain, validate_rtl_tcp_host, validate_rtl_tcp_port
+from utils.validation import (
+    validate_device_index,
+    validate_gain,
+    validate_ppm,
+    validate_rtl_tcp_host,
+    validate_rtl_tcp_port,
+)
 
 adsb_bp = Blueprint("adsb", __name__, url_prefix="/adsb")
 
@@ -977,6 +984,7 @@ def start_adsb():
             ), 409
 
     data = request.get_json(silent=True) or {}
+    data = apply_device_defaults(data)
     start_source = data.get("source")
     started_by = request.remote_addr
 
@@ -984,6 +992,7 @@ def start_adsb():
     try:
         gain = int(validate_gain(data.get("gain", "40")))
         device = validate_device_index(data.get("device", "0"))
+        ppm = validate_ppm(data.get("ppm", "0"))
     except ValueError as e:
         return api_error(str(e), 400)
 
@@ -1090,7 +1099,7 @@ def start_adsb():
     # Build ADS-B decoder command
     bias_t = data.get("bias_t", False)
     adsb_bias_t_active = bias_t
-    cmd = builder.build_adsb_command(device=sdr_device, gain=float(gain), bias_t=bias_t)
+    cmd = builder.build_adsb_command(device=sdr_device, gain=float(gain), bias_t=bias_t, ppm=ppm or None)
 
     # Ensure we use the resolved binary path for all SDR types
     cmd[0] = dump1090_path

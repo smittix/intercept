@@ -98,7 +98,13 @@ class HackRFCommandBuilder(CommandBuilder):
 
         return cmd
 
-    def build_adsb_command(self, device: SDRDevice, gain: float | None = None, bias_t: bool = False) -> list[str]:
+    def build_adsb_command(
+        self,
+        device: SDRDevice,
+        gain: float | None = None,
+        bias_t: bool = False,
+        ppm: int | None = None,
+    ) -> list[str]:
         """
         Build dump1090/readsb command with SoapySDR support for ADS-B decoding.
 
@@ -152,6 +158,7 @@ class HackRFCommandBuilder(CommandBuilder):
         tcp_port: int = 10110,
         udp_host: str | None = None,
         udp_port: int | None = None,
+        ppm: int | None = None,
     ) -> list[str]:
         """
         Build AIS-catcher command for AIS vessel tracking with HackRF.

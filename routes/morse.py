@@ -23,6 +23,7 @@ from utils.morse import (
 from utils.process import register_process, safe_terminate, unregister_process
 from utils.responses import api_error
 from utils.sdr import SDRFactory, SDRType
+from utils.sdr.device_config import apply_device_defaults
 from utils.sse import sse_stream_fanout
 from utils.validation import (
     validate_device_index,
@@ -250,6 +251,7 @@ def start_morse() -> Response:
     global morse_last_error, morse_session_id
 
     data = request.json or {}
+    data = apply_device_defaults(data)
 
     # Validate detect_mode first — it determines frequency limits.
     try:

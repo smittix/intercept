@@ -1,7 +1,7 @@
 """Tests for Flask routes and API endpoints."""
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -77,9 +77,18 @@ class TestDevicesEndpoint:
     @patch("app.SDRFactory.detect_devices")
     def test_devices_returns_list(self, mock_detect, client):
         """Test devices endpoint returns list format."""
-        mock_device = MagicMock()
-        mock_device.to_dict.return_value = {"index": 0, "name": "Test RTL-SDR", "sdr_type": "rtlsdr"}
-        mock_detect.return_value = [mock_device]
+        from utils.sdr import RTLSDRCommandBuilder, SDRDevice, SDRType
+
+        mock_detect.return_value = [
+            SDRDevice(
+                sdr_type=SDRType.RTL_SDR,
+                index=0,
+                name="Test RTL-SDR",
+                serial="00000001",
+                driver="rtlsdr",
+                capabilities=RTLSDRCommandBuilder.CAPABILITIES,
+            )
+        ]
 
         response = client.get("/devices")
         data = json.loads(response.data)

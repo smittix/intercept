@@ -78,7 +78,7 @@ var OokMode = (function () {
         var payload = {
             frequency: document.getElementById('ookFrequency').value || '433.920',
             gain: document.getElementById('ookGain').value || '0',
-            ppm: document.getElementById('ookPPM').value || '0',
+            ppm: document.getElementById('ookPPM').value,
             device: document.getElementById('deviceSelect')?.value || '0',
             sdr_type: document.getElementById('sdrTypeSelect')?.value || 'rtlsdr',
             encoding: document.getElementById('ookEncoding').value || 'pwm',

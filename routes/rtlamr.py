@@ -17,6 +17,7 @@ from utils.event_pipeline import process_event
 from utils.logging import sensor_logger as logger
 from utils.process import register_process, unregister_process
 from utils.responses import api_error
+from utils.sdr.device_config import apply_device_defaults
 from utils.sse import sse_stream_fanout
 from utils.validation import validate_device_index, validate_frequency, validate_gain, validate_ppm
 
@@ -100,6 +101,7 @@ def start_rtlamr() -> Response:
             return api_error("RTLAMR already running", 409)
 
         data = request.json or {}
+        data = apply_device_defaults(data)
         sdr_type_str = data.get("sdr_type", "rtlsdr")
 
         if sdr_type_str != "rtlsdr":
@@ -154,9 +156,9 @@ def start_rtlamr() -> Response:
                     if gain and gain != "0":
                         rtl_tcp_cmd.extend(["-g", str(gain)])
 
-                    # Add PPM correction if not 0
+                    # Add PPM correction if not 0 (-P; rtl_tcp's -p is the listen port)
                     if ppm and ppm != "0":
-                        rtl_tcp_cmd.extend(["-p", str(ppm)])
+                        rtl_tcp_cmd.extend(["-P", str(ppm)])
 
                     rtl_tcp_process = subprocess.Popen(rtl_tcp_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     register_process(rtl_tcp_process)

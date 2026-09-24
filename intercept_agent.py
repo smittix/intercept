@@ -68,6 +68,19 @@ except ImportError:
     ThreatDetector = None
     CorrelationEngine = None
 
+# Per-device defaults (name, PPM, gain, bias-T) from this host's settings,
+# validated on the same path the controller's routes use
+try:
+    from utils.sdr.device_config import apply_device_defaults, display_names
+    from utils.validation import validate_gain, validate_ppm
+
+    HAS_DEVICE_CONFIG = True
+except ImportError:
+    HAS_DEVICE_CONFIG = False
+
+# Modes that tune an SDR and so take its PPM, gain and bias-T defaults
+SDR_MODES = {"sensor", "adsb", "pager", "ais", "acars", "aprs", "rtlamr", "dsc", "listening_post"}
+
 # Import database functions for baseline support (same as local mode)
 try:
     from utils.database import get_active_tscm_baseline, get_tscm_baseline
@@ -474,12 +487,14 @@ class ModeManager:
         if sdr_factory:
             try:
                 devices = sdr_factory.detect_devices()
+                names = display_names(devices) if HAS_DEVICE_CONFIG else [d.name for d in devices]
                 sdr_list = []
-                for sdr in devices:
+                for sdr, name in zip(devices, names):
                     sdr_dict = sdr.to_dict()
+                    sdr_dict["name"] = name
                     # Create friendly display name
-                    display_name = sdr.name
-                    if sdr.serial and sdr.serial not in ("N/A", "Unknown"):
+                    display_name = name
+                    if name == sdr.name and sdr.serial and sdr.serial not in ("N/A", "Unknown"):
                         display_name = f"{sdr.name} (SN: {sdr.serial[-8:]})"
                     sdr_dict["display_name"] = display_name
                     sdr_list.append(sdr_dict)
@@ -839,6 +854,16 @@ class ModeManager:
 
     def _start_mode_internal(self, mode: str, params: dict) -> dict:
         """Internal mode start - dispatches to mode-specific handlers."""
+        if HAS_DEVICE_CONFIG and mode in SDR_MODES:
+            params = apply_device_defaults(params)
+            try:
+                if "ppm" in params:
+                    validate_ppm(params["ppm"])
+                if "gain" in params:
+                    validate_gain(params["gain"])
+            except ValueError as e:
+                return {"status": "error", "message": str(e)}
+
         logger.info(f"Starting mode {mode} with params: {params}")
 
         # Initialize data structures
@@ -1127,6 +1152,7 @@ class ModeManager:
         gain = params.get("gain", "40")
         device = params.get("device", "0")
         bias_t = params.get("bias_t", False)
+        ppm = params.get("ppm")
         sdr_type_str = params.get("sdr_type", "rtlsdr")
         remote_sbs_host = params.get("remote_sbs_host")
         remote_sbs_port = params.get("remote_sbs_port", 30003)
@@ -1160,7 +1186,12 @@ class ModeManager:
                 builder = sdr_factory.get_builder(sdr_type)
 
                 # Use the builder to construct dump1090 command
-                cmd = builder.build_adsb_command(device=sdr_device, gain=float(gain) if gain else None, bias_t=bias_t)
+                cmd = builder.build_adsb_command(
+                    device=sdr_device,
+                    gain=float(gain) if gain else None,
+                    bias_t=bias_t,
+                    ppm=int(ppm) if ppm else None,
+                )
                 logger.info(f"Starting ADS-B (via SDR abstraction): {' '.join(cmd)}")
 
             except Exception as e:
@@ -1175,6 +1206,8 @@ class ModeManager:
             cmd = [dump1090_path, "--net", "--quiet"]
             if gain:
                 cmd.extend(["--gain", str(gain)])
+            if ppm and str(ppm) != "0":
+                cmd.extend(["--ppm", str(ppm)])
             if device and str(device) != "0":
                 cmd.extend(["--device-index", str(device)])
 
@@ -2184,6 +2217,7 @@ class ModeManager:
         gain = params.get("gain", "33")
         device = params.get("device", "0")
         bias_t = params.get("bias_t", False)
+        ppm = params.get("ppm")
 
         # Find AIS-catcher
         ais_catcher = self._find_ais_catcher()
@@ -2213,6 +2247,9 @@ class ModeManager:
 
         if bias_t:
             cmd.extend(["-gr", "BIASTEE=on"])
+
+        if ppm and str(ppm) != "0":
+            cmd.extend(["-p", str(ppm)])
 
         logger.info(f"Starting AIS-catcher: {' '.join(cmd)}")
 
@@ -2389,7 +2426,10 @@ class ModeManager:
         """Start ACARS decoding using acarsdec."""
         gain = params.get("gain", "40")
         device = params.get("device", "0")
+        ppm = params.get("ppm")
         frequencies = params.get("frequencies", ["131.550", "130.025", "129.125", "131.525", "131.725"])
+        # PPM, like gain, must come before the device argument
+        ppm_args = ["-p", str(ppm)] if ppm and str(ppm) != "0" else []
 
         acarsdec_path = self._get_tool_path("acarsdec")
         if not acarsdec_path:
@@ -2402,15 +2442,15 @@ class ModeManager:
         if fork_type == "--output":
             # f00b4r0 fork (DragonOS): different syntax
             cmd.extend(["--output", "json:file"])  # stdout
-            cmd.extend(["-g", str(gain)])
+            cmd.extend(["-g", str(gain), *ppm_args])
             cmd.extend(["-m", "256"])  # 3.2 MS/s for wider bandwidth
             cmd.extend(["--rtlsdr", str(device)])
         elif fork_type == "-j":
             # TLeconte v4+
-            cmd.extend(["-j", "-g", str(gain), "-r", str(device)])
+            cmd.extend(["-j", "-g", str(gain), *ppm_args, "-r", str(device)])
         else:
             # TLeconte v3.x
-            cmd.extend(["-o", "4", "-g", str(gain), "-r", str(device)])
+            cmd.extend(["-o", "4", "-g", str(gain), *ppm_args, "-r", str(device)])
 
         cmd.extend(frequencies)
 
@@ -2697,6 +2737,7 @@ class ModeManager:
         freq = params.get("frequency", "912.0")
         device = params.get("device", "0")
         gain = params.get("gain", "40")
+        ppm = params.get("ppm")
         msg_type = params.get("msgtype", "scm")
         filter_id = params.get("filterid")
 
@@ -2712,6 +2753,8 @@ class ModeManager:
         rtl_tcp_cmd = [rtl_tcp_path, "-a", "127.0.0.1", "-p", "1234", "-d", str(device)]
         if gain:
             rtl_tcp_cmd.extend(["-g", str(gain)])
+        if ppm and str(ppm) != "0":
+            rtl_tcp_cmd.extend(["-P", str(ppm)])  # -p is the listen port
 
         logger.info(f"Starting rtl_tcp: {' '.join(rtl_tcp_cmd)}")
 

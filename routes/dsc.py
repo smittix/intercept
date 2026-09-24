@@ -39,10 +39,12 @@ from utils.event_pipeline import process_event
 from utils.process import register_process, unregister_process
 from utils.responses import api_error
 from utils.sdr import SDRFactory, SDRType
+from utils.sdr.device_config import apply_device_defaults
 from utils.sse import sse_stream_fanout
 from utils.validation import (
     validate_device_index,
     validate_gain,
+    validate_ppm,
     validate_rtl_tcp_host,
     validate_rtl_tcp_port,
 )
@@ -293,6 +295,7 @@ def start_decoding() -> Response:
             return jsonify({"status": "error", "message": f"Missing required tools: {', '.join(missing)}"}), 400
 
         data = request.json or {}
+        data = apply_device_defaults(data)
 
         # Validate device
         try:
@@ -300,9 +303,10 @@ def start_decoding() -> Response:
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
 
-        # Validate gain
+        # Validate gain and PPM
         try:
             gain = validate_gain(data.get("gain", "40"))
+            ppm = validate_ppm(data.get("ppm", "0"))
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
 
@@ -357,6 +361,7 @@ def start_decoding() -> Response:
                 frequency_mhz=DSC_VHF_FREQUENCY_MHZ,
                 sample_rate=DSC_SAMPLE_RATE,
                 gain=float(gain) if gain and str(gain) != "0" else None,
+                ppm=ppm or None,
                 modulation="fm",
                 squelch=0,
             )
