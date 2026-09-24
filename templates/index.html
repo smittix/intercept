@@ -1986,22 +1986,18 @@
                     <!-- Proximity HUD -->
                     <div class="btl-hud" id="btLocateHud" style="display: none;">
                         <div class="btl-hud-top">
-                            <div class="btl-hud-band" id="btLocateBand">---</div>
+                            <!-- Signal gauge (drawn by BtLocate): hotter / colder, not a distance -->
+                            <div class="btl-gauge" id="btLocateGauge" role="img" aria-label="Signal strength"></div>
                             <div class="btl-hud-metrics">
-                                <div class="btl-hud-metric btl-hud-metric-lg">
-                                    <span class="btl-hud-value" id="btLocateDistance">--</span>
-                                    <span class="btl-hud-unit">m</span>
-                                    <span class="btl-hud-label">Est. Distance</span>
-                                </div>
                                 <div class="btl-hud-metric">
                                     <span class="btl-hud-value" id="btLocateRssi">--</span>
                                     <span class="btl-hud-unit">dBm</span>
-                                    <span class="btl-hud-label">RSSI</span>
+                                    <span class="btl-hud-label">RSSI now</span>
                                 </div>
                                 <div class="btl-hud-metric">
-                                    <span class="btl-hud-value" id="btLocateRssiEma">--</span>
+                                    <span class="btl-hud-value" id="btLocateBest">--</span>
                                     <span class="btl-hud-unit">dBm</span>
-                                    <span class="btl-hud-label">RSSI avg</span>
+                                    <span class="btl-hud-label">Best</span>
                                 </div>
                                 <div class="btl-hud-separator"></div>
                                 <div class="btl-hud-metric">
@@ -2046,7 +2042,7 @@
                                 <span class="btl-hud-info-sep">&middot;</span>
                                 <span class="btl-hud-info-item" id="btLocateLastSeen">Last: --</span>
                                 <span class="btl-hud-info-sep">&middot;</span>
-                                <span class="btl-hud-info-item" id="btLocateConfidenceInfo">Confidence: --</span>
+                                <span class="btl-hud-info-item" id="btLocateConfidenceInfo">Signal spread: --</span>
                                 <span class="btl-hud-info-sep">&middot;</span>
                                 <span class="btl-hud-info-item" id="btLocateBestSignal">Best: --</span>
                             </div>
