@@ -2208,8 +2208,14 @@
                             </svg>
                             Number Stations & Diplomatic Networks
                         </div>
-                        <div class="spy-stations-count">
-                            <span id="spyStationsVisibleCount">0</span> stations
+                        <div class="spy-stations-header-right">
+                            <div class="spy-view-toggle" role="group" aria-label="View">
+                                <button type="button" data-view="cards" onclick="SpyStations.setView('cards')">Cards</button>
+                                <button type="button" data-view="table" onclick="SpyStations.setView('table')">Table</button>
+                            </div>
+                            <div class="spy-stations-count">
+                                <span id="spyStationsVisibleCount">0</span> stations
+                            </div>
                         </div>
                     </div>
                     <div class="spy-stations-grid" id="spyStationsGrid">

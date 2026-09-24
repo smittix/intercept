@@ -7,6 +7,8 @@ const SpyStations = (function() {
     // State
     let stations = [];
     let filteredStations = [];
+    const VIEW_KEY = 'intercept.spyStations.view';
+    let view = readView();
     let activeFilters = {
         types: ['number', 'diplomatic'],
         countries: [],
@@ -154,7 +156,59 @@ const SpyStations = (function() {
             return;
         }
 
-        container.innerHTML = filteredStations.map(station => renderStationCard(station)).join('');
+        syncViewButtons();
+        container.classList.toggle('table-view', view === 'table');
+        container.innerHTML = view === 'table'
+            ? renderStationTable(filteredStations)
+            : filteredStations.map(station => renderStationCard(station)).join('');
+    }
+
+    function readView() {
+        try { return localStorage.getItem(VIEW_KEY) === 'table' ? 'table' : 'cards'; } catch (e) { return 'cards'; }
+    }
+
+    /** Cards (with descriptions) or a compact table, remembered for next time. */
+    function setView(next) {
+        view = next === 'table' ? 'table' : 'cards';
+        try { localStorage.setItem(VIEW_KEY, view); } catch (e) { /* this visit only */ }
+        renderStations();
+    }
+
+    function syncViewButtons() {
+        document.querySelectorAll('.spy-view-toggle button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === view);
+            btn.setAttribute('aria-pressed', String(btn.dataset.view === view));
+        });
+    }
+
+    /** One row per station: many more on screen than the cards allow. */
+    function renderStationTable(list) {
+        const rows = list.map(station => {
+            const flag = countryFlags[station.country_code] || '';
+            const primary = station.frequencies.find(f => f.primary) || station.frequencies[0];
+            const tune = station.frequencies.length > 1
+                ? `<select class="spy-freq-select" id="freq-select-${station.id}">${station.frequencies.map(f =>
+                    `<option value="${f.freq_khz}">${formatFrequency(f.freq_khz)}${f.primary ? ' (primary)' : ''}</option>`).join('')}</select>
+                   <button class="spy-tune-btn" onclick="SpyStations.tuneToSelectedFreq('${station.id}')">Tune In</button>`
+                : `<span class="spy-table-freq">${formatFrequency(primary.freq_khz)}</span>
+                   <button class="spy-tune-btn" onclick="SpyStations.tuneToStation('${station.id}', ${primary.freq_khz})">Tune In</button>`;
+            return `
+                <tr data-station-id="${station.id}">
+                    <td class="spy-table-name"><span class="spy-station-flag">${flag}</span><b>${station.name}</b>
+                        ${station.nickname ? `<span class="spy-station-nickname">${station.nickname}</span>` : ''}</td>
+                    <td><span class="spy-station-badge ${station.type === 'number' ? 'spy-badge-number' : 'spy-badge-diplomatic'}">${station.type === 'number' ? 'NUMBER' : 'DIPLOMATIC'}</span></td>
+                    <td>${station.country}</td>
+                    <td class="spy-meta-mode">${station.mode}</td>
+                    <td class="spy-table-count">${station.frequencies.length}</td>
+                    <td class="spy-table-tune">${tune}</td>
+                    <td><button class="spy-details-btn" onclick="SpyStations.showDetails('${station.id}')">Details</button></td>
+                </tr>`;
+        }).join('');
+        return `
+            <table class="spy-table">
+                <thead><tr><th>Station</th><th>Type</th><th>Origin</th><th>Mode</th><th title="Frequencies">Freqs</th><th>Tune</th><th></th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
     }
 
     /**
@@ -533,6 +587,7 @@ const SpyStations = (function() {
         closeDetails,
         showHelp,
         closeHelp,
+        setView,
         destroy
     };
 })();
