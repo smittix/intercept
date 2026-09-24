@@ -2,6 +2,20 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.10] - 2026-09-24
+
+### Fixed
+
+- **TSCM report findings all read "Signal: Minimal (Confidence: Low)".** The report looked for `rssi_mean`, `observation_count` and `observation_duration_seconds`, none of which a correlation-engine profile carries, so every finding was assessed from no data. It now uses the profile's `rssi_current`, `detection_count` and first/last-seen times.
+- **The TSCM CSV annex listed every device as `informational` with risk score 0**, including high-interest ones, because device timelines carry no risk fields. Device rows now take risk level, score and indicators from the device's finding.
+- **CSV annex cells could be read as spreadsheet formulas.** Bluetooth names are chosen by whoever owns the device; a name beginning `=`, `+`, `-` or `@` now gets a leading apostrophe so Excel and LibreOffice treat it as text.
+- **Generating a TSCM report for a running or aborted sweep failed with a server error** (the sweep has no results yet).
+- **TSCM report sweep times were UTC shown as local time**, beside a "Generated" time that really is local, and a running sweep's duration was off by the UTC offset. Stored times are now converted to local time.
+- A device profile with a null protocol no longer aborts report generation.
+- The generated admin password file is now written beside the database rather than relative to the working directory, so running the test suite no longer overwrites a real `instance/.initial_password` (#288).
+
+---
+
 ## [2.33.9] - 2026-09-23
 
 ### Added

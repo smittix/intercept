@@ -1,0 +1,77 @@
+======================================================================
+TECHNICAL SURVEILLANCE COUNTERMEASURES (TSCM) SWEEP REPORT
+======================================================================
+
+Report ID: TSCM-1-20260924120000
+Generated: 2026-09-24 12:00:00
+Sweep ID: 1
+
+----------------------------------------------------------------------
+EXECUTIVE SUMMARY
+----------------------------------------------------------------------
+TSCM Sweep Report - Location Not Specified
+Conducted: 2026-09-24 10:00
+Duration: 20 minutes
+
+OVERALL ASSESSMENT: LOW
+No significant indicators of surveillance activity were detected.
+
+SCAN STATISTICS:
+  - Total devices scanned: 19
+    - WiFi access points: 6
+    - WiFi clients: 2
+    - Bluetooth devices: 11
+    - RF signals: 0
+
+FINDINGS SUMMARY:
+  - High Interest (require investigation): 0
+  - Needs Review: 0
+  - Informational: 0
+
+----------------------------------------------------------------------
+SWEEP CAPABILITIES & LIMITATIONS
+=================================
+
+----------------------------------------------------------------------
+SIGNAL ANALYSIS METHODOLOGY
+===========================
+Signal analysis provides indicators for further investigation and should not be
+interpreted as definitive identification of devices or their purposes. Environmental
+factors such as building materials, electromagnetic interference, multipath
+propagation, and device orientation significantly affect signal measurements.
+All findings represent patterns observed at a specific point in time and location.
+
+----------------------------------------------------------------------
+
+IMPORTANT DISCLAIMER
+
+This report documents the findings of a Technical Surveillance Countermeasures
+(TSCM) sweep conducted using electronic detection equipment. The following
+limitations and considerations apply:
+
+1. DETECTION LIMITATIONS: No TSCM sweep can guarantee detection of all
+   surveillance devices. Sophisticated devices may evade detection.
+
+2. FINDINGS ARE INDICATORS: All findings represent patterns and indicators,
+   NOT confirmed surveillance devices. Each finding requires professional
+   interpretation and may have legitimate explanations.
+
+3. ENVIRONMENTAL FACTORS: Wireless signals are affected by building
+   construction, interference, and other environmental factors that may
+   impact detection accuracy.
+
+4. POINT-IN-TIME ASSESSMENT: This report reflects conditions at the time
+   of the sweep. Conditions may change after the assessment.
+
+5. NOT LEGAL ADVICE: This report does not constitute legal advice. Consult
+   qualified legal counsel for guidance on surveillance-related matters.
+
+6. PRIVACY CONSIDERATIONS: Some detected devices may be legitimate personal
+   devices of authorized individuals.
+
+This report should be treated as confidential and distributed only to
+authorized personnel on a need-to-know basis.
+
+======================================================================
+END OF REPORT
+======================================================================

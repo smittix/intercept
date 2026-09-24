@@ -1,0 +1,13 @@
+identifier,protocol,name,risk_level,risk_score,first_seen,last_seen,observation_count,rssi_min,rssi_max,rssi_mean,rssi_stability,movement_pattern,meeting_correlated,indicators
+4C:E6:76:12:34:56,bluetooth,,high_interest,<flagged>,2026-09-24T10:05:00,2026-09-24T11:25:00,40,-52,-45,-48.5,0.8,stationary,True,airtag_detected(3); persistent(2); meeting_correlated(2)
+433.920,rf,433.92 MHz carrier,high_interest,<flagged>,2026-09-24T10:05:00,2026-09-24T11:30:00,30,-63,-59,-61.0,0.8,stationary,False,narrowband_signal(2); always_on_carrier(2); persistent(2)
+F0:12:34:AB:CD:EF,bluetooth,JBL Flip 5,needs_review,<flagged>,2026-09-24T10:05:00,2026-09-24T10:07:00,2,-78,-70,-74.0,0.8,mobile,False,audio_capable(2); unknown_device(1)
+02:11:22:33:44:55,wifi,,needs_review,<flagged>,2026-09-24T10:05:00,2026-09-24T11:05:00,12,-69,-63,-66.0,0.8,stationary,False,hidden_identity(2); unknown_device(1)
+00:1B:A9:77:88:99,wifi,Office Printer,informational,<flagged>,2026-09-24T10:05:00,2026-09-24T11:30:00,50,-60,-56,-58.0,0.8,stationary,False,
+
+--- FINDINGS SUMMARY ---
+identifier,protocol,risk_level,risk_score,signal_strength,signal_confidence,description,interpretation,recommended_action
+4C:E6:76:12:34:56,bluetooth,high_interest,<flagged>,<flagged>,<flagged>,<flagged>,<flagged>,investigate
+433.920,rf,high_interest,<flagged>,<flagged>,<flagged>,<flagged>,<flagged>,investigate
+F0:12:34:AB:CD:EF,bluetooth,needs_review,<flagged>,<flagged>,<flagged>,<flagged>,<flagged>,review
+02:11:22:33:44:55,wifi,needs_review,<flagged>,<flagged>,<flagged>,<flagged>,<flagged>,review

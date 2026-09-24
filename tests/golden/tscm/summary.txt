@@ -1,0 +1,25 @@
+TSCM Sweep Report - Head Office, 3rd floor boardroom
+Conducted: 2026-09-24 10:00
+Duration: 90 minutes
+
+OVERALL ASSESSMENT: ELEVATED
+Multiple indicators warrant further investigation.
+
+SCAN STATISTICS:
+  - Total devices scanned: 50
+    - WiFi access points: 14
+    - WiFi clients: 9
+    - Bluetooth devices: 23
+    - RF signals: 4
+
+FINDINGS SUMMARY:
+  - High Interest (require investigation): 2
+  - Needs Review: 2
+  - Informational: 1
+
+MEETING WINDOW ACTIVITY:
+  - Board meeting: 1 new devices, 1 high interest
+
+SWEEP LIMITATIONS:
+  - No coverage above 1.7 GHz
+  - Single-antenna Bluetooth; no direction finding

@@ -7,10 +7,19 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.9"
+VERSION = "2.33.10"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.10",
+        "date": "September 2026",
+        "highlights": [
+            "Fix: TSCM reports now assess each finding's signal from what was observed; every finding previously read 'Minimal, Low confidence'.",
+            "Fix: the TSCM CSV annex listed every device as informational with risk score 0, and could carry spreadsheet formulas from device names.",
+            "Fix: a TSCM report for a running or aborted sweep failed with a server error; sweep times were shown in UTC beside a local 'Generated' time.",
+        ],
+    },
     {
         "version": "2.33.9",
         "date": "September 2026",
