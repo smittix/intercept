@@ -1,0 +1,189 @@
+/**
+ * TSCM Survey workspace
+ * Baseline -> sweep -> known devices -> threats and findings -> report
+ */
+
+.tscm-survey-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    font-size: 12px;
+    color: var(--text-primary);
+}
+
+.tscm-survey-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+}
+
+.tscm-survey-step {
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    min-width: 0;
+}
+
+.tscm-survey-step h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-family: var(--font-mono);
+}
+
+.tscm-survey-step h4 {
+    margin: 14px 0 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tscm-survey-step h5 {
+    margin: 10px 0 4px;
+    font-size: 12px;
+}
+
+.tscm-survey-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent-cyan-dim);
+    color: var(--accent-cyan);
+    font-size: 12px;
+}
+
+.tscm-survey-dim { color: var(--text-dim); }
+.tscm-survey-disclaimer { color: var(--text-dim); font-size: 11px; font-style: italic; }
+
+.tscm-survey-message {
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    margin: 6px 0;
+}
+.tscm-survey-message.info { border-left: 3px solid var(--accent-cyan); }
+.tscm-survey-message.warn { border-left: 3px solid var(--accent-orange); }
+.tscm-survey-message.error { border-left: 3px solid var(--accent-red); color: var(--accent-red); }
+
+.tscm-survey-kv {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 14px;
+    margin: 8px 0;
+}
+.tscm-survey-kv dt { color: var(--text-dim); }
+.tscm-survey-kv dd { margin: 0; overflow-wrap: break-word; min-width: 0; }
+
+.tscm-survey-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0;
+}
+.tscm-survey-table th,
+.tscm-survey-table td {
+    text-align: left;
+    vertical-align: top;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border-color);
+    overflow-wrap: break-word;
+}
+.tscm-survey-table th { color: var(--text-dim); font-weight: 500; }
+
+.tscm-survey-indicators {
+    margin: 4px 0 0;
+    padding-left: 16px;
+    color: var(--text-secondary);
+}
+.tscm-survey-indicators code { color: var(--text-primary); }
+
+.tscm-survey-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.tscm-survey-btn {
+    padding: 5px 10px;
+    border: 1px solid var(--accent-cyan);
+    border-radius: 4px;
+    background: var(--accent-cyan-dim);
+    color: var(--accent-cyan);
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.tscm-survey-btn.subtle { border-color: var(--border-color); background: transparent; color: var(--text-secondary); }
+.tscm-survey-btn:disabled { opacity: 0.5; cursor: default; }
+
+.tscm-survey-input {
+    padding: 5px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 11px;
+    min-width: 0;
+}
+textarea.tscm-survey-input { flex: 1 1 240px; font-family: inherit; }
+
+.tscm-survey-inline-error { color: var(--accent-red); font-size: 11px; }
+
+.tscm-survey-tag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: 10px;
+}
+.tscm-survey-tag.known { background: var(--accent-green-dim); color: var(--accent-green); margin-left: 0; }
+
+.tscm-survey-severity { font-weight: 600; text-transform: uppercase; font-size: 10px; }
+.tscm-survey-severity.critical,
+.tscm-survey-severity.high { color: var(--accent-red); }
+.tscm-survey-severity.medium { color: var(--accent-orange); }
+.tscm-survey-severity.low { color: var(--text-secondary); }
+
+.tscm-survey-health { margin: 8px 0; padding: 8px 10px; border-radius: 6px; background: var(--bg-tertiary); }
+.tscm-survey-health ul { margin: 4px 0 0; padding-left: 16px; color: var(--text-secondary); }
+.tscm-survey-health.healthy strong { color: var(--accent-green); }
+.tscm-survey-health.noisy strong { color: var(--accent-orange); }
+.tscm-survey-health.stale strong { color: var(--accent-red); }
+
+.tscm-survey-presets details { margin: 4px 0; }
+.tscm-survey-presets summary { cursor: pointer; }
+.tscm-survey-preset-details { padding: 4px 0 4px 16px; color: var(--text-secondary); }
+
+.tscm-survey-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.tscm-survey-card { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-tertiary); min-width: 0; }
+.tscm-survey-more ol { padding-left: 18px; }
+
+/* Wide tables scroll inside their card on narrow screens rather than
+   pushing the page sideways. */
+@media (max-width: 700px) {
+    .tscm-survey-container { padding: 10px; }
+    .tscm-survey-step { padding: 12px; }
+    .tscm-survey-table { display: block; overflow-x: auto; }
+    .tscm-survey-table td { min-width: 90px; }
+}

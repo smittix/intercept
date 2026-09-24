@@ -163,8 +163,11 @@ def get_baseline_diff(baseline_id: int, sweep_id: int):
         if not sweep:
             return jsonify({"status": "error", "message": "Sweep not found"}), 404
 
-        # Get current devices from sweep results
-        results = sweep.get("results", {})
+        # Get current devices from sweep results. A sweep has none until it
+        # completes, and diffing nothing would report every device missing.
+        results = sweep.get("results")
+        if results is None:
+            return jsonify({"status": "error", "message": "Sweep has no results yet; compare once it completes"}), 409
         if isinstance(results, str):
             results = json.loads(results)
 
@@ -197,15 +200,9 @@ def get_baseline_health(baseline_id: int):
         if not baseline:
             return jsonify({"status": "error", "message": "Baseline not found"}), 404
 
-        # Calculate age
-        created_at = baseline.get("created_at")
-        age_hours = 0
-        if created_at:
-            if isinstance(created_at, str):
-                created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-                age_hours = (datetime.now() - created.replace(tzinfo=None)).total_seconds() / 3600
-            elif isinstance(created_at, datetime):
-                age_hours = (datetime.now() - created_at).total_seconds() / 3600
+        from utils.tscm.advanced import baseline_age_hours
+
+        age_hours = baseline_age_hours(baseline.get("created_at"))
 
         # Count devices
         total_devices = (

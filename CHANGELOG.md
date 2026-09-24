@@ -2,6 +2,26 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.11] - 2026-09-24
+
+### Added
+
+- **TSCM Survey workspace** (Intel > TSCM Survey). Most of the TSCM backend had no way in from the UI. One page now walks a survey in the order a practitioner works:
+  1. **Baseline:** which baseline is active, when it was captured, its health (with the age and device count behind the score), and the others to activate.
+  2. **Sweep:** the latest sweep, what each sweep type covers, and what it found that the baseline did not (new, missing and changed devices).
+  3. **Known devices:** every device profiled this session with its score *and the indicators that make it up*, marking devices known or removing them, the known-device registry, and a lookup.
+  4. **Threats and findings:** unresolved threats by severity, resolving them with notes, adding them to a case, case notes, high-interest devices with their playbook and timeline, and cross-protocol correlations.
+  5. **Report:** the client report and JSON or CSV annexes for the latest sweep, with site, examiner and tiers.
+
+  Sweeps and baseline recording stay in TSCM mode, which owns interface, SDR and agent selection; the workspace links there. Nothing on the page is derived from RSSI beyond the dBm reading itself: no distance, bearing, location or movement.
+
+### Fixed
+
+- **A TSCM baseline's age was wrong outside UTC.** It is stored in UTC and was compared with local time, so in the UK a baseline recorded a moment ago read as an hour old, and baselines aged into "noisy" and "stale" early.
+- **Comparing a baseline with a sweep that had not finished failed with a server error.** It now says the sweep has no results yet, rather than reporting every baseline device as missing.
+
+---
+
 ## [2.33.10] - 2026-09-24
 
 ### Changed

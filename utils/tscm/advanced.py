@@ -22,7 +22,7 @@ import os
 import platform
 import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any
 
@@ -503,6 +503,26 @@ class BaselineDiff:
         }
 
 
+def baseline_age_hours(created_at) -> float:
+    """Hours since a baseline was recorded.
+
+    A stored created_at is SQLite's CURRENT_TIMESTAMP: UTC with no offset.
+    It has to be compared with the UTC clock; against local time a baseline
+    recorded a moment ago reads as hours old outside UTC.
+    """
+    if isinstance(created_at, datetime):
+        return (datetime.now() - created_at).total_seconds() / 3600
+    if not isinstance(created_at, str) or not created_at:
+        return 0.0
+    try:
+        created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    except ValueError:
+        return 0.0
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - created).total_seconds() / 3600
+
+
 def calculate_baseline_diff(
     baseline: dict,
     current_wifi: list[dict],
@@ -528,16 +548,7 @@ def calculate_baseline_diff(
     diff = BaselineDiff(baseline_id=baseline.get("id", 0), sweep_id=sweep_id)
 
     # Calculate baseline age
-    created_at = baseline.get("created_at")
-    if created_at:
-        if isinstance(created_at, str):
-            try:
-                created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-                diff.baseline_age_hours = (datetime.now() - created.replace(tzinfo=None)).total_seconds() / 3600
-            except ValueError:
-                diff.baseline_age_hours = 0
-        elif isinstance(created_at, datetime):
-            diff.baseline_age_hours = (datetime.now() - created_at).total_seconds() / 3600
+    diff.baseline_age_hours = baseline_age_hours(baseline.get("created_at"))
 
     # Check if baseline is stale (>72 hours old)
     diff.is_stale = diff.baseline_age_hours > 72
