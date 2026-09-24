@@ -63,13 +63,25 @@ APPLE_COMPANY_ID = 0x004C
 # Apple Find My / AirTag advertisement types (first byte of manufacturer data after company ID)
 APPLE_FINDMY_ADV_TYPE = 0x12  # Find My network advertisement
 APPLE_NEARBY_ADV_TYPE = 0x10  # Nearby action
-APPLE_AIRTAG_ADV_PATTERN = bytes([0x12, 0x19])  # AirTag specific
-APPLE_FINDMY_PREFIX_SHORT = bytes([0x12])  # Find My prefix (short)
-APPLE_FINDMY_PREFIX_ALT = bytes([0x07, 0x19])  # Alternative Find My pattern
-
-# Find My service UUID (Apple's offline finding service)
-APPLE_FINDMY_SERVICE_UUID = "fd6f"  # 16-bit UUID
+APPLE_AIRTAG_ADV_PATTERN = bytes([0x12, 0x19])  # Offline Finding, separated from owner
+APPLE_FINDMY_PREFIX_SHORT = bytes([0x12])  # Offline Finding (any length)
 APPLE_CONTINUITY_SERVICE_UUID = "d0611e78-bbb4-4591-a5f8-487910ae4366"
+
+# Every Find My device sends the same Offline Finding (0x12) advertisement:
+# iPhones, iPads and Macs, AirPods, AirTags and third-party accessories. Bits
+# 4-5 of its status byte (the byte after type and length) say which kind of
+# device sent it; the mapping is the one AirGuard (TU Darmstadt, Heinrich et
+# al.) uses to tell AirTags from the rest.
+APPLE_OF_DEVICE_KINDS = {0: "apple_device", 1: "airtag", 2: "airpods", 3: "findmy_accessory"}
+
+# 0xFD6F is the Exposure Notification service (COVID contact tracing), used
+# by Android phones and iPhones alike. It is not Find My, and not evidence
+# of a tracker.
+EXPOSURE_NOTIFICATION_SERVICE_UUID = "fd6f"
+
+# Companies whose ID appears on phones, earbuds, TVs and much else besides
+# trackers: their ID alone says nothing about whether a device is a tracker.
+MULTI_PRODUCT_COMPANY_IDS = {0x004C, 0x0075}  # Apple, Samsung
 
 # Tile
 TILE_COMPANY_ID = 0x00ED  # Tile Inc
@@ -134,7 +146,6 @@ TRACKER_SIGNATURES: list[TrackerSignature] = [
             APPLE_AIRTAG_ADV_PATTERN,
             APPLE_FINDMY_PREFIX_SHORT,
         ],
-        service_uuids=[APPLE_FINDMY_SERVICE_UUID],
         name_patterns=["airtag"],
         min_manufacturer_data_len=22,  # AirTags have 22+ byte payloads
         confidence_boost=0.2,
@@ -147,9 +158,7 @@ TRACKER_SIGNATURES: list[TrackerSignature] = [
         company_id=APPLE_COMPANY_ID,
         manufacturer_data_prefixes=[
             APPLE_FINDMY_PREFIX_SHORT,
-            APPLE_FINDMY_PREFIX_ALT,
         ],
-        service_uuids=[APPLE_FINDMY_SERVICE_UUID],
         name_patterns=["findmy", "find my", "chipolo one spot", "belkin"],
     ),
     # Tile
@@ -439,12 +448,17 @@ class TrackerSignatureEngine:
         # Normalize service UUIDs to lowercase 16-bit format where possible
         normalized_uuids = self._normalize_service_uuids(service_uuids)
 
+        # An Apple Offline Finding advertisement says what kind of device sent it
+        of_kind = apple_offline_finding_kind(manufacturer_id, manufacturer_data)
+
         # Score each signature
         best_match = None
         best_score = 0.0
         best_evidence = []
 
         for signature in self.signatures:
+            if of_kind and not self._of_kind_fits(of_kind, signature.tracker_type):
+                continue
             score, evidence = self._score_signature(
                 signature=signature,
                 address=address,
@@ -460,8 +474,9 @@ class TrackerSignatureEngine:
                 best_match = signature
                 best_evidence = evidence
 
-        # Check for generic tracker indicators if no specific match
-        if best_score < 0.3:
+        # Check for generic tracker indicators if no specific match. An Apple
+        # device that said what it is has been classified already.
+        if best_score < 0.3 and of_kind is None:
             generic_score, generic_evidence = self._check_generic_tracker_indicators(
                 address=address,
                 address_type=address_type,
@@ -482,8 +497,10 @@ class TrackerSignatureEngine:
 
             if best_match:
                 result.tracker_type = best_match.tracker_type
-                result.tracker_name = best_match.name
+                result.tracker_name = "AirPods (Find My)" if of_kind == "airpods" else best_match.name
                 result.matched_signature = best_match.name
+                if of_kind:
+                    result.evidence.append(f"Offline Finding status byte identifies the sender as: {of_kind}")
             else:
                 result.tracker_type = TrackerType.UNKNOWN_TRACKER
                 result.tracker_name = "Unknown Tracker"
@@ -520,23 +537,18 @@ class TrackerSignatureEngine:
             if signature.company_id == manufacturer_id or manufacturer_id in signature.company_ids:
                 company_id_matches = True
 
-        # For Apple devices, only add company ID score if we also have Find My indicators
+        # A multi-product company's ID counts only alongside that company's
+        # tracker-specific signal: Find My (0x12) data for Apple, the
+        # SmartThings Find service for Samsung. On its own it matched every
+        # Galaxy phone and pair of Buds as a SmartTag.
         if company_id_matches:
-            if manufacturer_id == APPLE_COMPANY_ID:
-                # Apple devices need additional proof - just the company ID isn't enough
-                # Only give full score if we have the manufacturer data pattern or service UUID
-                has_findmy_pattern = False
-                if manufacturer_data and len(manufacturer_data) >= 1:
-                    adv_type = manufacturer_data[0]
-                    if adv_type == APPLE_FINDMY_ADV_TYPE:  # 0x12 = Find My
-                        has_findmy_pattern = True
-
-                has_findmy_service = APPLE_FINDMY_SERVICE_UUID in normalized_uuids
-
-                if has_findmy_pattern or has_findmy_service:
+            if manufacturer_id in MULTI_PRODUCT_COMPANY_IDS:
+                has_findmy_pattern = bool(manufacturer_data) and manufacturer_data[0] == APPLE_FINDMY_ADV_TYPE
+                has_tracker_service = any(uuid.lower() in normalized_uuids for uuid in signature.service_uuids)
+                specific = has_findmy_pattern if manufacturer_id == APPLE_COMPANY_ID else has_tracker_service
+                if specific:
                     score += 0.35
                     evidence.append(f"Manufacturer ID 0x{manufacturer_id:04X} matches {signature.name}")
-                # Don't add score for Apple manufacturer ID without Find My indicators
             else:
                 # Non-Apple trackers - company ID is strong evidence
                 score += 0.35
@@ -593,6 +605,17 @@ class TrackerSignatureEngine:
 
         return score, evidence
 
+    @staticmethod
+    def _of_kind_fits(of_kind: str, tracker_type: TrackerType) -> bool:
+        """Whether an Offline Finding sender kind may match a signature: an
+        AirTag only the AirTag signature, AirPods and accessories only the Find
+        My accessory one, and an iPhone, iPad or Mac none."""
+        if of_kind == "airtag":
+            return tracker_type == TrackerType.AIRTAG
+        if of_kind in ("airpods", "findmy_accessory"):
+            return tracker_type == TrackerType.FINDMY_ACCESSORY
+        return False
+
     def _check_generic_tracker_indicators(
         self,
         address: str,
@@ -604,11 +627,6 @@ class TrackerSignatureEngine:
         """Check for generic tracker-like indicators."""
         score = 0.0
         evidence = []
-
-        # Apple Find My service UUID without specific AirTag pattern
-        if APPLE_FINDMY_SERVICE_UUID in normalized_uuids:
-            score += 0.4
-            evidence.append("Uses Apple Find My network service (fd6f)")
 
         # Apple manufacturer with Find My advertisement type
         if manufacturer_id == APPLE_COMPANY_ID and manufacturer_data and len(manufacturer_data) >= 2:
@@ -766,6 +784,17 @@ class TrackerSignatureEngine:
 # =============================================================================
 
 _engine_instance: TrackerSignatureEngine | None = None
+
+
+def apple_offline_finding_kind(manufacturer_id: int | None, manufacturer_data: bytes | None) -> str | None:
+    """For an Apple Offline Finding advertisement, the kind of device that
+    sent it ("apple_device", "airtag", "airpods" or "findmy_accessory");
+    otherwise None. manufacturer_data starts after the company ID."""
+    if manufacturer_id != APPLE_COMPANY_ID or not manufacturer_data or len(manufacturer_data) < 3:
+        return None
+    if manufacturer_data[0] != APPLE_FINDMY_ADV_TYPE:
+        return None
+    return APPLE_OF_DEVICE_KINDS[(manufacturer_data[2] & 0x30) >> 4]
 
 
 def get_tracker_engine() -> TrackerSignatureEngine:
