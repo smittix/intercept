@@ -7,10 +7,19 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.22"
+VERSION = "2.33.24"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.24",
+        "date": "September 2026",
+        "highlights": [
+            "Polish round 4: Start/Stop on the sidebar status card, a toolbar with labels and a More menu, notification history, and header chips for what is in view.",
+            "A reception outline on the ADS-B and AIS maps, a 24-hour pass timeline in Satellite Command, a Spy Stations table view, and weather satellite images grouped by pass.",
+            "Readable text (4.5:1 contrast) and keyboard focus rings; Meters no longer merges SCM+ and IDM meters into one card.",
+        ],
+    },
     {
         "version": "2.33.22",
         "date": "September 2026",
