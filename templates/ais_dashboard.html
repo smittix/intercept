@@ -524,10 +524,12 @@
                 const circle = L.circle([observerLocation.lat, observerLocation.lon], {
                     radius: nm * nmToMeters,
                     fill: false,
-                    color: '#4a9eff',
-                    opacity: 0.3,
-                    weight: 1,
-                    dashArray: '4 4'
+                    // Strong enough to read over satellite imagery (it was 1 px at 30%)
+                    color: '#7cc4ff',
+                    opacity: 0.75,
+                    weight: 1.5,
+                    dashArray: '6 5',
+                    interactive: false
                 });
                 rings.push(circle);
             });
