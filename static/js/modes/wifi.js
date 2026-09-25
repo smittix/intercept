@@ -1625,6 +1625,14 @@ const WiFiMode = (function() {
 
         if (elements.heatmapCount) elements.heatmapCount.textContent = channelHistory.length;
 
+        // Scans that found nothing on 2.4 GHz channels 1-11 would draw an empty wall
+        const anyActivity = channelHistory.some(snap => Object.values(snap.channels).some(v => v > 0));
+        if (!anyActivity) {
+            elements.heatmapGrid.innerHTML =
+                `<div class="wifi-heatmap-empty">No networks on 2.4 GHz channels 1–11 in the last ${channelHistory.length} scan${channelHistory.length === 1 ? '' : 's'}</div>`;
+            return;
+        }
+
         // Find max value for colour scale
         let maxVal = 1;
         channelHistory.forEach(snap => {
@@ -1644,9 +1652,10 @@ const WiFiMode = (function() {
     }
 
     function congestionColor(value, maxValue) {
-        if (value === 0 || maxValue === 0) return '#0d1117';
+        // An empty cell: a faint tint that suits either theme
+        if (value === 0 || maxValue === 0) return 'rgba(128,128,128,0.08)';
         const ratio = value / maxValue;
-        if (ratio < 0.05)  return '#0d1117';
+        if (ratio < 0.05)  return 'rgba(128,128,128,0.08)';
         if (ratio < 0.25)  return `rgba(13,74,110,${(ratio * 4).toFixed(2)})`;
         if (ratio < 0.5)   return `rgba(14,165,233,${ratio.toFixed(2)})`;
         if (ratio < 0.75)  return `rgba(249,115,22,${ratio.toFixed(2)})`;

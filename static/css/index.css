@@ -3942,9 +3942,12 @@ header h1 .tagline {
 .wifi-heatmap-grid {
     display: grid;
     grid-template-columns: 26px repeat(11, 1fr);
+    grid-auto-rows: 14px;  /* one row per scan, not stretched to fill the panel */
+    align-content: start;
     gap: 2px;
     flex: 1;
     min-height: 0;
+    overflow-y: auto;
 }
 
 .wifi-heatmap-time-label {
