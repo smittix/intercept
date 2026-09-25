@@ -59,6 +59,10 @@ pytest --cov=routes --cov=utils
 
 # Run a specific test
 pytest tests/test_bluetooth.py::test_function_name -v
+
+# Browser smoke test: every mode and dashboard, fails on JS errors
+# (needs: pip install playwright && python -m playwright install chromium)
+pytest tests/smoke -q
 ```
 
 ### Linting and Formatting
