@@ -141,6 +141,23 @@ def _parse_sbs_timestamp(date_str: str | None, time_str: str | None) -> datetime
     return None
 
 
+def _sbs_on_ground(msg_type: str, parts: list[str]) -> bool | None:
+    """Whether an SBS message says the aircraft is on the ground.
+
+    Field 22 (IsOnGround) is -1 on the ground and 0 airborne, and empty when
+    the message does not say; a surface position (MSG,2) is on the ground.
+    None when the message does not tell.
+    """
+    if msg_type == "2":
+        return True
+    flag = parts[21].strip() if len(parts) > 21 else ""
+    if flag == "-1":
+        return True
+    if flag == "0":
+        return False
+    return None
+
+
 def _parse_int(value: str | None) -> int | None:
     if value is None:
         return None
@@ -839,6 +856,10 @@ def parse_sbs_stream(service_addr):
                                     aircraft["lon"] = float(parts[15])
                                 except (ValueError, TypeError):
                                     pass
+
+                        on_ground = _sbs_on_ground(msg_type, parts)
+                        if on_ground is not None:
+                            aircraft["on_ground"] = on_ground
 
                         app_module.adsb_aircraft.set(icao, aircraft)
                         pending_updates.add(icao)

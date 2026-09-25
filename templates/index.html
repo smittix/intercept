@@ -5028,10 +5028,23 @@
             // Load interfaces and initialize visualizations when switching modes
             const modeDef = window.INTERCEPT_MODES[mode];
             if (modeDef && typeof modeDef.init === 'function') {
-                try {
-                    modeDef.init();
-                } catch (err) {
-                    console.error(`Mode init failed for ${mode}:`, err);
+                const runInit = () => {
+                    try {
+                        modeDef.init();
+                    } catch (err) {
+                        console.error(`Mode init failed for ${mode}:`, err);
+                    }
+                };
+                // The switch waits at most 5 s for the mode's script. If it is still
+                // loading (a slow device or connection), start the mode when it
+                // arrives, rather than now without it ("X is not defined").
+                const scriptSrc = window.INTERCEPT_MODE_SCRIPT_MAP && window.INTERCEPT_MODE_SCRIPT_MAP[mode];
+                const stillLoading = scriptSrc && !window.INTERCEPT_MODE_SCRIPT_LOADED[scriptSrc]
+                    ? window.INTERCEPT_MODE_SCRIPT_PROMISES[scriptSrc] : null;
+                if (stillLoading) {
+                    stillLoading.then(() => { if (requestId === modeSwitchRequestId) runInit(); }, () => {});
+                } else {
+                    runInit();
                 }
             }
             if (requestId !== modeSwitchRequestId) return;
