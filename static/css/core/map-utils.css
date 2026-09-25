@@ -169,3 +169,9 @@
 .map-glass-popup .leaflet-popup-close-button:hover {
     color: var(--text-primary, #c8d8e8);
 }
+
+/* The top-left HUD sat on top of Leaflet's zoom control (both 10 px from the
+   corner), hiding its + button; the control moves down below the HUD */
+.leaflet-container:has(> .map-hud-tl) .leaflet-top.leaflet-left {
+    top: 52px;
+}
