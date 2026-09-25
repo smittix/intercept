@@ -8,6 +8,10 @@ ReferenceError in console.error), since many modes wrap their start-up in
 try/catch. Requests off this machine are refused, so the result does not
 depend on CDNs or third-party services.
 
+Each check runs in the dark and light themes, at desktop and phone size.
+It also fails on a missing file (a 4xx/5xx for anything under /static/),
+and, at phone size, on any screen that scrolls sideways.
+
 Needs Playwright and its Chromium:
 
     pip install playwright && python -m playwright install --with-deps chromium
@@ -38,13 +42,25 @@ DASHBOARDS = [
 # A logged error that is a bug in the page, not a failed request or a missing tool
 CODE_ERROR = re.compile(r"\b(TypeError|ReferenceError|SyntaxError|RangeError)\b|is not (a function|defined)")
 
-# First-run prompts that would cover the page
+# First-run prompts that would cover the page, and the theme under test
 INIT_SCRIPT = """
 try {
     localStorage.setItem('disclaimerAccepted', 'true');
     localStorage.setItem('intercept.setup.complete.v1', 'true');
+    localStorage.setItem('intercept-theme', '%s');
 } catch (e) {}
 """
+
+SETUPS = {
+    "dark-desktop": ("dark", {"width": 1600, "height": 1000}),
+    "light-desktop": ("light", {"width": 1600, "height": 1000}),
+    "dark-phone": ("dark", {"width": 390, "height": 844}),
+    "light-phone": ("light", {"width": 390, "height": 844}),
+}
+
+# Scrolling sideways: the page is wider than the window (content that scrolls
+# inside its own box, like the phone nav bar, does not count)
+OVERFLOW_JS = "document.documentElement.scrollWidth - window.innerWidth"
 
 
 @pytest.fixture(scope="module")
@@ -72,10 +88,11 @@ def browser():
         browser.close()
 
 
-@pytest.fixture
-def page(browser, base_url):
-    context = browser.new_context(viewport={"width": 1600, "height": 1000})
-    context.add_init_script(INIT_SCRIPT)
+@pytest.fixture(params=list(SETUPS))
+def page(request, browser, base_url):
+    theme, viewport = SETUPS[request.param]
+    context = browser.new_context(viewport=viewport)
+    context.add_init_script(INIT_SCRIPT % theme)
 
     def local_only(route):
         if route.request.url.startswith(base_url):
@@ -86,7 +103,16 @@ def page(browser, base_url):
     context.route("**/*", local_only)
     page = context.new_page()
     page.errors = []
+    page.is_phone = viewport["width"] < 768
     page.on("pageerror", lambda err: page.errors.append(str(err)))
+    page.on(
+        "response",
+        lambda r: (
+            page.errors.append(f"{r.status} {r.url}")
+            if r.status >= 400 and r.url.startswith(base_url + "/static/")
+            else None
+        ),
+    )
     page.on(
         "console",
         lambda msg: page.errors.append(msg.text) if msg.type == "error" and CODE_ERROR.search(msg.text) else None,
@@ -106,8 +132,11 @@ def test_main_page_every_mode(page, base_url):
         before = len(page.errors)
         page.evaluate("(m) => Promise.resolve(window.switchMode(m)).catch((e) => { throw e; })", mode)
         page.wait_for_timeout(700)  # lazy scripts load and modes run their first render
-        if len(page.errors) > before:
-            failures[mode] = page.errors[before:]
+        problems = page.errors[before:]
+        if page.is_phone and page.evaluate(OVERFLOW_JS) > 1:
+            problems = problems + [f"scrolls sideways by {page.evaluate(OVERFLOW_JS)} px"]
+        if problems:
+            failures[mode] = problems
 
     assert not failures, failures
 
@@ -117,4 +146,7 @@ def test_dashboard_loads(page, base_url, path):
     response = page.goto(base_url + path, wait_until="domcontentloaded")
     assert response.status == 200
     page.wait_for_timeout(1500)
-    assert not page.errors, page.errors
+    problems = list(page.errors)
+    if page.is_phone and page.evaluate(OVERFLOW_JS) > 1:
+        problems.append(f"scrolls sideways by {page.evaluate(OVERFLOW_JS)} px")
+    assert not problems, problems
