@@ -193,19 +193,11 @@
                         Save Location
                     </button>
                 </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="settings-group-title">Current Location</div>
-                <div id="currentLocationDisplay" style="padding: 12px; background: var(--bg-tertiary); border-radius: 6px; font-family: var(--font-mono); font-size: 12px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: var(--text-dim);">Latitude</span>
-                        <span id="currentLatDisplay" style="color: var(--accent-cyan);">Not set</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: var(--text-dim);">Longitude</span>
-                        <span id="currentLonDisplay" style="color: var(--accent-cyan);">Not set</span>
-                    </div>
+                <!-- What is saved, which the fields above may differ from until Save -->
+                <div id="currentLocationDisplay" style="margin-top: 10px; font-size: 11px; color: var(--text-dim);">
+                    Saved:
+                    <span id="currentLatDisplay" style="color: var(--accent-cyan); font-family: var(--font-mono);">Not set</span>,
+                    <span id="currentLonDisplay" style="color: var(--accent-cyan); font-family: var(--font-mono);">Not set</span>
                 </div>
             </div>
 
