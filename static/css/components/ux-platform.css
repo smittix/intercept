@@ -550,6 +550,26 @@ header #runStateStrip .run-state-label {
     display: none;
 }
 
+/* The header has room for one line of chips: with the idle modes shown
+   ("+22 idle"), they wrapped into rows that slid under the nav. They stay on
+   one line and scroll sideways instead. */
+header #runStateStrip .run-state-left {
+    flex: 1;
+    min-width: 0;
+}
+
+header #runStateChips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+}
+
+header #runStateChips > * {
+    flex-shrink: 0;
+}
+
 @media (max-width: 1280px) {
     header #runStateStrip .run-state-value {
         display: none;
