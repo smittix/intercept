@@ -35,7 +35,7 @@ const GPS = (function() {
     };
 
     const GPS_GLOBE_SCRIPT_URLS = [
-        'https://cdn.jsdelivr.net/npm/globe.gl@2.33.1/dist/globe.gl.min.js',
+        '/static/vendor/globe/globe.gl-2.33.1.min.js',  // bundled, so it works offline
     ];
     const GPS_GLOBE_TEXTURE_URL = '/static/images/globe/earth-dark.jpg';
     // The sky plot needs neither WebGL nor the globe library (fetched from a
