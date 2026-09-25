@@ -860,11 +860,15 @@ const BluetoothMode = (function() {
     function showCapabilityWarning(issues) {
         if (!capabilityStatusEl) return;
         capabilityStatusEl.style.display = 'block';
-        capabilityStatusEl.innerHTML = `
-            <div style="color: #f59e0b; padding: 10px; background: rgba(245,158,11,0.1); border-radius: 6px; font-size: 12px;">
-                ${issues.map(i => `<div>⚠ ${i}</div>`).join('')}
-            </div>
-        `;
+        // The same note as a mode's missing tool on the status card (sidebar-polish.css)
+        const box = document.createElement('div');
+        box.className = 'sb-status-missing';
+        issues.forEach((issue) => {
+            const line = document.createElement('div');
+            line.textContent = issue;
+            box.append(line);
+        });
+        capabilityStatusEl.replaceChildren(box);
     }
 
     function hideCapabilityWarning() {
