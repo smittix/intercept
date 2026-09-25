@@ -987,7 +987,7 @@ html[data-theme="light"] .timeline-row {
 }
 
 html[data-theme="light"] .modal-backdrop {
-    background: var(--bg-card);
+    background: rgba(18, 32, 52, 0.35);  /* a backdrop: dims the page */
 }
 
 html[data-theme="light"] .detail-row {
