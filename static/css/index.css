@@ -7814,3 +7814,17 @@ html[data-ui-tier="enhanced"]:not([data-theme="light"]) .control-group {
 header .active-mode-indicator {
     display: none;
 }
+
+/* Tracker Detection's empty state: centred in the panel, not a line at its top */
+.bt-tracker-list:has(> .app-collection-state) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.bt-tracker-list > .app-collection-state {
+    max-width: 260px;
+    text-align: center;
+    line-height: 1.5;
+}
