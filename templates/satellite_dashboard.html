@@ -2026,12 +2026,12 @@
             if (!groundMap) return;
             window.groundMap = groundMap;
 
+            // No HUD: its clock repeated the header's UTC clock over the packet
+            // console, and its count was always 0. The grid button goes under
+            // the zoom buttons, clear of the track card at the bottom left.
             satMapOverlays = MapUtils.addTacticalOverlays(groundMap, {
-                hudPanels: {
-                    modeName: 'SAT TRACK',
-                    getContactCount: () => 0,
-                },
                 scaleBar: true,
+                graticulePosition: 'topleft',
             });
 
             // Add observer marker via reticle

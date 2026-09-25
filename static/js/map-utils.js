@@ -243,6 +243,7 @@ const MapUtils = {
         // --- Graticule toggle control (always added; defaultVisible via options.graticule) ---
         const grat = this.addGraticuleControl(map, {
             defaultVisible: options.graticule !== false,
+            position: options.graticulePosition,  // a map with its own bottom-left panel moves it
         });
         handles.showGraticule = grat.show;
         handles.hideGraticule = grat.hide;
