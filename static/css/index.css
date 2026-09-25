@@ -7393,10 +7393,6 @@ body[data-mode="tscm"] {
     padding: 2px 8px;
 }
 
-.run-state-strip .run-state-btn {
-    min-height: 26px;
-    padding: 4px 10px;
-}
 
 .run-state-strip .run-state-right {
     gap: 6px;

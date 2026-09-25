@@ -123,22 +123,7 @@
     color: var(--text-dim, #8697aa);
 }
 
-.run-state-btn {
-    background: linear-gradient(180deg, rgba(17, 27, 41, 0.9), rgba(10, 16, 25, 0.92));
-    color: var(--accent-cyan, #4aa3ff);
-    border: 1px solid rgba(var(--accent-cyan-rgb), 0.45);
-    border-radius: 6px;
-    font-size: 10px;
-    padding: 4px 8px;
-    cursor: pointer;
-    transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
-}
 
-.run-state-btn:hover {
-    background: rgba(var(--accent-cyan-rgb), 0.14);
-    border-color: rgba(var(--accent-cyan-rgb), 0.7);
-    transform: translateY(-1px);
-}
 
 .command-palette-overlay {
     position: fixed;
@@ -482,15 +467,7 @@ html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-chip.running 
     box-shadow: 0 0 0 4px rgba(56, 193, 128, 0.16), 0 0 12px rgba(56, 193, 128, 0.35);
 }
 
-html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-btn {
-    background: linear-gradient(180deg, rgba(4, 8, 8, 0.9), rgba(2, 4, 4, 0.92));
-    border-color: rgba(46, 125, 138, 0.40);
-}
 
-html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-btn:hover {
-    background: rgba(46, 125, 138, 0.12);
-    border-color: rgba(46, 125, 138, 0.65);
-}
 
 /* ---- Light theme overrides ---- */
 [data-theme="light"] .run-state-chip {
@@ -504,16 +481,7 @@ html[data-ui-tier="enhanced"]:not([data-theme="light"]) .run-state-btn:hover {
     color: var(--text-primary);
 }
 
-[data-theme="light"] .run-state-btn {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(241, 244, 249, 0.97));
-    color: var(--accent-cyan);
-    border-color: rgba(31, 95, 168, 0.25);
-}
 
-[data-theme="light"] .run-state-btn:hover {
-    background: rgba(31, 95, 168, 0.08);
-    border-color: rgba(31, 95, 168, 0.45);
-}
 
 @media (max-width: 1023px) {
     .run-state-strip {
@@ -588,11 +556,6 @@ header #runStateStrip .run-state-label {
 
     header #runStateStrip .run-state-right {
         margin-left: auto;
-    }
-
-    /* The strip refreshes itself every few seconds */
-    header #runStateStrip #runStateRefreshBtn {
-        display: none;
     }
 }
 

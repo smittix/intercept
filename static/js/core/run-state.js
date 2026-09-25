@@ -51,7 +51,6 @@ const RunState = (function() {
         const root = document.getElementById('runStateStrip');
         if (!root) return;
 
-        wireActions();
         wrapModeSwitch();
         activeMode = inferCurrentMode();
         renderHealth(null);
@@ -64,25 +63,6 @@ const RunState = (function() {
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) refresh();
         });
-    }
-
-    function wireActions() {
-        const refreshBtn = document.getElementById('runStateRefreshBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => refresh());
-        }
-
-        const settingsBtn = document.getElementById('runStateSettingsBtn');
-        if (settingsBtn) {
-            settingsBtn.addEventListener('click', () => {
-                if (typeof showSettings === 'function') {
-                    showSettings();
-                    if (typeof switchSettingsTab === 'function') {
-                        switchSettingsTab('tools');
-                    }
-                }
-            });
-        }
     }
 
     function wrapModeSwitch() {
