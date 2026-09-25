@@ -208,6 +208,18 @@ def add_security_headers(response):
 # ============================================
 
 
+@app.url_defaults
+def version_static_urls(endpoint: str, values: dict) -> None:
+    """Every url_for('static', ...) carries ?v=<version>.
+
+    App assets are cached for a day, so without it a browser could pair a
+    new release's pages with the old release's scripts (GPS.setSkyView "is
+    not a function" after an upgrade). A new version is a new URL.
+    """
+    if endpoint == "static" and "v" not in values:
+        values["v"] = VERSION
+
+
 @app.context_processor
 def inject_offline_settings():
     """Inject offline settings into all templates."""

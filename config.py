@@ -7,10 +7,19 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.24"
+VERSION = "2.33.25"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.25",
+        "date": "September 2026",
+        "highlights": [
+            "Fix: after an upgrade the browser could keep running the previous version's scripts (GPS and Spy Stations errors); asset URLs now carry the version.",
+            "Fix: the toolbar's More and Stop all buttons no longer squeeze on narrower windows.",
+            "Fix: ADS-B and AIS range rings are clearly visible, and the ADS-B control bar no longer leaves tall empty boxes on narrower windows.",
+        ],
+    },
     {
         "version": "2.33.24",
         "date": "September 2026",

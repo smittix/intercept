@@ -2544,3 +2544,25 @@ html[data-ui-tier="lean"] .radar-bg {
     border-color: var(--accent-cyan);
     color: var(--accent-cyan);
 }
+
+/* Control bar: when the groups do not fit on one line, the bar wraps onto a
+   second row. Before, it squeezed instead: the Airband group folded its
+   controls into a column, and every group in the row stretched to that
+   height with its controls pinned to the bottom. */
+.controls-bar {
+    flex-wrap: wrap;
+    align-items: flex-start !important;
+    overflow-x: visible;
+}
+
+.controls-bar > .control-group > .control-group-items {
+    margin-top: 0;
+}
+
+.control-group.airband-group {
+    flex: 0 0 auto;
+}
+
+.control-group.airband-group > .control-group-items {
+    flex-wrap: nowrap;
+}

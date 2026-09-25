@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core/map-utils.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}?v={{ version }}&r=maptheme17">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/help-modal.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/adsb_dashboard.css') }}">
     <!-- Deferred scripts -->
@@ -1503,14 +1503,16 @@ ACARS: ${r.statistics.acarsMessages} messages`;
             const distances = [maxRange * 0.25, maxRange * 0.5, maxRange * 0.75, maxRange];
             distances.forEach(nm => {
                 const meters = nm * 1852;
+                // Strong enough to read over satellite imagery (it was 1 px at 30%)
                 const circle = L.circle([observerLocation.lat, observerLocation.lon], {
                     radius: meters,
-                    color: '#4a9eff',
+                    color: '#7cc4ff',
                     fillColor: 'transparent',
                     fillOpacity: 0,
-                    weight: 1,
-                    opacity: 0.3,
-                    dashArray: '4 4'
+                    weight: 1.5,
+                    opacity: 0.75,
+                    dashArray: '6 5',
+                    interactive: false
                 });
 
                 const labelLat = observerLocation.lat + (nm * 0.0166);
@@ -5591,11 +5593,11 @@ ACARS: ${r.statistics.acarsMessages} messages`;
     <!-- Help Modal -->
     {% include 'partials/help-modal.html' %}
 
-    <script src="{{ url_for('static', filename='js/core/voice-alerts.js') }}?v={{ version }}&r=adsbvoice1"></script>
+    <script src="{{ url_for('static', filename='js/core/voice-alerts.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/keyboard-shortcuts.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/cheat-sheets.js') }}"></script>
     {% include 'partials/nav-utility-modals.html' %}
-    <script src="{{ url_for('static', filename='js/core/settings-manager.js') }}?v={{ version }}&r=maptheme17"></script>
+    <script src="{{ url_for('static', filename='js/core/settings-manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/map-utils.js') }}"></script>
     <script>
         window.addEventListener('DOMContentLoaded', () => {

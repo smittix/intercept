@@ -1557,3 +1557,31 @@ div.ui-loading::before {
         border-top-color: rgba(var(--accent-cyan-rgb), 0.25);
     }
 }
+
+/* Labelled toolbar buttons never squeeze or wrap ("Mo", "Sto al"); where
+   the toolbar is short of room they drop to icons, keeping their tooltips */
+.nav-tools .nav-more-btn,
+.nav-tools .nav-killall-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+@media (max-width: 1420px) {
+    .nav-tools .nav-more-btn,
+    .nav-tools .nav-killall-btn {
+        width: 28px;
+        padding: 0;
+        gap: 0;
+    }
+
+    .nav-more-text,
+    .nav-killall-label,
+    .nav-dashboard-btn .nav-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+}

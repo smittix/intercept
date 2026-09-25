@@ -68,7 +68,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/proximity-viz.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/sidebar-polish.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/welcome-live.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}?v={{ version }}&r=maptheme17">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/function-strip.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/toast.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/ux-platform.css') }}">
@@ -76,7 +76,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/burst-plot.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core/components.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/core/map-utils.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/modes/waterfall.css') }}?v={{ version }}&r=wfdeck19">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modes/waterfall.css') }}">
     <!-- Deferred scripts - Leaflet, Chart.js, observer-location -->
     <script defer src="{{ url_for('static', filename='js/core/observer-location.js') }}"></script>
     {% if offline_settings.assets_source == 'local' %}
@@ -105,9 +105,9 @@
             weathersat: "{{ url_for('static', filename='css/modes/weather-satellite.css') }}",
             sstv_general: "{{ url_for('static', filename='css/modes/sstv-general.css') }}",
             gps: "{{ url_for('static', filename='css/modes/gps.css') }}",
-            subghz: "{{ url_for('static', filename='css/modes/subghz.css') }}?v={{ version }}&r=subghz_layout9",
-            bt_locate: "{{ url_for('static', filename='css/modes/bt_locate.css') }}?v={{ version }}&r=btlocate4",
-            wifi_locate: "{{ url_for('static', filename='css/modes/wifi_locate.css') }}?v={{ version }}&r=wflocate1",
+            subghz: "{{ url_for('static', filename='css/modes/subghz.css') }}",
+            bt_locate: "{{ url_for('static', filename='css/modes/bt_locate.css') }}",
+            wifi_locate: "{{ url_for('static', filename='css/modes/wifi_locate.css') }}",
             spaceweather: "{{ url_for('static', filename='css/modes/space-weather.css') }}",
             wefax: "{{ url_for('static', filename='css/modes/wefax.css') }}",
             morse: "{{ url_for('static', filename='css/modes/morse.css') }}",
@@ -182,7 +182,7 @@
     </script>
     <script>
         window.INTERCEPT_MODE_SCRIPT_MAP = {
-            bluetooth: "{{ url_for('static', filename='js/modes/bluetooth.js') }}?v={{ version }}&r=btlocate2",
+            bluetooth: "{{ url_for('static', filename='js/modes/bluetooth.js') }}",
             wifi: "{{ url_for('static', filename='js/modes/wifi.js') }}",
             spystations: "{{ url_for('static', filename='js/modes/spy-stations.js') }}",
             tscmsurvey: "{{ url_for('static', filename='js/modes/tscm-survey.js') }}",
@@ -194,16 +194,16 @@
             sstv_general: "{{ url_for('static', filename='js/modes/sstv-general.js') }}",
             gps: "{{ url_for('static', filename='js/modes/gps.js') }}",
             websdr: "{{ url_for('static', filename='js/modes/websdr.js') }}",
-            subghz: "{{ url_for('static', filename='js/modes/subghz.js') }}?v={{ version }}&r=subghz_layout9",
-            bt_locate: "{{ url_for('static', filename='js/modes/bt_locate.js') }}?v={{ version }}&r=btlocate4",
-            wifi_locate: "{{ url_for('static', filename='js/modes/wifi_locate.js') }}?v={{ version }}&r=wflocate1",
+            subghz: "{{ url_for('static', filename='js/modes/subghz.js') }}",
+            bt_locate: "{{ url_for('static', filename='js/modes/bt_locate.js') }}",
+            wifi_locate: "{{ url_for('static', filename='js/modes/wifi_locate.js') }}",
             wefax: "{{ url_for('static', filename='js/modes/wefax.js') }}",
-            morse: "{{ url_for('static', filename='js/modes/morse.js') }}?v={{ version }}&r=morse_iq12",
-            ook: "{{ url_for('static', filename='js/modes/ook.js') }}?v={{ version }}&r=ook2",
+            morse: "{{ url_for('static', filename='js/modes/morse.js') }}",
+            ook: "{{ url_for('static', filename='js/modes/ook.js') }}",
             spaceweather: "{{ url_for('static', filename='js/modes/space-weather.js') }}",
             system: "{{ url_for('static', filename='js/modes/system.js') }}",
             meteor: "{{ url_for('static', filename='js/modes/meteor.js') }}",
-            waterfall: "{{ url_for('static', filename='js/modes/waterfall.js') }}?v={{ version }}&r=wfdeck21",
+            waterfall: "{{ url_for('static', filename='js/modes/waterfall.js') }}",
             drone: "{{ url_for('static', filename='js/modes/drone.js') }}"
         };
         window.INTERCEPT_MODE_SCRIPT_LOADED = {};
@@ -3696,14 +3696,14 @@
     <script src="{{ url_for('static', filename='js/components/timeline-heatmap.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/signal-waveform.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/burst-plot.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/components/signal-id-modal.js') }}?v={{ version }}"></script>
+    <script src="{{ url_for('static', filename='js/components/signal-id-modal.js') }}"></script>
     <!-- Mode scripts are lazy-loaded via ensureModeScript() in switchMode() -->
     <!-- WiFi v2 components (eagerly loaded — shared component) -->
     <script src="{{ url_for('static', filename='js/components/channel-chart.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/core/voice-alerts.js') }}?v={{ version }}&r=voicefix2"></script>
+    <script src="{{ url_for('static', filename='js/core/voice-alerts.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/keyboard-shortcuts.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/cheat-sheets.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/mode-registry.js') }}?v={{ version }}"></script>
+    <script src="{{ url_for('static', filename='js/mode-registry.js') }}"></script>
 
     <script>
         // ============================================
@@ -16432,7 +16432,7 @@
     <!-- Updater -->
     <script src="{{ url_for('static', filename='js/core/updater.js') }}"></script>
     <!-- Settings Manager -->
-    <script src="{{ url_for('static', filename='js/core/settings-manager.js') }}?v={{ version }}&r=maptheme17"></script>
+    <script src="{{ url_for('static', filename='js/core/settings-manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/map-utils.js') }}"></script>
     <!-- Alerts + Recording -->
     <script src="{{ url_for('static', filename='js/core/alerts.js') }}"></script>
