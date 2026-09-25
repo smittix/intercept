@@ -7,10 +7,19 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.26"
+VERSION = "2.33.27"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.27",
+        "date": "September 2026",
+        "highlights": [
+            "Polish round 6: a browser smoke test now opens every mode and dashboard on each change and fails on JavaScript errors.",
+            "Inline colours follow the theme; Settings shows full install commands and keeps one height; Quick Setup statuses are clear pills.",
+            "The Wi-Fi channel heatmap and Bluetooth tracker panel explain themselves when empty.",
+        ],
+    },
     {
         "version": "2.33.26",
         "date": "September 2026",
