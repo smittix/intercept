@@ -1809,3 +1809,134 @@ html[data-ui-tier="lean"] .scanline,
 html[data-ui-tier="lean"] .grid-bg {
     display: none;
 }
+
+/* Pass timeline: every tracked satellite over the next 24 h */
+.dashboard {
+    grid-template-rows: minmax(0, 1fr) auto auto auto;
+}
+
+.pass-timeline .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ptl-hint {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--text-dim);
+}
+
+.ptl-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px 6px;
+}
+
+.ptl-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 11px;
+}
+
+.ptl-row {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 10px;
+    align-items: stretch;
+}
+
+.ptl-name {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 11px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.ptl-name i {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.ptl-row.active .ptl-name {
+    color: var(--accent-cyan);
+    font-weight: 600;
+}
+
+.ptl-track {
+    position: relative;
+    height: 26px;
+    border-radius: 3px;
+    background: repeating-linear-gradient(90deg, transparent 0, transparent calc(12.5% - 1px), rgba(255, 255, 255, 0.05) calc(12.5% - 1px), rgba(255, 255, 255, 0.05) 12.5%), rgba(0, 0, 0, 0.2);
+}
+
+.ptl-row.active .ptl-track {
+    box-shadow: inset 0 0 0 1px rgba(var(--accent-cyan-rgb), 0.35);
+}
+
+.ptl-pass {
+    position: absolute;
+    bottom: 0;
+    min-width: 3px;
+    padding: 0;
+    border: 0;
+    border-radius: 2px 2px 0 0;
+    cursor: pointer;
+}
+
+.ptl-pass.excellent { background: var(--accent-green); }
+.ptl-pass.good { background: var(--accent-cyan); }
+.ptl-pass.fair { background: var(--text-dim); }
+
+.ptl-pass:hover {
+    filter: brightness(1.3);
+    box-shadow: 0 0 6px currentColor;
+}
+
+.ptl-none {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--text-dim);
+}
+
+.ptl-axis .ptl-track {
+    height: 14px;
+    background: none;
+}
+
+.ptl-axis .ptl-track span {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-dim);
+}
+
+.ptl-axis .ptl-track .ptl-now {
+    transform: none;
+    color: var(--accent-cyan);
+}
+
+@media (max-width: 700px) {
+    .ptl-row { grid-template-columns: 90px minmax(0, 1fr); }
+    .ptl-hint { display: none; }
+}

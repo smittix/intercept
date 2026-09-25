@@ -626,3 +626,38 @@ header #runStateStrip .run-state-label {
 .map-waiting[hidden] {
     display: none;
 }
+
+/* Header counts: what is in view, as chips that open their mode (run-state.js) */
+#runStateSummary {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#runStateSummary[hidden] {
+    display: none;
+}
+
+.run-state-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.run-state-count:hover {
+    border-color: var(--accent-cyan);
+}
+
+.run-state-count svg {
+    width: 12px;
+    height: 12px;
+    color: var(--accent-cyan);
+}

@@ -102,7 +102,7 @@
                             <button class="drawer-action-btn drawer-action-btn-small" onclick="loadTrackedSatelliteCatalog()">REFRESH</button>
                         </div>
                         <div class="drawer-list" id="satTrackingList">
-                            <div class="drawer-empty-state">Loading tracked satellites...</div>
+                            <div class="drawer-empty-state ui-loading">Loading tracked satellites…</div>
                         </div>
                     </div>
                 </div>
@@ -290,6 +290,19 @@
                     </div>
                 </div>
             </aside>
+        </section>
+
+        <!-- Every tracked satellite's passes over the next 24 hours -->
+        <section class="panel pass-timeline">
+            <div class="panel-header">
+                <span>NEXT 24 H // ALL TRACKED SATELLITES</span>
+                <span class="ptl-hint">bar height is the peak elevation · click one to select it</span>
+            </div>
+            <div class="panel-content">
+                <div class="ptl-body" id="passTimelineBody">
+                    <div class="ptl-empty ui-loading">Calculating passes…</div>
+                </div>
+            </div>
         </section>
 
         <section class="data-grid">
@@ -1175,6 +1188,7 @@
                         });
                     }
                     satellites = newSats;
+                    schedulePassTimeline();
                     select.innerHTML = '';
                     Object.entries(newSats).forEach(([norad, sat]) => {
                         const opt = document.createElement('option');
@@ -1241,6 +1255,91 @@
                     if (btn) btn.classList.remove('spinning');
                 });
         }
+
+        // ---- Pass timeline: all tracked satellites, next 24 h ----
+        const PASS_TIMELINE_HOURS = 24;
+        let _passTimelineTimer = null;
+
+        function ptlEsc(value) {
+            return String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+        }
+
+        function schedulePassTimeline() {
+            clearTimeout(_passTimelineTimer);
+            _passTimelineTimer = setTimeout(loadPassTimeline, 400);
+        }
+
+        async function loadPassTimeline() {
+            const body = document.getElementById('passTimelineBody');
+            const { lat, lon, valid } = getObserverCoords();
+            const ids = Object.keys(satellites).map(Number).filter(Number.isFinite);
+            if (!body || !valid || !ids.length) return;
+            try {
+                const response = await fetch('/satellite/predict', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ latitude: lat, longitude: lon, hours: PASS_TIMELINE_HOURS, minEl: 5, satellites: ids }),
+                });
+                const data = await response.json();
+                if (data.status !== 'success') throw new Error(data.message || 'prediction failed');
+                renderPassTimeline(ids, Array.isArray(data.passes) ? data.passes : []);
+            } catch (err) {
+                body.innerHTML = '<div class="ptl-empty">Pass prediction unavailable</div>';
+            }
+        }
+
+        function renderPassTimeline(ids, passList) {
+            const body = document.getElementById('passTimelineBody');
+            if (!body) return;
+            const start = Date.now();
+            const span = PASS_TIMELINE_HOURS * 3600 * 1000;
+            const pct = (t) => Math.max(0, Math.min(100, (t - start) / span * 100));
+            const fmt = (t) => new Date(t).toISOString().slice(11, 16);
+
+            const rows = ids.map((id) => {
+                const sat = satellites[id] || {};
+                const own = passList.filter((p) => parseInt(p.norad ?? p.norad_id, 10) === id);
+                const bars = own.map((p) => {
+                    const aos = Date.parse(p.aosTime || p.startTimeISO);
+                    const los = Date.parse(p.losTime || p.endTimeISO) || aos + (p.duration || 5) * 60000;
+                    if (!Number.isFinite(aos) || los < start) return '';
+                    const left = pct(aos);
+                    const width = Math.max(0.35, pct(los) - left);
+                    const el = Number(p.maxEl) || 0;
+                    const height = Math.max(18, Math.min(100, el / 90 * 100));
+                    const cls = el >= 60 ? 'excellent' : el >= 30 ? 'good' : 'fair';
+                    const title = `${sat.name || id} · ${fmt(aos)}–${fmt(los)} UTC · peak ${el.toFixed(0)}° · ${Number(p.duration || 0).toFixed(0)} min`;
+                    return `<button type="button" class="ptl-pass ${cls}" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;height:${height.toFixed(0)}%"
+                                title="${ptlEsc(title)}" onclick="selectTimelineSatellite(${id})"></button>`;
+                }).join('');
+                const active = id === selectedSatellite ? ' active' : '';
+                return `<div class="ptl-row${active}">
+                        <button type="button" class="ptl-name" onclick="selectTimelineSatellite(${id})" title="Select ${ptlEsc(sat.name || String(id))}">
+                            <i style="background:${ptlEsc(sat.color || 'var(--accent-cyan)')}"></i>${ptlEsc(sat.name || String(id))}
+                        </button>
+                        <div class="ptl-track">${bars || '<span class="ptl-none">no pass above 5°</span>'}</div>
+                    </div>`;
+            }).join('');
+
+            // Hour ticks every 3 h, on the UTC hour
+            const firstTick = Math.ceil(start / 10800000) * 10800000;
+            let ticks = '';
+            for (let t = firstTick; t < start + span; t += 10800000) {
+                ticks += `<span style="left:${pct(t).toFixed(2)}%">${fmt(t)}</span>`;
+            }
+            body.innerHTML = rows + `<div class="ptl-row ptl-axis"><span></span><div class="ptl-track">${ticks}<span class="ptl-now" style="left:0">now</span></div></div>`;
+        }
+
+        function selectTimelineSatellite(id) {
+            const select = document.getElementById('satSelect');
+            if (!select || !satellites[id]) return;
+            select.value = String(id);
+            onSatelliteChange();
+            schedulePassTimeline();
+        }
+
+        setInterval(() => { if (!document.hidden) loadPassTimeline(); }, 10 * 60 * 1000);
 
         function onSatelliteChange() {
             const select = document.getElementById('satSelect');
@@ -1998,7 +2097,7 @@
 
             const shouldReplacePassPane = !passes.length;
             if (container && shouldReplacePassPane) {
-                container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;">Calculating passes...</div>';
+                container.innerHTML = '<div class="ui-loading">Calculating passes…</div>';
             }
             if (button) {
                 button.disabled = true;
@@ -2599,7 +2698,7 @@
                 if (countEl) countEl.textContent = '';
                 return;
             }
-            container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:15px;font-size:11px;">Loading...</div>';
+            container.innerHTML = '<div class="ui-loading">Loading…</div>';
             try {
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 7000);

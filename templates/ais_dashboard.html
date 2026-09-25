@@ -161,6 +161,8 @@
                 <div class="control-group-items">
                     <label title="Show vessel trails"><input type="checkbox" id="showTrails" onchange="toggleTrails()"> Trails</label>
                     <label title="Show range rings"><input type="checkbox" id="showRangeRings" checked onchange="drawRangeRings()"> Rings</label>
+                    <label title="Outline of the furthest contact heard in each direction"><input type="checkbox" id="showReach" checked onchange="receptionOutline && receptionOutline.setVisible(this.checked)"> Reach</label>
+                    <button type="button" class="reach-reset" title="Forget the reception outline for this location" onclick="receptionOutline && receptionOutline.reset()">&#8634;</button>
                     <select id="rangeSelect" onchange="updateRange()" title="Range rings distance">
                         <option value="10">10nm</option>
                         <option value="25">25nm</option>
@@ -210,6 +212,7 @@
 
         // State
         let vesselMap = null;
+        let receptionOutline = null;  // components/reception-outline.js
         let aisMapOverlays = null;
         let vessels = {};
         let markers = {};
@@ -423,6 +426,13 @@
                 },
                 scaleBar: true,
             });
+
+            if (window.ReceptionOutline) {
+                receptionOutline = ReceptionOutline.create(vesselMap, {
+                    key: 'ais', observer: () => observerLocation, color: '#3b82f6',
+                    visible: document.getElementById('showReach')?.checked !== false,
+                });
+            }
 
             // Add observer marker
             observerMarker = L.circleMarker([observerLocation.lat, observerLocation.lon], {
@@ -760,6 +770,7 @@
             if (data.lat !== undefined && data.lat !== null && data.lon !== undefined && data.lon !== null) {
                 const dist = calculateDistance(observerLocation.lat, observerLocation.lon, data.lat, data.lon);
                 if (dist > stats.maxRange) stats.maxRange = dist;
+                if (receptionOutline) receptionOutline.add(data.lat, data.lon);
                 if (dist < stats.closestDistance) stats.closestDistance = dist;
 
                 // Update trail
@@ -1604,6 +1615,7 @@
     <script src="{{ url_for('static', filename='js/core/agents.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/global-nav.js') }}"></script>
     <script src="{{ url_for('static', filename='js/components/strip-spark.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/reception-outline.js') }}"></script>
     <script>StripSpark.attach('stripVesselsNow', { title: 'Vessels in view, over the last 15 minutes' });</script>
     <script>
         // AIS-specific agent integration

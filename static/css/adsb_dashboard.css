@@ -2527,3 +2527,20 @@ html[data-ui-tier="lean"] .radar-bg {
     stroke-width: 1.5;
     vector-effect: non-scaling-stroke;
 }
+
+/* Reception outline reset (components/reception-outline.js) */
+.reach-reset {
+    padding: 0 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 18px;
+    cursor: pointer;
+}
+
+.reach-reset:hover {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}

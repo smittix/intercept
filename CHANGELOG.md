@@ -2,6 +2,32 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.24] - 2026-09-25
+
+Polish round 4.
+
+### Changed
+
+- **Sidebar status card** carries the mode's Start / Stop (it presses the mode's own button), so long sidebars need no scrolling.
+- **Toolbar**: theme, settings, help and a labelled "Stop all" stay; display mode, network monitor, agents, voice alerts, cheat sheet, shortcuts and log out move to a labelled **More** menu.
+- **Notification history**: a bell lists the pop-ups shown in this tab (the last 50, following you between pages), with a count of unseen ones.
+- **Header**: aircraft, vessels, Wi-Fi networks and Bluetooth devices in view as chips that open their mode; zeros are left out.
+- **ADS-B and AIS maps**: a reception outline, the furthest contact heard in each 10° of bearing, built up across sessions per location ("Reach" toggle, and a reset).
+- **Satellite Command**: every tracked satellite's passes over the next 24 hours on one timeline, bar height the peak elevation; click to select.
+- **Spy Stations**: a table view, one row per station, alongside the cards.
+- **Weather satellite**: decoded images grouped by pass (satellite, time, frequency, mode, count), with image sizes; the sidebar opens on the controls rather than "Getting Started" (in every mode, guide sections are no longer opened by default).
+- **Meters**: cards side by side.
+- **Readability**: muted and dim text, and the Enhanced tier's teal, now meet 4.5:1 contrast in both themes; 27 hard-coded near-black greys use the theme's colour; every page has a keyboard focus ring.
+- **Loading placeholders** share one style: a small spinner and dim text.
+
+### Fixed
+
+- Meters read the meter number from `ID` only, so all SCM+ (`EndpointID`) and IDM (`ERTSerialNumber`) meters were merged into one "Unknown" card; rates from readings seconds apart were in the millions.
+- `AppFeedback` was not on `window`, so checks for it failed; the main page's `showInfo` drew its own box instead of a toast.
+- A WeFax scheduler test failed between 00:00 and 02:00 UTC.
+
+---
+
 ## [2.33.23] - 2026-09-24
 
 ### Changed

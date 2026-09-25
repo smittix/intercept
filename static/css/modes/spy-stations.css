@@ -466,3 +466,95 @@
         padding: 8px 12px;
     }
 }
+
+/* Cards / Table view toggle and the table view (SpyStations.setView) */
+.spy-stations-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.spy-view-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.spy-view-toggle button {
+    padding: 4px 10px;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.spy-view-toggle button.active {
+    background: rgba(var(--accent-cyan-rgb), 0.16);
+    color: var(--accent-cyan);
+}
+
+.spy-stations-grid.table-view {
+    display: block;
+}
+
+.spy-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.spy-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-dim);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.spy-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    vertical-align: middle;
+}
+
+.spy-table tbody tr:hover td {
+    background: rgba(var(--accent-cyan-rgb), 0.05);
+}
+
+.spy-table-name b {
+    margin: 0 6px;
+    color: var(--text-primary);
+}
+
+.spy-table-count {
+    font-family: var(--font-mono);
+    text-align: center;
+}
+
+.spy-table-tune {
+    white-space: nowrap;
+}
+
+.spy-table-tune .spy-freq-select,
+.spy-table-tune .spy-table-freq {
+    margin-right: 6px;
+}
+
+.spy-table-freq {
+    font-family: var(--font-mono);
+}
+
+.spy-table .spy-tune-btn,
+.spy-table .spy-details-btn {
+    padding: 4px 10px;
+}

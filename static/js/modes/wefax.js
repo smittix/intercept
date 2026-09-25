@@ -576,7 +576,7 @@ var WeFax = (function () {
                 statusLabel.style.color = '#666';
             } else {
                 statusLabel.textContent = 'IDLE';
-                statusLabel.style.color = '#444';
+                statusLabel.style.color = 'var(--text-dim)';
             }
         }
 

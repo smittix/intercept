@@ -175,9 +175,32 @@ const RunState = (function() {
             chipsContainer.appendChild(more);
         }
 
-        const counts = data.data || {};
-        summaryEl.textContent = `Aircraft ${counts.aircraft_count || 0} | Vessels ${counts.vessel_count || 0} | WiFi ${counts.wifi_networks_count || 0} | BT ${counts.bt_devices_count || 0}`;
+        renderCounts(summaryEl, data.data || {});
         markActiveChip();
+    }
+
+    // What is in view right now, as chips that open their mode; zeros are left out.
+    const COUNT_CHIPS = [
+        { key: 'aircraft_count', mode: 'adsb', label: 'aircraft', icon: '<path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>' },
+        { key: 'vessel_count', mode: 'ais', label: 'vessels', icon: '<path d="M3 18l2 2h14l2-2"/><path d="M5 18v-4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4"/><path d="M12 12V6"/>' },
+        { key: 'wifi_networks_count', mode: 'wifi', label: 'Wi-Fi networks', icon: '<path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/>' },
+        { key: 'bt_devices_count', mode: 'bluetooth', label: 'Bluetooth devices', icon: '<path d="M7 7l10 10-5 5V2l5 5L7 17"/>' },
+    ];
+
+    function renderCounts(el, counts) {
+        const chips = COUNT_CHIPS.filter((c) => Number(counts[c.key]) > 0).map((c) => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'run-state-count';
+            chip.title = `${counts[c.key]} ${c.label} in view. Open.`;
+            chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+                'stroke-linejoin="round" aria-hidden="true">' + c.icon + '</svg>';  // fixed markup from COUNT_CHIPS
+            chip.append(document.createTextNode(String(counts[c.key])));
+            chip.addEventListener('click', () => openMode(c.mode));
+            return chip;
+        });
+        el.replaceChildren(...chips);
+        el.hidden = !chips.length;
     }
 
     function readExpanded() {

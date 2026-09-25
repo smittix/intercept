@@ -1817,7 +1817,7 @@ const WeatherSat = (function() {
         let html = '';
         for (const [date, imgs] of Object.entries(groups)) {
             html += `<div class="wxsat-date-header">${escapeHtml(date)}</div>`;
-            html += imgs.map(img => {
+            html += groupByPass(imgs).map(pass => passHeader(pass) + pass.images.map(img => {
                 const fn = escapeHtml(img.filename || img.url.split('/').pop());
                 const deleteButton = img.deletable === false ? '' : `
                     <div class="wxsat-image-actions">
@@ -1834,15 +1834,53 @@ const WeatherSat = (function() {
                         <div class="wxsat-image-info">
                             <div class="wxsat-image-sat">${escapeHtml(img.satellite)}</div>
                             <div class="wxsat-image-product">${escapeHtml(img.product || img.mode)}</div>
-                            <div class="wxsat-image-timestamp">${formatTimestamp(img.timestamp)}</div>
+                            <div class="wxsat-image-timestamp">${formatTimestamp(img.timestamp)}${img.size_bytes ? ' · ' + formatSize(img.size_bytes) : ''}</div>
                         </div>
                     </div>
                     ${deleteButton}
                 </div>`;
-            }).join('');
+            }).join('')).join('');
         }
 
         gallery.innerHTML = html;
+    }
+
+    /**
+     * Images of one satellite less than 20 minutes apart came from one pass
+     * (a pass lasts 10-15 minutes); list is newest first.
+     */
+    function groupByPass(list) {
+        const passes = [];
+        list.forEach(img => {
+            const t = new Date(img.timestamp || 0).getTime();
+            const last = passes[passes.length - 1];
+            if (last && last.satellite === img.satellite && Math.abs(last.start - t) <= 20 * 60000) {
+                last.images.push(img);
+                last.start = Math.min(last.start, t);
+            } else {
+                passes.push({ satellite: img.satellite, start: t, images: [img] });
+            }
+        });
+        return passes;
+    }
+
+    function passHeader(pass) {
+        const first = pass.images[0] || {};
+        // Same clock as the cards (the page's time zone setting)
+        const time = pass.start ? formatTimestamp(new Date(pass.start).toISOString()) : '';
+        const bits = [
+            time,
+            first.frequency ? `${Number(first.frequency).toFixed(3)} MHz` : '',
+            first.mode || '',
+            `${pass.images.length} image${pass.images.length === 1 ? '' : 's'}`,
+        ].filter(Boolean).map(escapeHtml).join(' · ');
+        return `<div class="wxsat-pass-header"><b>${escapeHtml(pass.satellite || 'Unknown')}</b><span>${bits}</span></div>`;
+    }
+
+    function formatSize(bytes) {
+        const n = Number(bytes) || 0;
+        if (!n) return '';
+        return n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
     }
 
     /**

@@ -1932,3 +1932,21 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Meters: one card per meter, side by side instead of full-width rows */
+/* switchMode shows #output with an inline display: block; override only
+   that shown state, so its inline display: none still hides it */
+body[data-mode="rtlamr"] #output[style*="display: block"] {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 10px;
+    align-content: start;
+}
+
+body[data-mode="rtlamr"] #output > :not(.signal-card) {
+    grid-column: 1 / -1;
+}
+
+body[data-mode="rtlamr"] #output > .signal-card {
+    margin: 0;
+}

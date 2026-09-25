@@ -419,8 +419,8 @@ const SSTVGeneral = (function() {
             if (sstvGeneralScopeTone === 'leader') { toneLabel.textContent = 'LEADER'; toneLabel.style.color = '#0f0'; }
             else if (sstvGeneralScopeTone === 'sync') { toneLabel.textContent = 'SYNC'; toneLabel.style.color = '#0ff'; }
             else if (sstvGeneralScopeTone === 'decoding') { toneLabel.textContent = 'DECODING'; toneLabel.style.color = '#fa0'; }
-            else if (sstvGeneralScopeTone === 'noise') { toneLabel.textContent = 'NOISE'; toneLabel.style.color = '#555'; }
-            else { toneLabel.textContent = 'QUIET'; toneLabel.style.color = '#444'; }
+            else if (sstvGeneralScopeTone === 'noise') { toneLabel.textContent = 'NOISE'; toneLabel.style.color = 'var(--text-dim)'; }
+            else { toneLabel.textContent = 'QUIET'; toneLabel.style.color = 'var(--text-dim)'; }
         }
         if (statusLabel) {
             const waveIsFresh = (performance.now() - sstvGeneralScopeLastWaveAt) < 1000;
@@ -432,7 +432,7 @@ const SSTVGeneral = (function() {
                 statusLabel.style.color = '#e0b8ff';
             } else {
                 statusLabel.textContent = 'QUIET';
-                statusLabel.style.color = '#555';
+                statusLabel.style.color = 'var(--text-dim)';
             }
         }
 

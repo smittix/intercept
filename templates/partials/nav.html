@@ -198,40 +198,62 @@
         </a>
         <div class="nav-divider"></div>
         <div class="nav-tools">
-            <button type="button" class="nav-tool-btn nav-tier-btn" onclick="toggleUiTier()" title="Switch display mode" aria-label="Switch display mode" style="width:auto;padding:0 8px;gap:4px;font-family:var(--font-mono);font-size:9px;letter-spacing:1px;">
-                <span class="icon-tier-lean icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></span>
-                <span class="icon-tier-enhanced icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
-                <span class="tier-label-lean">LEAN</span>
-                <span class="tier-label-enhanced">ENHANCED</span>
-            </button>
             <button type="button" class="nav-tool-btn" onclick="toggleTheme()" title="Toggle Light/Dark Theme" aria-label="Toggle theme">
                 <span class="icon-moon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
                 <span class="icon-sun icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
             </button>
-            <a href="/controller/monitor" class="nav-tool-btn" title="Network Monitor - Multi-Agent View" style="text-decoration: none;">
-                <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
-            </a>
-            <a href="/controller/manage" class="nav-tool-btn" title="Manage Remote Agents" style="text-decoration: none;">
-                <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></span>
-            </a>
             <button type="button" class="nav-tool-btn" onclick="showSettings()" title="Settings" aria-label="Open settings">
                 <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
             </button>
-            <button type="button" class="nav-tool-btn" id="voiceMuteBtn" onclick="window.VoiceAlerts && VoiceAlerts.toggleMute()" title="Toggle voice alerts" aria-label="Toggle voice alerts">
-                <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
-            </button>
-            <button type="button" class="nav-tool-btn" onclick="window.CheatSheets && CheatSheets.showForCurrentMode()" title="Mode cheat sheet (Alt+C)" aria-label="Mode cheat sheet">
-                <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
-            </button>
-            <button type="button" class="nav-tool-btn" onclick="window.KeyboardShortcuts && KeyboardShortcuts.showHelp()" title="Keyboard shortcuts (Alt+K)" aria-label="Keyboard shortcuts">
-                <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg></span>
-            </button>
             <button type="button" class="nav-tool-btn" onclick="showHelp()" title="Help & Documentation" aria-label="Open help">?</button>
+            <div class="nav-notices">
+                <button type="button" class="nav-tool-btn nav-notices-btn" id="navNoticesBtn" aria-haspopup="dialog" aria-expanded="false" onclick="toggleNavNotices(event)" title="Recent notifications">
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+                    <span class="nav-notices-count" id="navNoticesCount" hidden></span>
+                </button>
+                <div class="nav-notices-panel" id="navNoticesPanel" role="dialog" aria-label="Recent notifications" hidden>
+                    <div class="nav-notices-head">
+                        <span>Recent notifications</span>
+                        <button type="button" onclick="clearNavNotices()">Clear</button>
+                    </div>
+                    <div class="nav-notices-list" id="navNoticesList"></div>
+                </div>
+            </div>
+            <div class="nav-more">
+                <button type="button" class="nav-tool-btn nav-more-btn" id="navMoreBtn" aria-haspopup="menu" aria-expanded="false" onclick="toggleNavMore(event)" title="More tools">
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></span>
+                    <span class="nav-more-text">More</span>
+                </button>
+                <div class="nav-more-menu" id="navMoreMenu" role="menu" hidden>
+                <button type="button" role="menuitem" class="nav-tool-btn nav-more-item nav-tier-btn" onclick="toggleUiTier()" title="Switch display mode" aria-label="Switch display mode" style="width:auto;padding:0 8px;gap:4px;font-family:var(--font-mono);font-size:9px;letter-spacing:1px;">
+                    <span class="icon-tier-lean icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></span>
+                    <span class="icon-tier-enhanced icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+                    <span class="tier-label-lean">LEAN</span>
+                    <span class="tier-label-enhanced">ENHANCED</span>
+                <span class="nav-more-label">Display mode</span></button>
+                <a href="/controller/monitor" role="menuitem" class="nav-tool-btn nav-more-item" title="Network Monitor - Multi-Agent View" style="text-decoration: none;">
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+                <span class="nav-more-label">Network monitor</span></a>
+                <a href="/controller/manage" role="menuitem" class="nav-tool-btn nav-more-item" title="Manage Remote Agents" style="text-decoration: none;">
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></span>
+                <span class="nav-more-label">Remote agents</span></a>
+                <button type="button" role="menuitem" class="nav-tool-btn nav-more-item" id="voiceMuteBtn" onclick="window.VoiceAlerts && VoiceAlerts.toggleMute()" title="Toggle voice alerts" aria-label="Toggle voice alerts">
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
+                <span class="nav-more-label">Voice alerts</span></button>
+                <button type="button" role="menuitem" class="nav-tool-btn nav-more-item" onclick="window.CheatSheets && CheatSheets.showForCurrentMode()" title="Mode cheat sheet (Alt+C)" aria-label="Mode cheat sheet">
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+                <span class="nav-more-label">Mode cheat sheet</span></button>
+                <button type="button" role="menuitem" class="nav-tool-btn nav-more-item" onclick="window.KeyboardShortcuts && KeyboardShortcuts.showHelp()" title="Keyboard shortcuts (Alt+K)" aria-label="Keyboard shortcuts">
+                    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg></span>
+                <span class="nav-more-label">Keyboard shortcuts</span></button>
+                <button type="button" role="menuitem" class="nav-tool-btn nav-more-item" onclick="logout(event)" title="Logout" aria-label="Logout">
+                    <span class="power-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+                <span class="nav-more-label">Log out</span></button>
+                </div>
+            </div>
             <button type="button" class="nav-tool-btn nav-killall-btn" onclick="killAllProcesses()" title="Stop all running processes" aria-label="Stop all running processes">
                 <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span>
-            </button>
-            <button type="button" class="nav-tool-btn" onclick="logout(event)" title="Logout" aria-label="Logout">
-                <span class="power-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+                <span class="nav-killall-label">Stop all</span>
             </button>
         </div>
     </div>
@@ -493,6 +515,130 @@
             localStorage.setItem('intercept-theme', next);
         };
     }
+
+    // Notification history: the toasts shown in this tab (ui-feedback.js keeps
+    // them in session storage), with a count of those not yet seen.
+    const NOTICES_KEY = 'intercept.notices';
+    const NOTICES_SEEN_KEY = 'intercept.notices.seen';
+
+    function readNotices() {
+        try { return JSON.parse(sessionStorage.getItem(NOTICES_KEY) || '[]'); } catch (e) { return []; }
+    }
+
+    function noticeAge(t) {
+        const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+        if (s < 60) return 'just now';
+        if (s < 3600) return Math.floor(s / 60) + ' min ago';
+        return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function readSeen() {
+        try { return Number(sessionStorage.getItem(NOTICES_SEEN_KEY)) || 0; } catch (e) { return 0; }
+    }
+
+    // highlightSince: mark as new what came after this (on opening, the time
+    // last seen before this opening)
+    function renderNavNotices(highlightSince) {
+        const list = readNotices();
+        const seen = readSeen();
+        const unread = list.filter((n) => n.t > seen).length;
+        const since = highlightSince === undefined ? seen : highlightSince;
+        const count = document.getElementById('navNoticesCount');
+        if (count) {
+            count.textContent = unread > 9 ? '9+' : String(unread);
+            count.hidden = unread === 0;
+        }
+        const box = document.getElementById('navNoticesList');
+        if (!box) return;
+        if (!list.length) {
+            box.innerHTML = '<div class="nav-notices-empty">Nothing yet. Alerts, errors and results shown as pop-ups are kept here.</div>';
+            return;
+        }
+        box.replaceChildren(...list.slice().reverse().map((n) => {
+            const row = document.createElement('div');
+            row.className = 'nav-notice ' + (n.type || 'info') + (n.t > since ? ' unread' : '');
+            const head = document.createElement('div');
+            head.className = 'nav-notice-head';
+            const title = document.createElement('b');
+            title.textContent = n.title || '';
+            const when = document.createElement('span');
+            when.textContent = noticeAge(n.t);
+            head.append(title, when);
+            const msg = document.createElement('div');
+            msg.className = 'nav-notice-msg';
+            msg.textContent = n.message || '';
+            row.append(head, msg);
+            return row;
+        }));
+    }
+
+    window.toggleNavNotices = function(event, open) {
+        if (event) event.stopPropagation();
+        const panel = document.getElementById('navNoticesPanel');
+        const btn = document.getElementById('navNoticesBtn');
+        if (!panel || !btn) return;
+        const show = open === undefined ? panel.hidden : open;
+        if (show) {
+            const before = readSeen();
+            try { sessionStorage.setItem(NOTICES_SEEN_KEY, String(Date.now())); } catch (e) { /* ignore */ }
+            renderNavNotices(before);  // the count clears; what was new stays marked
+            if (window.toggleNavMore) toggleNavMore(null, false);
+        } else {
+            renderNavNotices();
+        }
+        panel.hidden = !show;
+        btn.setAttribute('aria-expanded', String(show));
+        document.body.classList.toggle('nav-notices-open', show);
+    };
+
+    window.clearNavNotices = function() {
+        try { sessionStorage.removeItem(NOTICES_KEY); } catch (e) { /* ignore */ }
+        renderNavNotices();
+    };
+
+    window.addEventListener('intercept:notice', () => {
+        const panel = document.getElementById('navNoticesPanel');
+        renderNavNotices();
+        if (panel && !panel.hidden) {
+            try { sessionStorage.setItem(NOTICES_SEEN_KEY, String(Date.now())); } catch (e) { /* ignore */ }
+        }
+    });
+    document.addEventListener('click', (event) => {
+        const panel = document.getElementById('navNoticesPanel');
+        if (panel && !panel.hidden && !event.target.closest('.nav-notices')) toggleNavNotices(null, false);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            const panel = document.getElementById('navNoticesPanel');
+            if (panel && !panel.hidden) toggleNavNotices(null, false);
+        }
+    });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderNavNotices);
+    else renderNavNotices();
+
+    // The toolbar's "More" menu: the tools used now and then, with labels
+    window.toggleNavMore = function(event, open) {
+        if (event) event.stopPropagation();
+        const menu = document.getElementById('navMoreMenu');
+        const btn = document.getElementById('navMoreBtn');
+        if (!menu || !btn) return;
+        const show = open === undefined ? menu.hidden : open;
+        if (show && window.toggleNavNotices) toggleNavNotices(null, false);
+        menu.hidden = !show;
+        btn.setAttribute('aria-expanded', String(show));
+        // The nav is its own stacking context, so toasts (z 25500) would cover
+        // the menu; they step aside while it is open.
+        document.body.classList.toggle('nav-more-open', show);
+    };
+    document.addEventListener('click', (event) => {
+        const menu = document.getElementById('navMoreMenu');
+        if (!menu || menu.hidden) return;
+        // Close after choosing an item, or on a click anywhere else
+        if (!event.target.closest('.nav-more') || event.target.closest('.nav-more-item')) toggleNavMore(null, false);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') toggleNavMore(null, false);
+    });
 
     // Kill All Processes — available from every page that includes this nav,
     // not just the main dashboard's System panel. Defined here rather than in a

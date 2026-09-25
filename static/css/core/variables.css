@@ -54,8 +54,8 @@
     /* Text hierarchy */
     --text-primary: #d7e0ee;
     --text-secondary: #9fb0c7;
-    --text-dim: #6f7f94;
-    --text-muted: #445266;
+    --text-dim: #7d8da2;
+    --text-muted: #6c7d92;  /* 4.5:1 on the page (was 2.5:1) */
     --text-inverse: #0b1118;
 
     /* Borders */
@@ -243,8 +243,8 @@ html[data-ui-tier="enhanced"] {
     --surface-glass: rgba(2, 4, 4, 0.90);
     --surface-panel-gradient: linear-gradient(160deg, rgba(6, 10, 10, 0.96) 0%, rgba(2, 4, 4, 0.98) 100%);
 
-    --accent-cyan: #2e7d8a;
-    --accent-cyan-rgb: 46, 125, 138;
+    --accent-cyan: #35919f;  /* 5:1 as text on black (was 4:1) */
+    --accent-cyan-rgb: 53, 145, 159;
     --accent-cyan-dim: rgba(46, 125, 138, 0.14);
     --accent-cyan-hover: #3a9aaa;
     --accent-cyan-glow: rgba(46, 125, 138, 0.09);
@@ -325,7 +325,7 @@ html[data-theme="light"] {
     --text-primary: #122034;
     --text-secondary: #3a4a5f;
     --text-dim: #566a7f;
-    --text-muted: #7a8a9e;
+    --text-muted: #5f6f84;
     --text-inverse: #f4f7fb;
 
     --border-color: #d1d9e6;
@@ -364,7 +364,7 @@ html[data-ui-tier="lean"][data-theme="light"] {
     --text-primary: #122034;
     --text-secondary: #3a4a5f;
     --text-dim: #566a7f;
-    --text-muted: #7a8a9e;
+    --text-muted: #5f6f84;
     --border-color: #d1d9e6;
     --border-light: #c1ccdb;
     --border-glow: rgba(31, 95, 168, 0.12);

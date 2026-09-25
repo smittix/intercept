@@ -147,3 +147,33 @@
     border-color: var(--accent-cyan);
     color: var(--accent-cyan);
 }
+
+/* Start / Stop, pressing the mode's own button */
+.sb-status-action {
+    width: 100%;
+    margin-top: 10px;
+    padding: 7px 10px;
+    border: 1px solid var(--accent-green);
+    border-radius: 6px;
+    background: rgba(var(--accent-green-rgb, 56, 193, 128), 0.12);
+    color: var(--accent-green);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.sb-status-action:hover {
+    background: rgba(var(--accent-green-rgb, 56, 193, 128), 0.22);
+}
+
+.sb-status-action.stop {
+    border-color: var(--accent-red);
+    background: rgba(226, 93, 93, 0.12);
+    color: var(--accent-red);
+}
+
+.sb-status-action.stop:hover {
+    background: rgba(226, 93, 93, 0.22);
+}

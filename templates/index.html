@@ -609,7 +609,7 @@
                 <div id="runStateChips"></div>
             </div>
             <div class="run-state-right">
-                <span id="runStateSummary" class="run-state-value">Loading...</span>
+                <span id="runStateSummary" class="run-state-value" hidden></span>
                 <button id="runStateRefreshBtn" class="run-state-btn" type="button">Refresh</button>
                 <button id="runStateSettingsBtn" class="run-state-btn" type="button">Tools</button>
             </div>
@@ -655,7 +655,7 @@
                     <details style="margin-top: 8px;">
                         <summary style="font-size: 10px; color: #888; cursor: pointer;">All Agents Health</summary>
                         <div id="agentHealthPanel" style="margin-top: 6px; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px; max-height: 120px; overflow-y: auto;">
-                            <div style="color: var(--text-muted); font-size: 11px;">Loading...</div>
+                            <div class="ui-loading">Loading…</div>
                         </div>
                     </details>
                     <!-- Multi-agent mode toggle -->
@@ -2223,8 +2223,14 @@
                             </svg>
                             Number Stations & Diplomatic Networks
                         </div>
-                        <div class="spy-stations-count">
-                            <span id="spyStationsVisibleCount">0</span> stations
+                        <div class="spy-stations-header-right">
+                            <div class="spy-view-toggle" role="group" aria-label="View">
+                                <button type="button" data-view="cards" onclick="SpyStations.setView('cards')">Cards</button>
+                                <button type="button" data-view="table" onclick="SpyStations.setView('table')">Table</button>
+                            </div>
+                            <div class="spy-stations-count">
+                                <span id="spyStationsVisibleCount">0</span> stations
+                            </div>
                         </div>
                     </div>
                     <div class="spy-stations-grid" id="spyStationsGrid">
@@ -2508,13 +2514,13 @@
                     <!-- Signal Scope -->
                     <div id="sstvScopePanel" style="display: none; margin-bottom: 12px;">
                         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                                 <span>Audio Waveform</span>
                                 <div style="display: flex; gap: 14px;">
                                     <span>RMS: <span id="sstvScopeRmsLabel" style="color: #c080ff; font-variant-numeric: tabular-nums;">0</span></span>
                                     <span>PEAK: <span id="sstvScopePeakLabel" style="color: #f44; font-variant-numeric: tabular-nums;">0</span></span>
-                                    <span id="sstvScopeToneLabel" style="color: #444;">QUIET</span>
-                                    <span id="sstvScopeStatusLabel" style="color: #444;">IDLE</span>
+                                    <span id="sstvScopeToneLabel" style="color: var(--text-dim);">QUIET</span>
+                                    <span id="sstvScopeStatusLabel" style="color: var(--text-dim);">IDLE</span>
                                 </div>
                             </div>
                             <canvas id="sstvScopeCanvas" style="width: 100%; height: 80px; display: block; border-radius: 3px; background: #050510;"></canvas>
@@ -2854,13 +2860,13 @@
                     <!-- Signal Scope -->
                     <div id="sstvGeneralScopePanel" style="display: none; margin-bottom: 12px;">
                         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                                 <span>Audio Waveform</span>
                                 <div style="display: flex; gap: 14px;">
                                     <span>RMS: <span id="sstvGeneralScopeRmsLabel" style="color: #c080ff; font-variant-numeric: tabular-nums;">0</span></span>
                                     <span>PEAK: <span id="sstvGeneralScopePeakLabel" style="color: #f44; font-variant-numeric: tabular-nums;">0</span></span>
-                                    <span id="sstvGeneralScopeToneLabel" style="color: #444;">QUIET</span>
-                                    <span id="sstvGeneralScopeStatusLabel" style="color: #444;">IDLE</span>
+                                    <span id="sstvGeneralScopeToneLabel" style="color: var(--text-dim);">QUIET</span>
+                                    <span id="sstvGeneralScopeStatusLabel" style="color: var(--text-dim);">IDLE</span>
                                 </div>
                             </div>
                             <canvas id="sstvGeneralScopeCanvas" style="width: 100%; height: 80px; display: block; border-radius: 3px; background: #050510;"></canvas>
@@ -2982,12 +2988,12 @@
                     <!-- Audio Waveform Scope -->
                     <div id="wefaxScopePanel" style="display: none;">
                         <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                                 <span>Audio Waveform</span>
                                 <div style="display: flex; gap: 14px;">
                                     <span>RMS: <span id="wefaxScopeRmsLabel" style="color: #ffaa00; font-variant-numeric: tabular-nums;">0</span></span>
                                     <span>PEAK: <span id="wefaxScopePeakLabel" style="color: #f44; font-variant-numeric: tabular-nums;">0</span></span>
-                                    <span id="wefaxScopeStatusLabel" style="color: #444;">IDLE</span>
+                                    <span id="wefaxScopeStatusLabel" style="color: var(--text-dim);">IDLE</span>
                                 </div>
                             </div>
                             <canvas id="wefaxScopeCanvas" style="width: 100%; height: 80px; display: block; border-radius: 3px; background: #050510;"></canvas>
@@ -3102,7 +3108,7 @@
                     <div class="sw-band-panel">
                         <div class="sw-band-title">HF Band Conditions</div>
                         <div class="sw-band-grid" id="swBandGrid">
-                            <div class="sw-loading">Loading band data</div>
+                            <div class="sw-loading ui-loading">Loading band data…</div>
                         </div>
                     </div>
 
@@ -3122,7 +3128,7 @@
                         </div>
                         <div class="sw-chart-card">
                             <div class="sw-chart-title">Flare Probability</div>
-                            <div id="swFlareProb"><div class="sw-loading">Loading</div></div>
+                            <div id="swFlareProb"><div class="sw-loading ui-loading">Loading…</div></div>
                         </div>
                     </div>
 
@@ -3136,13 +3142,13 @@
                                 <button class="sw-image-tab sw-solar-tab" data-key="sdo_magnetogram" onclick="SpaceWeather.selectSolarImage('sdo_magnetogram')">Magnetogram</button>
                             </div>
                             <div class="sw-image-frame" id="swSolarImageFrame">
-                                <div class="sw-loading">Loading</div>
+                                <div class="sw-loading ui-loading">Loading…</div>
                             </div>
                         </div>
                         <div class="sw-image-panel">
                             <div class="sw-chart-title">Aurora Forecast (North)</div>
                             <div class="sw-image-frame" id="swAuroraFrame">
-                                <div class="sw-loading">Loading</div>
+                                <div class="sw-loading ui-loading">Loading…</div>
                             </div>
                         </div>
                     </div>
@@ -3160,7 +3166,7 @@
                             <button class="sw-drap-freq-btn" data-key="drap_30" onclick="SpaceWeather.selectDrapFreq('drap_30')">30 MHz</button>
                         </div>
                         <div class="sw-image-frame" id="swDrapImageFrame">
-                            <div class="sw-loading">Loading</div>
+                            <div class="sw-loading ui-loading">Loading…</div>
                         </div>
                     </div>
 
@@ -3168,7 +3174,7 @@
                     <div class="sw-dashboard-grid">
                         <div class="sw-alerts-panel">
                             <div class="sw-chart-title">Active Alerts</div>
-                            <div id="swAlertsList"><div class="sw-loading">Loading</div></div>
+                            <div id="swAlertsList"><div class="sw-loading ui-loading">Loading…</div></div>
                         </div>
                         <div class="sw-regions-panel">
                             <div class="sw-chart-title">Active Sunspot Regions</div>
@@ -3177,7 +3183,7 @@
                                     <tr><th>Region</th><th>Date</th><th>Loc</th><th>Lo</th><th>Area</th></tr>
                                 </thead>
                                 <tbody id="swRegionsBody">
-                                    <tr><td colspan="5" class="sw-loading">Loading</td></tr>
+                                    <tr><td colspan="5" class="sw-loading ui-loading">Loading…</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -3347,7 +3353,7 @@
                         </div>
                     </div>
                     <div class="recon-content" id="reconContent">
-                        <div style="color: #444; text-align: center; padding: 20px; font-size: 11px;">
+                        <div style="color: var(--text-dim); text-align: center; padding: 20px; font-size: 11px;">
                             Device intelligence data will appear here as signals are intercepted.
                         </div>
                     </div>
@@ -3359,12 +3365,12 @@
                 <!-- Pager Signal Scope -->
                 <div id="pagerScopePanel" style="display: none; margin-bottom: 12px;">
                     <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                             <span>Audio Waveform</span>
                             <div style="display: flex; gap: 14px;">
                                 <span>RMS: <span id="scopeRmsLabel" style="color: #0ff; font-variant-numeric: tabular-nums;">0</span></span>
                                 <span>PEAK: <span id="scopePeakLabel" style="color: #f44; font-variant-numeric: tabular-nums;">0</span></span>
-                                <span id="scopeStatusLabel" style="color: #444;">IDLE</span>
+                                <span id="scopeStatusLabel" style="color: var(--text-dim);">IDLE</span>
                             </div>
                         </div>
                         <canvas id="pagerScopeCanvas" style="width: 100%; height: 80px; display: block; border-radius: 3px; background: #050510;"></canvas>
@@ -3385,12 +3391,12 @@
                 <!-- Morse Signal Scope -->
                 <div id="morseScopePanel" style="display: none; margin-bottom: 12px;">
                     <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                             <span>CW Tone Detection</span>
                             <div style="display: flex; gap: 14px;">
                                 <span>TONE: <span id="morseScopeToneLabel" style="color: #0f0; font-variant-numeric: tabular-nums;">--</span></span>
                                 <span>THRESH: <span id="morseScopeThreshLabel" style="color: #fa0; font-variant-numeric: tabular-nums;">--</span></span>
-                                <span id="morseScopeStatusLabel" style="color: #444;">IDLE</span>
+                                <span id="morseScopeStatusLabel" style="color: var(--text-dim);">IDLE</span>
                             </div>
                         </div>
                         <canvas id="morseScopeCanvas" style="width: 100%; height: 80px; display: block; border-radius: 3px; background: #050510;"></canvas>
@@ -3405,7 +3411,7 @@
                 <!-- Morse Decoded Output -->
                 <div id="morseOutputPanel" style="display: none; margin-bottom: 12px;">
                     <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                             <span>Decoded Text</span>
                             <div style="display: flex; gap: 6px;">
                                 <button class="btn btn-sm btn-ghost" onclick="MorseMode.exportTxt()">TXT</button>
@@ -3560,7 +3566,7 @@
                         </div>
                         <div class="sys-card" id="sysCardLocation">
                             <div class="sys-card-header">Location &amp; Weather</div>
-                            <div class="sys-card-body"><span class="sys-metric-na">Loading&hellip;</span></div>
+                            <div class="sys-card-body"><span class="ui-loading">Loading…</span></div>
                         </div>
                         <div class="sys-card" id="sysCardInfo">
                             <div class="sys-card-header">System Info</div>
@@ -3589,7 +3595,7 @@
                     <div id="ookPulseTrain" class="ook-pulse"></div>
                     <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; flex: 1; min-height: 0;">
                         <!-- Toolbar row 1: bit order -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                             <span>Decoded Frames <span id="ookStatusBarFrames" style="color: var(--text-dim);">0 frames</span></span>
                             <div style="display: flex; gap: 6px; align-items: center;">
                                 <span style="color: var(--text-dim); font-size: 10px;">Bit order:</span>
@@ -6504,7 +6510,7 @@
                     statusLabel.style.color = '#2efbff';
                 } else {
                     statusLabel.textContent = 'QUIET';
-                    statusLabel.style.color = '#555';
+                    statusLabel.style.color = 'var(--text-dim)';
                 }
             }
 
@@ -7013,7 +7019,7 @@
             document.getElementById('trackedCount').textContent = '0';
             document.getElementById('newDeviceCount').textContent = '0';
             document.getElementById('anomalyCount').textContent = '0';
-            document.getElementById('reconContent').innerHTML = '<div style="color: #444; text-align: center; padding: 30px; font-size: 11px;">Device intelligence data will appear here as signals are intercepted.</div>';
+            document.getElementById('reconContent').innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: 30px; font-size: 11px;">Device intelligence data will appear here as signals are intercepted.</div>';
         }
 
         // ============== DEVICE INTELLIGENCE & RECONNAISSANCE ==============
@@ -7592,7 +7598,7 @@
             const container = document.getElementById('watchList');
             if (!container) return;
             if (watchMacs.length === 0) {
-                container.innerHTML = '<div style="color: #555;">No MACs in watch list</div>';
+                container.innerHTML = '<div style="color: var(--text-dim);">No MACs in watch list</div>';
             } else {
                 container.innerHTML = watchMacs.map(mac =>
                     `<div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0;">
@@ -8993,7 +8999,7 @@
                 ${rogueHtml}
                 <div class="header" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span class="device-name">${escapeHtml(net.essid || '[Hidden]')}${wpsHtml}</span>
-                    <span style="color: #444; font-size: 10px;">CH ${net.channel}</span>
+                    <span style="color: var(--text-dim); font-size: 10px;">CH ${net.channel}</span>
                 </div>
                 <div class="sensor-data">
                     <div class="data-item">
@@ -11607,18 +11613,12 @@
             _loadSatellitesFromAPI();
         }
 
-        // Utility function
+        // Utility function. This later declaration replaces the feed version above,
+        // so status messages ("Sensor stream connected...") are the app's toasts.
         function showInfo(message) {
-            // Simple notification - could be enhanced
-            const existing = document.querySelector('.info-toast');
-            if (existing) existing.remove();
-
-            const toast = document.createElement('div');
-            toast.className = 'info-toast';
-            toast.textContent = message;
-            toast.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: var(--accent-cyan); color: #000; padding: 10px 20px; border-radius: 4px; z-index: 10001; font-size: 12px;';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+            if (window.AppFeedback) {
+                AppFeedback.toast({ type: 'info', message: String(message), durationMs: 3500 });
+            }
         }
 
         // Theme toggle functions
@@ -13505,7 +13505,7 @@
             html += `
                 <div class="device-detail-section" id="tscmTimelineSection">
                     <h4>Timeline</h4>
-                    <div class="tscm-empty">Loading timeline...</div>
+                    <div class="tscm-empty ui-loading">Loading timeline…</div>
                 </div>
             `;
 
@@ -13653,7 +13653,7 @@
             const displayName = device.name || device.essid || device.ssid || device.mac || device.bssid ||
                 (device.frequency ? `${device.frequency.toFixed(3)} MHz` : 'Unknown Device');
 
-            content.innerHTML = '<div style="text-align: center; padding: 40px;">Loading triage sheet...</div>';
+            content.innerHTML = '<div class="ui-loading">Loading triage sheet…</div>';
             modal.style.display = 'flex';
 
             let cases = [];
@@ -13704,12 +13704,12 @@
 
                 <div class="device-detail-section">
                     <h4>Device Profile</h4>
-                    <div id="tscmTriageProfileSection" class="tscm-empty">Loading profile...</div>
+                    <div id="tscmTriageProfileSection" class="tscm-empty ui-loading">Loading profile…</div>
                 </div>
 
                 <div class="device-detail-section" id="tscmTriageTimelineSection">
                     <h4>Timeline</h4>
-                    <div class="tscm-empty">Loading timeline...</div>
+                    <div class="tscm-empty ui-loading">Loading timeline…</div>
                 </div>
 
                 ${indicatorList ? `
@@ -13961,7 +13961,7 @@
         async function loadDeviceTimelines() {
             const container = document.getElementById('tscmDeviceTimelinesList');
             if (!container) return;
-            container.innerHTML = '<div class="tscm-empty">Loading timelines...</div>';
+            container.innerHTML = '<div class="tscm-empty ui-loading">Loading timelines…</div>';
 
             try {
                 const response = await fetch('/tscm/timelines');
@@ -15081,7 +15081,7 @@
 
             const modal = document.getElementById('tscmDeviceModal');
             const content = document.getElementById('tscmDeviceModalContent');
-            content.innerHTML = '<div style="text-align: center; padding: 40px;">Loading meeting summary...</div>';
+            content.innerHTML = '<div class="ui-loading">Loading meeting summary…</div>';
             modal.style.display = 'flex';
 
             try {
@@ -15163,7 +15163,7 @@
             const modal = document.getElementById('tscmDeviceModal');
             const content = document.getElementById('tscmDeviceModalContent');
 
-            content.innerHTML = '<div style="text-align: center; padding: 40px;">Loading capabilities...</div>';
+            content.innerHTML = '<div class="ui-loading">Loading capabilities…</div>';
             modal.style.display = 'flex';
 
             try {
@@ -15285,7 +15285,7 @@
             const modal = document.getElementById('tscmDeviceModal');
             const content = document.getElementById('tscmDeviceModalContent');
 
-            content.innerHTML = '<div style="text-align: center; padding: 40px;">Loading WiFi indicators...</div>';
+            content.innerHTML = '<div class="ui-loading">Loading WiFi indicators…</div>';
             modal.style.display = 'flex';
 
             try {
@@ -15342,7 +15342,7 @@
             const modal = document.getElementById('tscmDeviceModal');
             const content = document.getElementById('tscmDeviceModalContent');
 
-            content.innerHTML = '<div style="text-align: center; padding: 40px;">Loading known devices...</div>';
+            content.innerHTML = '<div class="ui-loading">Loading known devices…</div>';
             modal.style.display = 'flex';
 
             try {
@@ -15518,7 +15518,7 @@
             const modal = document.getElementById('tscmDeviceModal');
             const content = document.getElementById('tscmDeviceModalContent');
 
-            content.innerHTML = '<div style="text-align: center; padding: 40px;">Loading cases...</div>';
+            content.innerHTML = '<div class="ui-loading">Loading cases…</div>';
             modal.style.display = 'flex';
 
             try {
@@ -15704,7 +15704,7 @@
             const modal = document.getElementById('tscmDeviceModal');
             const content = document.getElementById('tscmDeviceModalContent');
 
-            content.innerHTML = '<div style="text-align: center; padding: 40px;">Loading schedules...</div>';
+            content.innerHTML = '<div class="ui-loading">Loading schedules…</div>';
             modal.style.display = 'flex';
 
             try {
@@ -15971,7 +15971,7 @@
             const modal = document.getElementById('tscmDeviceModal');
             const content = document.getElementById('tscmDeviceModalContent');
 
-            content.innerHTML = '<div style="text-align: center; padding: 40px;">Loading playbooks...</div>';
+            content.innerHTML = '<div class="ui-loading">Loading playbooks…</div>';
             modal.style.display = 'flex';
 
             try {

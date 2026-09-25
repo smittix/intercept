@@ -25,11 +25,26 @@ const AppFeedback = (function() {
         return stackEl;
     }
 
+    // Every toast is also kept, for the toolbar's notification history
+    // (partials/nav.html), in session storage so it follows you between pages.
+    const HISTORY_KEY = 'intercept.notices';
+    const HISTORY_MAX = 50;
+
+    function remember(type, title, message) {
+        try {
+            const list = JSON.parse(sessionStorage.getItem(HISTORY_KEY) || '[]');
+            list.push({ t: Date.now(), type, title, message });
+            sessionStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(-HISTORY_MAX)));
+        } catch (err) { /* the toast still shows */ }
+        window.dispatchEvent(new CustomEvent('intercept:notice'));
+    }
+
     function toast(options) {
         const opts = options || {};
         const type = normalizeType(opts.type);
         const id = nextToastId++;
         const durationMs = Number.isFinite(opts.durationMs) ? opts.durationMs : 6500;
+        remember(type, String(opts.title || defaultTitle(type)), String(opts.message || ''));
 
         const root = document.createElement('div');
         root.className = `app-toast ${type}`;
@@ -438,6 +453,10 @@ window.isTransientNetworkError = function(error) {
 window.isTransientOrOffline = function(error) {
     return AppFeedback.isTransientOrOffline(error);
 };
+
+// A top-level const is not a property of window; code that checks
+// window.AppFeedback (the nav, showInfo) needs it to be.
+window.AppFeedback = AppFeedback;
 
 // A page can use the toasts without the global error handlers by loading
 // this script with data-global-handlers="off" (the dashboards do).
