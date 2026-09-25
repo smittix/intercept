@@ -1585,3 +1585,12 @@ div.ui-loading::before {
         white-space: nowrap;
     }
 }
+
+/* Checkboxes, radios and sliders in the accent colour, not the browser's
+   default blue (core/base.css does this, but the main page does not load it);
+   a page's own accent-color still wins */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+    accent-color: var(--accent-cyan);
+}

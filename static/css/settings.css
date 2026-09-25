@@ -27,6 +27,8 @@
     max-width: 900px;
     width: 100%;
     max-height: calc(100vh - 80px);
+    /* One height for every tab, so the window does not jump as you switch */
+    height: min(720px, calc(100vh - 80px));
     display: flex;
     flex-direction: column;
     position: relative;
