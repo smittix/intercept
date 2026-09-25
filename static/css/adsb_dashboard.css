@@ -2566,3 +2566,54 @@ html[data-ui-tier="lean"] .radar-bg {
 .control-group.airband-group > .control-group-items {
     flex-wrap: nowrap;
 }
+
+/* Light theme: panels and text that hard-code dark-theme colours
+   (generated to match; the dark theme is unaffected) */
+html[data-theme="light"] .vdl2-modal-overlay {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .vdl2-modal {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .vdl2-modal-msg-body {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .vdl2-modal-raw-json {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .telemetry-item {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .aircraft-item {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .control-group input[type="text"],
+html[data-theme="light"] .control-group input[type="number"] {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] #airbandSpectrumCanvas {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .report-modal {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .highlight-item.emergency .highlight-type {
+    color: var(--text-primary);
+}
+
+html[data-theme="light"] .squawk-modal {
+    background: var(--bg-card);
+}
+
+/* ...but their active, selected and hover states keep their own colours */
+html[data-theme="light"] .aircraft-item:hover { background: rgba(var(--accent-cyan-rgb), 0.05); }
+html[data-theme="light"] .aircraft-item.selected { background: rgba(var(--accent-cyan-rgb), 0.1); }

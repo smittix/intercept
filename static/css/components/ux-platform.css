@@ -661,3 +661,21 @@ header #runStateStrip .run-state-label {
     height: 12px;
     color: var(--accent-cyan);
 }
+
+/* Toasts in the light theme: they hard-coded a dark panel, leaving dark text
+   on it unreadable */
+html[data-theme="light"] .app-toast {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    box-shadow: 0 10px 20px rgba(18, 40, 66, 0.12);
+}
+
+html[data-theme="light"] .app-toast-title {
+    color: var(--text-primary);
+}
+
+html[data-theme="light"] .app-toast-actions button {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}

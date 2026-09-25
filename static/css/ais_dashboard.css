@@ -1453,3 +1453,38 @@ html[data-ui-tier="lean"] .radar-bg {
     border-color: var(--accent-cyan);
     color: var(--accent-cyan);
 }
+
+/* Light theme: panels and text that hard-code dark-theme colours
+   (generated to match; the dark theme is unaffected) */
+html[data-theme="light"] .detail-item {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .vessel-item {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .control-group input[type="text"],
+html[data-theme="light"] .control-group input[type="number"] {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .dsc-alert-summary {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .dsc-message-item {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .dsc-distress-alert {
+    background: var(--bg-card);
+}
+
+/* ...but their active, selected and hover states keep their own colours */
+html[data-theme="light"] .vessel-item:hover { background: rgba(var(--accent-cyan-rgb), 0.05); }
+html[data-theme="light"] .vessel-item.selected { background: rgba(var(--accent-cyan-rgb), 0.1); }
+html[data-theme="light"] .dsc-message-item:hover { background: rgba(245, 158, 11, 0.05); }
+html[data-theme="light"] .dsc-message-item.distress { background: rgba(239, 68, 68, 0.1); }
+html[data-theme="light"] .dsc-message-item.urgency { background: rgba(245, 158, 11, 0.1); }
+html[data-theme="light"] .dsc-message-item.distress .dsc-message-category { background: rgba(239, 68, 68, 0.2); }
