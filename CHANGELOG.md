@@ -2,6 +2,21 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.23] - 2026-09-24
+
+### Changed
+
+- **WebSDR globe**: receivers are flat dots coloured by load (green under half their listener slots used, amber at half or more) instead of bars standing off the globe; latitude and longitude lines; the globe fills more of the panel. Your location is marked, the view opens on it, and choosing a receiver draws a path from you to it. Hovering a receiver in the list highlights it on the globe.
+- **WebSDR list**: nearest first, with distance and direction, place and antenna, and listener slots as a bar; a summary line (receivers, free slots, nearest); search, and sort by nearest, most free or name.
+- `GET /websdr/receivers` takes optional `lat` and `lon`, adding `distance_km` and `bearing` and sorting nearest first before the 100-receiver cap.
+
+### Fixed
+
+- WebSDR receiver names, places and antenna notes showed raw HTML and entities from the KiwiSDR directory.
+- A receiver without a position was drawn at 0,0.
+
+---
+
 ## [2.33.22] - 2026-09-24
 
 Polish round 3.

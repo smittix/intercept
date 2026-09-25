@@ -115,7 +115,8 @@
             meteor: "{{ url_for('static', filename='css/modes/meteor.css') }}",
             system: "{{ url_for('static', filename='css/modes/system.css') }}",
             ook: "{{ url_for('static', filename='css/modes/ook.css') }}",
-            drone: "{{ url_for('static', filename='css/modes/drone.css') }}"
+            drone: "{{ url_for('static', filename='css/modes/drone.css') }}",
+            websdr: "{{ url_for('static', filename='css/modes/websdr.css') }}"
         };
         window.INTERCEPT_MODE_STYLE_LOADED = {};
         window.INTERCEPT_MODE_STYLE_PROMISES = {};
@@ -2175,7 +2176,7 @@
                         </div>
                     </div>
                     <!-- Map and receiver list side by side -->
-                    <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 12px; flex: 1; min-height: 0; overflow: hidden;">
+                    <div class="wsdr-layout" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); gap: 12px; flex: 1; min-height: 0; overflow: hidden;">
                         <!-- Map -->
                         <div class="radio-module-box" style="padding: 0; overflow: hidden; position: relative; min-height: 0;">
                             <div id="websdrMap" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden;"></div>
@@ -2186,6 +2187,20 @@
                                 <div class="module-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 10px;">
                                     <span>RECEIVERS</span>
                                     <span id="websdrReceiverCount" style="color: var(--accent-cyan);">0 found</span>
+                                </div>
+                                <div class="wsdr-summary" id="websdrSummary"></div>
+                                <div class="wsdr-legend">
+                                    <span data-load="free">Plenty free</span>
+                                    <span data-load="busy">Half full or more</span>
+                                </div>
+                                <div class="wsdr-tools">
+                                    <input type="search" id="websdrSearch" placeholder="Search name, place, antenna"
+                                        oninput="renderReceiverList(websdrReceivers)" aria-label="Search receivers">
+                                    <select id="websdrSort" onchange="renderReceiverList(websdrReceivers)" aria-label="Sort receivers">
+                                        <option value="distance">Nearest</option>
+                                        <option value="free">Most free</option>
+                                        <option value="name">Name</option>
+                                    </select>
                                 </div>
                                 <div id="websdrReceiverList" style="font-size: 11px;">
                                     <div style="color: var(--text-muted); text-align: center; padding: 20px;">Click "Find Receivers" to search</div>
