@@ -2,6 +2,15 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.25] - 2026-09-25
+
+### Fixed
+
+- After an upgrade, a browser could run the new pages with the previous version's cached scripts and styles for up to a day ("GPS.setSkyView is not a function", "SpyStations.setView is not a function", unstyled controls). Every static asset URL now carries the app version, so each release is fetched fresh.
+- On windows narrower than about 1420 px, the toolbar's More and Stop all buttons squeezed their labels ("Mo", "Sto al"); they now show icons only there.
+
+---
+
 ## [2.33.24] - 2026-09-25
 
 Polish round 4.
