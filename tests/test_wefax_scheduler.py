@@ -21,8 +21,10 @@ class TestWeFaxScheduler:
         scheduler._frequency_khz = 4298.0
 
         now = datetime.now(timezone.utc)
-        utc_time = (now - timedelta(hours=2)).strftime("%H:%M")
-        today = now.date().isoformat()
+        earlier = now - timedelta(hours=2)
+        utc_time = earlier.strftime("%H:%M")
+        # The date the earlier broadcast ran: yesterday when run before 02:00 UTC
+        today = earlier.date().isoformat()
 
         prior = ScheduledBroadcast(
             station="USCG Kodiak",
