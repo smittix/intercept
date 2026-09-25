@@ -547,17 +547,17 @@
 ██║  ██║██╔══╝  ██║╚██╗██║██║██╔══╝  ██║  ██║
 ██████╔╝███████╗██║ ╚████║██║███████╗██████╔╝
 ╚═════╝ ╚══════╝╚═╝  ╚═══╝╚═╝╚══════╝╚═════╝</pre>
-            <div style="margin: 25px 0; padding: 15px; background: #0a0a0a; border-left: 3px solid var(--accent-red);">
+            <div style="margin: 25px 0; padding: 15px; background: var(--surface-sunken); border-left: 3px solid var(--accent-red);">
                 <p
-                    style="font-family: var(--font-mono); font-size: 11px; color: #888; text-align: left; margin: 0;">
+                    style="font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); text-align: left; margin: 0;">
                     <span style="color: var(--accent-red);">root@intercepted:</span><span
                         style="color: var(--accent-cyan);">~#</span> sudo access --grant-permission<br>
-                    <span style="color: #666;">[sudo] password for user: ********</span><br>
+                    <span style="color: var(--text-dim);">[sudo] password for user: ********</span><br>
                     <span style="color: var(--accent-red);">Error:</span> User is not in the sudoers file.<br>
                     <span style="color: var(--accent-orange);">This incident will be reported.</span>
                 </p>
             </div>
-            <p style="color: #666; font-size: 11px; text-align: center;">
+            <p style="color: var(--text-dim); font-size: 11px; text-align: center;">
                 "In a world of locked doors, the man with the key is king.<br>
                 And you, my friend, just threw away the key."
             </p>
@@ -637,7 +637,7 @@
                 <div class="section" id="agentSection">
                     <h3>Signal Source</h3>
                     <div class="form-group">
-                        <label style="font-size: 11px; color: #888; margin-bottom: 4px;">Agent</label>
+                        <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">Agent</label>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <select id="agentSelect" style="flex: 1;">
                                 <option value="local">Local (This Device)</option>
@@ -645,14 +645,14 @@
                             <span id="agentStatusDot" class="agent-status-dot online" title="Agent status"></span>
                         </div>
                     </div>
-                    <div id="agentInfo" class="info-text" style="font-size: 10px; color: #666; margin-top: 4px;">
+                    <div id="agentInfo" class="info-text" style="font-size: 10px; color: var(--text-dim); margin-top: 4px;">
                         <span id="agentStatusText">Local</span>
                         <span id="agentLatencyText" style="margin-left: 6px; color: var(--accent-cyan);"></span>
                     </div>
                     <!-- Agent health panel (shows all agents when expanded) -->
                     <details style="margin-top: 8px;">
-                        <summary style="font-size: 10px; color: #888; cursor: pointer;">All Agents Health</summary>
-                        <div id="agentHealthPanel" style="margin-top: 6px; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px; max-height: 120px; overflow-y: auto;">
+                        <summary style="font-size: 10px; color: var(--text-secondary); cursor: pointer;">All Agents Health</summary>
+                        <div id="agentHealthPanel" style="margin-top: 6px; padding: 6px; background: var(--surface-sunken-soft); border-radius: 4px; max-height: 120px; overflow-y: auto;">
                             <div class="ui-loading">Loading…</div>
                         </div>
                     </details>
@@ -671,7 +671,7 @@
                 <div class="section" id="rtlDeviceSection">
                     <h3>SDR Device</h3>
                     <div class="form-group">
-                        <label style="font-size: 11px; color: #888; margin-bottom: 4px;">Hardware Type</label>
+                        <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">Hardware Type</label>
                         <select id="sdrTypeSelect" onchange="onSDRTypeChanged()">
                             <option value="rtlsdr">RTL-SDR</option>
                             <option value="sdrplay">SDRplay</option>
@@ -684,7 +684,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label style="font-size: 11px; color: #888; margin-bottom: 4px;">Device</label>
+                        <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">Device</label>
                         <select id="deviceSelect">
                             {% if devices %}
                             {% for device in devices %}
@@ -699,8 +699,8 @@
                     <div id="deviceCapabilities" class="info-text"
                         style="font-size: 11px; margin-bottom: 8px; padding: 6px; background: var(--surface-sunken); border-radius: 4px;">
                         <div style="display: grid; grid-template-columns: auto 1fr; gap: 2px 8px;">
-                            <span style="color: #888;">Freq:</span><span id="capFreqRange">24-1766 MHz</span>
-                            <span style="color: #888;">Gain:</span><span id="capGainRange">0-50 dB</span>
+                            <span style="color: var(--text-secondary);">Freq:</span><span id="capFreqRange">24-1766 MHz</span>
+                            <span style="color: var(--text-secondary);">Gain:</span><span id="capGainRange">0-50 dB</span>
                         </div>
                     </div>
                     <!-- Bias-T Power Toggle - Prominent Location -->
@@ -711,7 +711,7 @@
                         <div>
                             <div style="color: var(--accent-orange); font-weight: bold; font-size: 12px;">Bias-T Power
                             </div>
-                            <div style="color: #888; font-size: 9px;">Powers external LNA/preamp</div>
+                            <div style="color: var(--text-secondary); font-size: 9px;">Powers external LNA/preamp</div>
                         </div>
                     </div>
                     <button class="preset-btn" onclick="refreshDevices()" style="width: 100%;">
@@ -721,7 +721,7 @@
                     <!-- SDR Device Status -->
                     <div id="sdrStatusPanel" style="margin-top: 10px; border: 1px solid var(--border-color); border-radius: 4px;">
                         <div id="sdrStatusList" style="max-height: 150px; overflow-y: auto;"></div>
-                        <div style="padding: 6px 8px; background: var(--bg-tertiary); border-top: 1px solid var(--border-color); font-size: 10px; color: #666;">
+                        <div style="padding: 6px 8px; background: var(--bg-tertiary); border-top: 1px solid var(--border-color); font-size: 10px; color: var(--text-dim);">
                             Auto-refreshes every 5s
                         </div>
                     </div>
@@ -735,16 +735,16 @@
                     </div>
                     <div id="remoteSDRConfig" style="display: none; margin-bottom: 10px;">
                         <div class="form-group">
-                            <label style="font-size: 11px; color: #888;">Host</label>
+                            <label style="font-size: 11px; color: var(--text-secondary);">Host</label>
                             <input type="text" id="rtlTcpHost" placeholder="192.168.1.100" style="width: 100%;">
                         </div>
                         <div class="form-group">
-                            <label style="font-size: 11px; color: #888;">Port</label>
+                            <label style="font-size: 11px; color: var(--text-secondary);">Port</label>
                             <input type="number" id="rtlTcpPort" value="1234" min="1" max="65535" style="width: 100%;">
                         </div>
-                        <div class="info-text" style="font-size: 10px; color: #666; margin-top: 4px;">
+                        <div class="info-text" style="font-size: 10px; color: var(--text-dim); margin-top: 4px;">
                             Connect to rtl_tcp server on remote machine.<br>
-                            Start server with: <code style="color: #00d4ff;">rtl_tcp -a 0.0.0.0</code>
+                            Start server with: <code style="color: var(--accent-cyan);">rtl_tcp -a 0.0.0.0</code>
                         </div>
                     </div>
 
@@ -2145,11 +2145,11 @@
                             <span id="kiwiBarReceiverName" style="font-size: 11px; color: var(--accent-cyan); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
                             <!-- Frequency input -->
                             <div style="display: flex; align-items: center; gap: 4px;">
-                                <input type="number" id="kiwiBarFrequency" step="1" style="width: 80px; font-size: 12px; font-family: var(--font-mono); padding: 2px 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);">
+                                <input type="number" id="kiwiBarFrequency" step="1" style="width: 80px; font-size: 12px; font-family: var(--font-mono); padding: 2px 6px; background: var(--surface-sunken); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);">
                                 <span style="font-size: 10px; color: var(--text-muted);">kHz</span>
                             </div>
                             <!-- Mode selector -->
-                            <select id="kiwiBarMode" style="font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);">
+                            <select id="kiwiBarMode" style="font-size: 11px; padding: 2px 6px; background: var(--surface-sunken); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary);">
                                 <option value="am">AM</option>
                                 <option value="usb">USB</option>
                                 <option value="lsb">LSB</option>
@@ -2515,8 +2515,8 @@
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                                 <span>Audio Waveform</span>
                                 <div style="display: flex; gap: 14px;">
-                                    <span>RMS: <span id="sstvScopeRmsLabel" style="color: #c080ff; font-variant-numeric: tabular-nums;">0</span></span>
-                                    <span>PEAK: <span id="sstvScopePeakLabel" style="color: #f44; font-variant-numeric: tabular-nums;">0</span></span>
+                                    <span>RMS: <span id="sstvScopeRmsLabel" style="color: var(--accent-purple); font-variant-numeric: tabular-nums;">0</span></span>
+                                    <span>PEAK: <span id="sstvScopePeakLabel" style="color: var(--accent-red); font-variant-numeric: tabular-nums;">0</span></span>
                                     <span id="sstvScopeToneLabel" style="color: var(--text-dim);">QUIET</span>
                                     <span id="sstvScopeStatusLabel" style="color: var(--text-dim);">IDLE</span>
                                 </div>
@@ -2861,8 +2861,8 @@
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                                 <span>Audio Waveform</span>
                                 <div style="display: flex; gap: 14px;">
-                                    <span>RMS: <span id="sstvGeneralScopeRmsLabel" style="color: #c080ff; font-variant-numeric: tabular-nums;">0</span></span>
-                                    <span>PEAK: <span id="sstvGeneralScopePeakLabel" style="color: #f44; font-variant-numeric: tabular-nums;">0</span></span>
+                                    <span>RMS: <span id="sstvGeneralScopeRmsLabel" style="color: var(--accent-purple); font-variant-numeric: tabular-nums;">0</span></span>
+                                    <span>PEAK: <span id="sstvGeneralScopePeakLabel" style="color: var(--accent-red); font-variant-numeric: tabular-nums;">0</span></span>
                                     <span id="sstvGeneralScopeToneLabel" style="color: var(--text-dim);">QUIET</span>
                                     <span id="sstvGeneralScopeStatusLabel" style="color: var(--text-dim);">IDLE</span>
                                 </div>
@@ -2989,8 +2989,8 @@
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                                 <span>Audio Waveform</span>
                                 <div style="display: flex; gap: 14px;">
-                                    <span>RMS: <span id="wefaxScopeRmsLabel" style="color: #ffaa00; font-variant-numeric: tabular-nums;">0</span></span>
-                                    <span>PEAK: <span id="wefaxScopePeakLabel" style="color: #f44; font-variant-numeric: tabular-nums;">0</span></span>
+                                    <span>RMS: <span id="wefaxScopeRmsLabel" style="color: var(--accent-amber); font-variant-numeric: tabular-nums;">0</span></span>
+                                    <span>PEAK: <span id="wefaxScopePeakLabel" style="color: var(--accent-red); font-variant-numeric: tabular-nums;">0</span></span>
                                     <span id="wefaxScopeStatusLabel" style="color: var(--text-dim);">IDLE</span>
                                 </div>
                             </div>
@@ -3014,7 +3014,7 @@
                         <div class="wefax-live-section">
                             <div class="wefax-live-header">
                                 <div class="wefax-live-title">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align: -2px; margin-right: 4px; color: #ffaa00;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align: -2px; margin-right: 4px; color: var(--accent-amber);">
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                         <polyline points="14 2 14 8 20 8"/>
                                     </svg>
@@ -3039,7 +3039,7 @@
                         <div class="wefax-gallery-section">
                             <div class="wefax-gallery-header">
                                 <div class="wefax-gallery-title">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align: -2px; margin-right: 4px; color: #ffaa00;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align: -2px; margin-right: 4px; color: var(--accent-amber);">
                                         <rect x="3" y="3" width="18" height="18" rx="2"/>
                                         <circle cx="8.5" cy="8.5" r="1.5"/>
                                         <polyline points="21 15 16 10 5 21"/>
@@ -3366,8 +3366,8 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                             <span>Audio Waveform</span>
                             <div style="display: flex; gap: 14px;">
-                                <span>RMS: <span id="scopeRmsLabel" style="color: #0ff; font-variant-numeric: tabular-nums;">0</span></span>
-                                <span>PEAK: <span id="scopePeakLabel" style="color: #f44; font-variant-numeric: tabular-nums;">0</span></span>
+                                <span>RMS: <span id="scopeRmsLabel" style="color: var(--accent-cyan); font-variant-numeric: tabular-nums;">0</span></span>
+                                <span>PEAK: <span id="scopePeakLabel" style="color: var(--accent-red); font-variant-numeric: tabular-nums;">0</span></span>
                                 <span id="scopeStatusLabel" style="color: var(--text-dim);">IDLE</span>
                             </div>
                         </div>
@@ -3392,8 +3392,8 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
                             <span>CW Tone Detection</span>
                             <div style="display: flex; gap: 14px;">
-                                <span>TONE: <span id="morseScopeToneLabel" style="color: #0f0; font-variant-numeric: tabular-nums;">--</span></span>
-                                <span>THRESH: <span id="morseScopeThreshLabel" style="color: #fa0; font-variant-numeric: tabular-nums;">--</span></span>
+                                <span>TONE: <span id="morseScopeToneLabel" style="color: var(--accent-green); font-variant-numeric: tabular-nums;">--</span></span>
+                                <span>THRESH: <span id="morseScopeThreshLabel" style="color: var(--accent-amber); font-variant-numeric: tabular-nums;">--</span></span>
                                 <span id="morseScopeStatusLabel" style="color: var(--text-dim);">IDLE</span>
                             </div>
                         </div>
@@ -6118,7 +6118,7 @@
             if (!container) return;
 
             if (!devices || devices.length === 0) {
-                container.innerHTML = '<div style="padding: 8px; color: #888; font-size: 11px; text-align: center;">No SDR devices detected</div>';
+                container.innerHTML = '<div style="padding: 8px; color: var(--text-secondary); font-size: 11px; text-align: center;">No SDR devices detected</div>';
                 return;
             }
 
@@ -6138,7 +6138,7 @@
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span style="font-size: 10px; color: ${modeColor}; font-weight: bold;">${modeName}</span>
-                        <span style="font-size: 9px; padding: 1px 4px; background: var(--bg-tertiary); border-radius: 3px; color: #888;">${sdrType}</span>
+                        <span style="font-size: 9px; padding: 1px 4px; background: var(--bg-tertiary); border-radius: 3px; color: var(--text-secondary);">${sdrType}</span>
                     </div>
                 </div>`;
             }).join('');
@@ -6167,9 +6167,9 @@
                     const container = document.getElementById('sdrStatusList');
                     if (container) {
                         if (transient) {
-                            container.innerHTML = '<div style="padding: 8px; color: #888; font-size: 11px; text-align: center;">Status temporarily unavailable</div>';
+                            container.innerHTML = '<div style="padding: 8px; color: var(--text-secondary); font-size: 11px; text-align: center;">Status temporarily unavailable</div>';
                         } else {
-                            container.innerHTML = '<div style="padding: 8px; color: #ff6666; font-size: 11px; text-align: center;">Error loading status</div>';
+                            container.innerHTML = '<div style="padding: 8px; color: var(--accent-red); font-size: 11px; text-align: center;">Error loading status</div>';
                         }
                     }
                 });
@@ -6986,7 +6986,7 @@
         function clearMessages() {
             if (currentMode === 'ook') { OokMode.clearOutput(); return; }
             document.getElementById('output').innerHTML = `
-                <div class="placeholder" style="color: #888; text-align: center; padding: 50px;">
+                <div class="placeholder" style="color: var(--text-secondary); text-align: center; padding: 50px;">
                     Messages cleared. ${isRunning || isSensorRunning ? 'Waiting for new messages...' : 'Start decoding to receive messages.'}
                 </div>
             `;
@@ -8866,22 +8866,22 @@
                             <div style="font-size: 18px; color: ${isRogue ? 'var(--accent-red)' : 'var(--accent-cyan)'}; font-weight: bold;">${escapeHtml(net.essid || '[Hidden]')}</div>
                             <div style="font-size: 10px; color: var(--text-muted);">${escapeHtml(net.bssid)}</div>
                         </div>
-                        <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">
+                        <div style="background: var(--surface-sunken); padding: 8px; border-radius: 4px;">
                             <div style="color: var(--text-dim); font-size: 9px;">SIGNAL</div>
                             <div style="color: ${signalColor}; font-size: 16px; font-weight: bold;">${power} dBm</div>
                             <div style="background: var(--bg-tertiary); height: 4px; border-radius: 2px; margin-top: 4px;">
                                 <div style="background: ${signalColor}; height: 100%; width: ${signalPercent}%; border-radius: 2px;"></div>
                             </div>
                         </div>
-                        <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">
+                        <div style="background: var(--surface-sunken); padding: 8px; border-radius: 4px;">
                             <div style="color: var(--text-dim); font-size: 9px;">CHANNEL</div>
                             <div style="color: var(--accent-cyan); font-size: 16px; font-weight: bold;">${net.channel}</div>
                         </div>
-                        <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">
+                        <div style="background: var(--surface-sunken); padding: 8px; border-radius: 4px;">
                             <div style="color: var(--text-dim); font-size: 9px;">SECURITY</div>
                             <div style="color: ${(net.privacy || '').includes('WPA3') ? 'var(--accent-green)' : (net.privacy || '').includes('WPA') ? 'var(--accent-orange)' : 'var(--accent-red)'};">${escapeHtml(net.privacy || 'Unknown')}</div>
                         </div>
-                        <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">
+                        <div style="background: var(--surface-sunken); padding: 8px; border-radius: 4px;">
                             <div style="color: var(--text-dim); font-size: 9px;">BEACONS</div>
                             <div style="color: var(--text-secondary);">${net.beacons || 0}</div>
                         </div>
@@ -8911,25 +8911,25 @@
                             <div style="font-size: 12px; color: var(--text-secondary);">${escapeHtml(client.mac)}</div>
                             ${client.vendor ? `<div style="font-size: 10px; color: var(--text-muted);">${escapeHtml(client.vendor)}</div>` : ''}
                         </div>
-                        <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">
+                        <div style="background: var(--surface-sunken); padding: 8px; border-radius: 4px;">
                             <div style="color: var(--text-dim); font-size: 9px;">SIGNAL</div>
                             <div style="color: ${signalColor}; font-size: 16px; font-weight: bold;">${power} dBm</div>
                             <div style="background: var(--bg-tertiary); height: 4px; border-radius: 2px; margin-top: 4px;">
                                 <div style="background: ${signalColor}; height: 100%; width: ${signalPercent}%; border-radius: 2px;"></div>
                             </div>
                         </div>
-                        <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">
+                        <div style="background: var(--surface-sunken); padding: 8px; border-radius: 4px;">
                             <div style="color: var(--text-dim); font-size: 9px;">PACKETS</div>
                             <div style="color: var(--text-secondary);">${client.packets || 0}</div>
                         </div>
                         ${associatedNet ? `
-                        <div style="grid-column: span 2; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">
+                        <div style="grid-column: span 2; background: var(--surface-sunken); padding: 8px; border-radius: 4px;">
                             <div style="color: var(--text-dim); font-size: 9px;">CONNECTED TO</div>
                             <div style="color: var(--accent-cyan);">${escapeHtml(associatedNet.essid || associatedNet.bssid)}</div>
                         </div>
                         ` : ''}
                         ${probes.length > 0 ? `
-                        <div style="grid-column: span 2; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">
+                        <div style="grid-column: span 2; background: var(--surface-sunken); padding: 8px; border-radius: 4px;">
                             <div style="color: var(--text-dim); font-size: 9px;">PROBING FOR</div>
                             <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
                                 ${probes.slice(0, 5).map(p => `<span style="background: var(--accent-orange); color: #000; padding: 2px 6px; border-radius: 3px; font-size: 10px;">${escapeHtml(p)}</span>`).join('')}
@@ -11053,7 +11053,7 @@
             container.innerHTML = '';
 
             if (satellitePasses.length === 0) {
-                container.innerHTML = '<div style="color: #666; text-align: center; padding: 30px;">No passes found for selected criteria.</div>';
+                container.innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: 30px;">No passes found for selected criteria.</div>';
                 return;
             }
 
@@ -11994,7 +11994,7 @@
                     if (scanResult.warnings && scanResult.warnings.length > 0) {
                         const warningsDiv = document.getElementById('tscmDeviceWarnings');
                         warningsDiv.innerHTML = scanResult.warnings.map(w =>
-                            `<div style="color: #ff9933; font-size: 10px; margin-bottom: 2px;">⚠ ${w}</div>`
+                            `<div style="color: var(--accent-amber); font-size: 10px; margin-bottom: 2px;">⚠ ${w}</div>`
                         ).join('');
                         warningsDiv.style.display = 'block';
                     }
@@ -12133,7 +12133,7 @@
             const informational = incInformational ? allInformational : [];
 
             const categoryNote = (!incHighInterest || !incNeedsReview || !incInformational)
-                ? `<div style="font-size:11px; color:#6b7280; margin-top:8px;">Filtered: showing ${[incHighInterest && 'High Interest', incNeedsReview && 'Needs Review', incInformational && 'Informational'].filter(Boolean).join(', ') || 'none'} only</div>`
+                ? `<div style="font-size:11px; color:var(--text-dim); margin-top:8px;">Filtered: showing ${[incHighInterest && 'High Interest', incNeedsReview && 'Needs Review', incInformational && 'Informational'].filter(Boolean).join(', ') || 'none'} only</div>`
                 : '';
 
             // Determine overall assessment (based on all data, not filter)
@@ -12509,7 +12509,7 @@
                     <div class="label">Informational</div>
                 </div>
                 <div class="summary-card">
-                    <div class="count" style="color: #4a9eff;">${tscmWifiDevices.length}/${tscmBtDevices.length}/${tscmRfSignals.length}</div>
+                    <div class="count" style="color: var(--accent-cyan);">${tscmWifiDevices.length}/${tscmBtDevices.length}/${tscmRfSignals.length}</div>
                     <div class="label">WiFi/BT/RF</div>
                 </div>
             </div>
@@ -12517,7 +12517,7 @@
                 <strong>Assessment:</strong> ${assessment}
             </div>
             ${categoryNote}
-            ${clearedCount > 0 ? `<div style="font-size:11px;color:#6b7280;margin-top:8px;">${clearedCount} device(s) marked as cleared by investigator — excluded from this report.</div>` : ''}
+            ${clearedCount > 0 ? `<div style="font-size:11px;color:var(--text-dim);margin-top:8px;">${clearedCount} device(s) marked as cleared by investigator — excluded from this report.</div>` : ''}
         </div>
 
         ${highInterest.length > 0 ? `
@@ -13175,7 +13175,7 @@
                 const safe = escapeHtml(k);
                 return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--border-color);">
                     <span style="font-family:monospace;font-size:9px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${safe}</span>
-                    <button onclick="tscmRemoveFromIgnoreList('${safe}')" style="background:none;border:none;color:#ff6b6b;cursor:pointer;font-size:12px;padding:0 4px;flex-shrink:0;" title="Remove">✕</button>
+                    <button onclick="tscmRemoveFromIgnoreList('${safe}')" style="background:none;border:none;color:var(--accent-red);cursor:pointer;font-size:12px;padding:0 4px;flex-shrink:0;" title="Remove">✕</button>
                 </div>`;
             }).join('');
         }
@@ -14086,13 +14086,13 @@
             }
             if (metrics.presence_ratio !== undefined) {
                 const pct = Math.round(metrics.presence_ratio * 100);
-                badges.push(`<span style="padding: 4px 8px; background: rgba(0,230,118,0.15); color: #00e676; border-radius: 4px; font-size: 10px;">${pct}% presence</span>`);
+                badges.push(`<span style="padding: 4px 8px; background: rgba(0,230,118,0.15); color: var(--accent-green); border-radius: 4px; font-size: 10px;">${pct}% presence</span>`);
             }
             if (signal.rssi_min !== undefined && signal.rssi_max !== undefined && signal.rssi_min !== null) {
-                badges.push(`<span style="padding: 4px 8px; background: rgba(255,152,0,0.15); color: #ff9800; border-radius: 4px; font-size: 10px;">${signal.rssi_min} to ${signal.rssi_max} dBm</span>`);
+                badges.push(`<span style="padding: 4px 8px; background: rgba(255,152,0,0.15); color: var(--accent-amber); border-radius: 4px; font-size: 10px;">${signal.rssi_min} to ${signal.rssi_max} dBm</span>`);
             }
             if (signal.stability !== undefined && signal.stability !== null) {
-                badges.push(`<span style="padding: 4px 8px; background: rgba(156,39,176,0.15); color: #ce93d8; border-radius: 4px; font-size: 10px;">${Math.round(signal.stability * 100)}% stability</span>`);
+                badges.push(`<span style="padding: 4px 8px; background: rgba(156,39,176,0.15); color: var(--accent-purple); border-radius: 4px; font-size: 10px;">${Math.round(signal.stability * 100)}% stability</span>`);
             }
             if (movement.pattern) {
                 const patternColors = { 'STATIONARY': '#00e676', 'MOBILE': '#ff3366', 'INTERMITTENT': '#ff9800' };
@@ -14991,7 +14991,7 @@
                     document.getElementById('tscmStartMeetingBtn').style.display = 'none';
                     document.getElementById('tscmEndMeetingBtn').style.display = 'block';
                     document.getElementById('tscmMeetingStatus').innerHTML =
-                        `<span style="color: #ff9933;">Meeting active: ${escapeHtml(meetingName)}</span>`;
+                        `<span style="color: var(--accent-amber);">Meeting active: ${escapeHtml(meetingName)}</span>`;
                     const summaryBtn = document.getElementById('tscmMeetingSummaryBtn');
                     if (summaryBtn) summaryBtn.style.display = 'block';
 
@@ -15035,7 +15035,7 @@
                     const duration = tscmMeetingStartTime ?
                         Math.round((new Date() - tscmMeetingStartTime) / 60000) : 0;
                     document.getElementById('tscmMeetingStatus').innerHTML =
-                        `<span style="color: #00ff88;">Meeting ended (${duration} min) - ${data.devices_flagged || 0} devices flagged</span>`;
+                        `<span style="color: var(--accent-green);">Meeting ended (${duration} min) - ${data.devices_flagged || 0} devices flagged</span>`;
 
                     // Show export section if devices were flagged
                     if (data.devices_flagged > 0) {
@@ -15087,7 +15087,7 @@
                 const data = await response.json();
 
                 if (data.status !== 'success' || !data.summary) {
-                    content.innerHTML = '<div style="padding: 20px; color: #ff6666;">Failed to load meeting summary.</div>';
+                    content.innerHTML = '<div style="padding: 20px; color: var(--accent-red);">Failed to load meeting summary.</div>';
                     return;
                 }
 
@@ -15152,7 +15152,7 @@
                 `;
             } catch (e) {
                 console.error('Failed to load meeting summary:', e);
-                content.innerHTML = '<div style="padding: 20px; color: #ff6666;">Failed to load meeting summary.</div>';
+                content.innerHTML = '<div style="padding: 20px; color: var(--accent-red);">Failed to load meeting summary.</div>';
             }
         }
 
@@ -15271,11 +15271,11 @@
                         </div>
                     `;
                 } else {
-                    content.innerHTML = `<div style="padding: 20px; color: #ff6666;">Failed to load capabilities: ${data.message || 'Unknown error'}</div>`;
+                    content.innerHTML = `<div style="padding: 20px; color: var(--accent-red);">Failed to load capabilities: ${data.message || 'Unknown error'}</div>`;
                 }
             } catch (e) {
                 console.error('Failed to load capabilities:', e);
-                content.innerHTML = '<div style="padding: 20px; color: #ff6666;">Failed to load capabilities</div>';
+                content.innerHTML = '<div style="padding: 20px; color: var(--accent-red);">Failed to load capabilities</div>';
             }
         }
 
@@ -15291,7 +15291,7 @@
                 const data = await response.json();
 
                 if (data.status !== 'success') {
-                    content.innerHTML = `<div style="padding: 20px; color: #ff6666;">Failed to load indicators: ${escapeHtml(data.message || 'Unknown error')}</div>`;
+                    content.innerHTML = `<div style="padding: 20px; color: var(--accent-red);">Failed to load indicators: ${escapeHtml(data.message || 'Unknown error')}</div>`;
                     return;
                 }
 
@@ -15331,7 +15331,7 @@
                 `;
             } catch (e) {
                 console.error('Failed to load WiFi indicators:', e);
-                content.innerHTML = '<div style="padding: 20px; color: #ff6666;">Failed to load WiFi indicators</div>';
+                content.innerHTML = '<div style="padding: 20px; color: var(--accent-red);">Failed to load WiFi indicators</div>';
             }
         }
 
@@ -15381,7 +15381,7 @@
                 `;
             } catch (e) {
                 console.error('Failed to load known devices:', e);
-                content.innerHTML = '<div style="padding: 20px; color: #ff6666;">Failed to load known devices</div>';
+                content.innerHTML = '<div style="padding: 20px; color: var(--accent-red);">Failed to load known devices</div>';
             }
         }
 
@@ -15573,7 +15573,7 @@
                 `;
             } catch (e) {
                 console.error('Failed to load cases:', e);
-                content.innerHTML = '<div style="padding: 20px; color: #ff6666;">Failed to load cases</div>';
+                content.innerHTML = '<div style="padding: 20px; color: var(--accent-red);">Failed to load cases</div>';
             }
         }
 
@@ -15830,7 +15830,7 @@
                 tscmScheduleCadenceChanged();
             } catch (e) {
                 console.error('Failed to load schedules:', e);
-                content.innerHTML = '<div style="padding: 20px; color: #ff6666;">Failed to load schedules</div>';
+                content.innerHTML = '<div style="padding: 20px; color: var(--accent-red);">Failed to load schedules</div>';
             }
         }
 
@@ -16005,7 +16005,7 @@
                 `;
             } catch (e) {
                 console.error('Failed to load playbooks:', e);
-                content.innerHTML = '<div style="padding: 20px; color: #ff6666;">Failed to load playbooks</div>';
+                content.innerHTML = '<div style="padding: 20px; color: var(--accent-red);">Failed to load playbooks</div>';
             }
         }
 
@@ -16037,8 +16037,8 @@
                 </div>
                 ${p.when_to_escalate ? `
                 <div style="margin: 12px 0; padding: 10px 14px; background: rgba(255,51,102,0.1); border: 1px solid rgba(255,51,102,0.4); border-radius: 6px;">
-                    <strong style="color: #ff3366; font-size: 11px; text-transform: uppercase;">Escalation Trigger</strong>
-                    <p style="margin: 4px 0 0; font-size: 12px; color: #ff6666;">${escapeHtml(p.when_to_escalate)}</p>
+                    <strong style="color: var(--accent-red); font-size: 11px; text-transform: uppercase;">Escalation Trigger</strong>
+                    <p style="margin: 4px 0 0; font-size: 12px; color: var(--accent-red);">${escapeHtml(p.when_to_escalate)}</p>
                 </div>
                 ` : ''}
                 <div class="device-detail-section">
@@ -16047,7 +16047,7 @@
                         ${(p.steps || []).map((step, i) => {
                             const stepNum = step.step_number || step.step || (i + 1);
                             return `
-                            <div class="playbook-check-step" id="pbStep${i}" style="display: flex; gap: 10px; padding: 10px; margin-bottom: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: border-color 0.3s;" onclick="togglePlaybookStep(${i})">
+                            <div class="playbook-check-step" id="pbStep${i}" style="display: flex; gap: 10px; padding: 10px; margin-bottom: 8px; background: var(--surface-sunken-soft); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: border-color 0.3s;" onclick="togglePlaybookStep(${i})">
                                 <div style="flex-shrink: 0; display: flex; align-items: flex-start; padding-top: 2px;">
                                     <input type="checkbox" id="pbCheck${i}" style="width: 16px; height: 16px; accent-color: #00e676; cursor: pointer;" onclick="event.stopPropagation(); togglePlaybookStep(${i})">
                                 </div>
@@ -16057,7 +16057,7 @@
                                         <strong style="font-size: 12px;">${escapeHtml(step.action || step.title || '')}</strong>
                                     </div>
                                     <p style="font-size: 11px; color: var(--text-muted); margin: 0;">${escapeHtml(step.details || step.description || '')}</p>
-                                    ${step.safety_note ? `<div style="margin-top: 6px; padding: 6px 8px; background: rgba(255,152,0,0.1); border-left: 3px solid #ff9800; border-radius: 3px; font-size: 10px; color: #ffb74d;"><strong>Safety:</strong> ${escapeHtml(step.safety_note)}</div>` : ''}
+                                    ${step.safety_note ? `<div style="margin-top: 6px; padding: 6px 8px; background: rgba(255,152,0,0.1); border-left: 3px solid #ff9800; border-radius: 3px; font-size: 10px; color: var(--accent-amber);"><strong>Safety:</strong> ${escapeHtml(step.safety_note)}</div>` : ''}
                                     ${step.evidence_needed && step.evidence_needed.length > 0 ? `<div style="margin-top: 6px; font-size: 10px; color: var(--text-muted);"><strong>Evidence needed:</strong> ${step.evidence_needed.map(e => escapeHtml(e)).join(', ')}</div>` : ''}
                                 </div>
                             </div>`;
@@ -16557,11 +16557,11 @@
         banner.innerHTML = `
             <span>📡 <strong>${satellite}</strong> pass in <strong>${mins} min</strong> · max ${elStr}${durStr ? ' · ' + durStr : ''} — satellite pre-selected</span>
             <button onclick="if(typeof WeatherSat!=='undefined')WeatherSat.start();this.closest('#weatherSatHandoffBanner').remove();"
-                style="background:rgba(0,255,136,0.2);border:1px solid rgba(0,255,136,0.5);color:#00ff88;padding:3px 10px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px;">
+                style="background:rgba(0,255,136,0.2);border:1px solid rgba(0,255,136,0.5);color:var(--accent-green);padding:3px 10px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:11px;">
                 Start Now
             </button>
             <button onclick="this.closest('#weatherSatHandoffBanner').remove();"
-                style="background:none;border:none;color:#666;cursor:pointer;font-size:14px;padding:0 4px;">✕</button>
+                style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:0 4px;">✕</button>
         `;
 
         document.body.appendChild(banner);
