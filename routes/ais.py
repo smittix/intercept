@@ -279,6 +279,16 @@ def process_ais_message(msg: dict) -> dict | None:
         except (ValueError, TypeError):
             pass
 
+    # Where the GPS antenna sits on the hull (metres to bow, stern, port,
+    # starboard), so the map can draw the hull to scale around the reported
+    # position. All four, or none.
+    try:
+        offsets = {key: int(msg[key]) for key in ("to_bow", "to_stern", "to_port", "to_starboard")}
+        if offsets["to_bow"] + offsets["to_stern"] > 0 and offsets["to_port"] + offsets["to_starboard"] > 0:
+            vessel.update(offsets)
+    except (KeyError, ValueError, TypeError):
+        pass
+
     # Draught
     if "draught" in msg:
         try:
