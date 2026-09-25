@@ -2,6 +2,21 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.31] - 2026-09-25
+
+Mostly under the hood.
+
+### Changed
+
+- **Main page code split** (continuing last round's TSCM move): satellite/GPS/drone, device intelligence, Wi-Fi, and the 433 MHz/meter feed handling each move to their own file in static/js/modes/. index.html goes from 16,579 lines (before the split began) to 7,640. No behaviour change; verified by the browser smoke test and by checking every control's handler still resolves.
+- **datetime.utcnow()** (deprecated) replaced everywhere with a timezone-aware call that yields the same value; timestamp output is unchanged.
+
+### Fixed
+
+- Theme sync across devices called routes that did not exist, so it 404'd on every page load and the theme only ever saved in one browser. A /settings/theme route now backs it.
+
+---
+
 ## [2.33.30] - 2026-09-25
 
 ### Changed
