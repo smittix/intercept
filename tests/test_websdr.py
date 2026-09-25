@@ -222,3 +222,57 @@ def test_parse_host_port_with_trailing_slash():
     host, port = parse_host_port("http://kiwi.com:8073/")
     assert host == "kiwi.com"
     assert port == 8073
+
+
+def test_clean_text_strips_tags_and_decodes_entities():
+    from routes.websdr import _clean_text
+
+    assert (
+        _clean_text("Active loop built by <b>&#9654; PA0EBC &#9664;</b> &#128077;")
+        == "Active loop built by ▶ PA0EBC ◀ 👍"
+    )
+    assert _clean_text("&lt;i&gt;Beverage&lt;/i&gt;  North") == "Beverage North"
+    assert _clean_text('Mini-Whip <a href="http://example') == "Mini-Whip"
+    assert _clean_text(None) == ""
+
+
+def test_fetch_kiwi_receivers_cleans_fields():
+    import io
+
+    from routes import websdr
+
+    data = (
+        'var kiwisdr_com = [{"name": "<b>Test</b> &amp; Co", "url": "rx.example:8073", "gps": "(52.0, 6.5)",'
+        ' "antenna": "Loop <i>active</i> &#128077;", "loc": "Assen &#124; NL", "users": "1", "users_max": "4",'
+        ' "status": "active", "bands": "0-30000000"}];' + " " * 100
+    )
+
+    class Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    with patch("urllib.request.urlopen", return_value=Resp(data.encode())):
+        receivers = websdr._fetch_kiwi_receivers()
+
+    assert receivers[0]["name"] == "Test & Co"
+    assert receivers[0]["antenna"] == "Loop active 👍"
+    assert receivers[0]["location"] == "Assen | NL"
+
+
+def test_websdr_receivers_sorted_by_distance_with_bearing(auth_client):
+    base = {"url": "http://x", "users": 0, "users_max": 4, "available": True, "freq_lo": 0, "freq_hi": 30000}
+    mock_receivers = [
+        {**base, "name": "Paris", "lat": 48.86, "lon": 2.35},
+        {**base, "name": "No position", "lat": None, "lon": None},
+        {**base, "name": "Oxford", "lat": 51.75, "lon": -1.26},
+    ]
+    with patch("routes.websdr.get_receivers", return_value=mock_receivers):
+        resp = auth_client.get("/websdr/receivers?lat=51.5&lon=-0.13")
+    names = [r["name"] for r in resp.get_json()["receivers"]]
+    assert names == ["Oxford", "Paris", "No position"]
+    oxford, paris = resp.get_json()["receivers"][:2]
+    assert 70 < oxford["distance_km"] < 90 and 280 < oxford["bearing"] < 300  # west-north-west
+    assert 330 < paris["distance_km"] < 350 and 140 < paris["bearing"] < 160  # south-east

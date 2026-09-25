@@ -21,6 +21,14 @@ CHANGELOG = [
         ],
     },
     {
+        "version": "2.33.23",
+        "date": "September 2026",
+        "highlights": [
+            "WebSDR: flat receiver dots coloured by how busy they are, a grid on the globe, you on it with a path to the receiver you pick, and a list by distance and direction with slots, search and sort.",
+            "WebSDR receiver names and notes no longer show raw HTML.",
+        ],
+    },
+    {
         "version": "2.33.22",
         "date": "September 2026",
         "highlights": [
