@@ -1594,3 +1594,14 @@ input[type="radio"],
 input[type="range"] {
     accent-color: var(--accent-cyan);
 }
+
+/* Tell the browser which theme is showing, so its own controls match:
+   number spinners, date pickers, open dropdown lists and scrollbar corners
+   were drawn light on the dark theme */
+:root {
+    color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+}
