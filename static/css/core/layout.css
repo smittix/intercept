@@ -1513,3 +1513,47 @@ body.nav-notices-open .app-toast-stack {
 :focus:not(:focus-visible) {
     outline: none;
 }
+
+/* Loading placeholder, the same everywhere: a small spinner and dim text */
+.ui-loading {
+    color: var(--text-dim);
+    font-size: 11px;
+    text-align: center;
+}
+
+div.ui-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+}
+
+.ui-loading::before {
+    content: '';
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+    vertical-align: -2px;
+    border: 2px solid rgba(var(--accent-cyan-rgb), 0.25);
+    border-top-color: var(--accent-cyan);
+    border-radius: 50%;
+    animation: ui-loading-spin 0.9s linear infinite;
+}
+
+div.ui-loading::before {
+    margin-right: 0;
+}
+
+@keyframes ui-loading-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ui-loading::before {
+        animation: none;
+        border-top-color: rgba(var(--accent-cyan-rgb), 0.25);
+    }
+}

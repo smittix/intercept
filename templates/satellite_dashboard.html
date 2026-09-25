@@ -102,7 +102,7 @@
                             <button class="drawer-action-btn drawer-action-btn-small" onclick="loadTrackedSatelliteCatalog()">REFRESH</button>
                         </div>
                         <div class="drawer-list" id="satTrackingList">
-                            <div class="drawer-empty-state">Loading tracked satellites...</div>
+                            <div class="drawer-empty-state ui-loading">Loading tracked satellites…</div>
                         </div>
                     </div>
                 </div>
@@ -300,7 +300,7 @@
             </div>
             <div class="panel-content">
                 <div class="ptl-body" id="passTimelineBody">
-                    <div class="ptl-empty">Calculating passes…</div>
+                    <div class="ptl-empty ui-loading">Calculating passes…</div>
                 </div>
             </div>
         </section>
@@ -2097,7 +2097,7 @@
 
             const shouldReplacePassPane = !passes.length;
             if (container && shouldReplacePassPane) {
-                container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;">Calculating passes...</div>';
+                container.innerHTML = '<div class="ui-loading">Calculating passes…</div>';
             }
             if (button) {
                 button.disabled = true;
@@ -2698,7 +2698,7 @@
                 if (countEl) countEl.textContent = '';
                 return;
             }
-            container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:15px;font-size:11px;">Loading...</div>';
+            container.innerHTML = '<div class="ui-loading">Loading…</div>';
             try {
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 7000);
