@@ -302,8 +302,23 @@
         const body = document.createElement('div');
         body.className = 'sb-status-rows';
         body.append(...rows);
+        // A tool the mode cannot run without, and how to install it (ToolReadiness)
+        const needs = window.ToolReadiness ? ToolReadiness.forMode(mode) : null;
+        let missing = null;
+        if (needs) {
+            missing = document.createElement('div');
+            missing.className = 'sb-status-missing';
+            const what = document.createElement('div');
+            what.textContent = 'Needs ' + needs.missing.join(', ');
+            missing.append(what);
+            if (needs.hint) {
+                const how = document.createElement('code');
+                how.textContent = needs.hint;
+                missing.append(how);
+            }
+        }
         const action = actionControl(mode);
-        el.replaceChildren(top, ...(rows.length ? [body] : []), ...(action ? [action] : []));
+        el.replaceChildren(top, ...(rows.length ? [body] : []), ...(missing ? [missing] : []), ...(action ? [action] : []));
     }
 
     // ------------------------------------------------------------ wiring
@@ -347,6 +362,7 @@
             renderCard();
         });
         (window.VisibleInterval ? VisibleInterval.set : setInterval)(renderCard, 5000);
+        if (window.ToolReadiness) ToolReadiness.load().then(renderCard);
 
         // After the page's own start-up has collapsed everything and applied ?mode=
         setTimeout(onModeShown, 0);

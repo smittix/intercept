@@ -1940,3 +1940,103 @@ html[data-ui-tier="lean"] .grid-bg {
     .ptl-row { grid-template-columns: 90px minmax(0, 1fr); }
     .ptl-hint { display: none; }
 }
+
+/* Light theme: panels and text that hard-code dark-theme colours
+   (generated to match; the dark theme is unaffected) */
+html[data-theme="light"] .drawer-action-btn {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .drawer-sat-item {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .drawer-sat-item.builtin {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .drawer-select,
+html[data-theme="light"] .drawer-field-value {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .sat-management-modal {
+    background: rgba(18, 32, 52, 0.35);  /* a backdrop: dims the page */
+}
+
+html[data-theme="light"] .sat-management-dialog {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .sat-management-close {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .sat-management-tab {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .sat-management-textarea {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .map-mode-btn,
+html[data-theme="light"] .map-action-btn {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .map-overlay-card {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .packet-console {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .packet-console-btn {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .packet-modal-backdrop {
+    background: rgba(18, 32, 52, 0.35);  /* a backdrop: dims the page */
+}
+
+html[data-theme="light"] .packet-modal-dialog {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .countdown-block {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .telemetry-item {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .pass-item {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .control-group input[type="text"],
+html[data-theme="light"] .control-group input[type="number"] {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] body.embedded .header {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] body.embedded .panel {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .ptl-track {
+    background: var(--bg-card);
+}
+
+/* ...but their active, selected and hover states keep their own colours */
+html[data-theme="light"] .sat-management-tab.active { background: linear-gradient(135deg, rgba(var(--accent-cyan-rgb), 0.18), rgba(56, 193, 128, 0.14)); }
+html[data-theme="light"] .map-mode-btn.active { background: linear-gradient(135deg, rgba(var(--accent-cyan-rgb), 0.95), rgba(79, 236, 182, 0.95)); color: #ffffff; }
+html[data-theme="light"] .map-action-btn.active { background: linear-gradient(135deg, rgba(var(--accent-cyan-rgb), 0.95), rgba(79, 236, 182, 0.95)); color: #ffffff; }
+html[data-theme="light"] .pass-item:hover { background: rgba(var(--accent-cyan-rgb), 0.05); }
+html[data-theme="light"] .pass-item.active { background: rgba(var(--accent-cyan-rgb), 0.1); }

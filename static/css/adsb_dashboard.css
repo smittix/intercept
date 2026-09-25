@@ -1132,7 +1132,7 @@ body {
 
 .aircraft-details {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);  /* ALT, SPD, HDG, V/S on one line */
     gap: 6px;
     font-size: 10px;
 }
@@ -2565,4 +2565,65 @@ html[data-ui-tier="lean"] .radar-bg {
 
 .control-group.airband-group > .control-group-items {
     flex-wrap: nowrap;
+}
+
+/* Light theme: panels and text that hard-code dark-theme colours
+   (generated to match; the dark theme is unaffected) */
+html[data-theme="light"] .vdl2-modal-overlay {
+    background: rgba(18, 32, 52, 0.35);  /* a backdrop: dims the page */
+}
+
+html[data-theme="light"] .vdl2-modal {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .vdl2-modal-msg-body {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .vdl2-modal-raw-json {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .telemetry-item {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .aircraft-item {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .control-group input[type="text"],
+html[data-theme="light"] .control-group input[type="number"] {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] #airbandSpectrumCanvas {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .report-modal {
+    background: rgba(18, 32, 52, 0.35);  /* a backdrop: dims the page */
+}
+
+html[data-theme="light"] .highlight-item.emergency .highlight-type {
+    color: var(--text-primary);
+}
+
+html[data-theme="light"] .squawk-modal {
+    background: rgba(18, 32, 52, 0.35);  /* a backdrop: dims the page */
+}
+
+/* ...but their active, selected and hover states keep their own colours */
+html[data-theme="light"] .aircraft-item:hover { background: rgba(var(--accent-cyan-rgb), 0.05); }
+html[data-theme="light"] .aircraft-item.selected { background: rgba(var(--accent-cyan-rgb), 0.1); }
+
+/* Aircraft rows: an edge in the altitude colour, as on the map
+   (styleAircraftRow), and faded when the aircraft has gone quiet */
+.aircraft-item {
+    border-left: 3px solid var(--alt-color, rgba(var(--accent-cyan-rgb), 0.15));
+}
+
+.aircraft-item.stale {
+    opacity: 0.55;
 }

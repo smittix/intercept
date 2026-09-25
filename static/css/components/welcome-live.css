@@ -195,3 +195,24 @@
     background: var(--accent-green);
     box-shadow: 0 0 6px var(--accent-green);
 }
+
+/* Mode tiles whose decoder is not installed */
+#welcomePage .mode-card.needs-tool {
+    position: relative;
+    opacity: 0.8;
+}
+
+.wl-needs {
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    transform: translateX(-50%);
+    max-width: calc(100% - 8px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 8px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--accent-amber);
+}

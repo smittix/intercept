@@ -967,3 +967,41 @@ html[data-ui-tier="lean"] {
     font-size: 10px;
     color: var(--text-dim);
 }
+
+/* Light theme: panels and text that hard-code dark-theme colours
+   (generated to match; the dark theme is unaffected) */
+html[data-theme="light"] .session-strip {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .danger-btn {
+    color: var(--text-primary);
+}
+
+html[data-theme="light"] .status-pill.error {
+    color: var(--text-primary);
+}
+
+html[data-theme="light"] .timeline-row {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .modal-backdrop {
+    background: rgba(18, 32, 52, 0.35);  /* a backdrop: dims the page */
+}
+
+html[data-theme="light"] .detail-row {
+    background: var(--bg-card);
+}
+
+html[data-theme="light"] .pb-tooltip {
+    color: var(--text-primary);
+}
+
+html[data-theme="light"] .status-pill.warn {
+    color: var(--text-primary);
+}
+
+html[data-theme="light"] .status-pill.error {
+    color: var(--text-primary);
+}

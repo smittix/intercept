@@ -1708,9 +1708,13 @@ header h1 .tagline {
     box-shadow: 0 0 0 2px var(--accent-cyan-dim);
 }
 
-/* Ensure device select is wide enough for device name + serial */
+/* The device select fills its column (a fixed 280 px minimum overflowed
+   narrower sidebars, e.g. OOK's); long names are clipped in the closed box
+   and shown in full in the open list */
 #deviceSelect {
-    min-width: 280px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .checkbox-group {
@@ -7389,10 +7393,6 @@ body[data-mode="tscm"] {
     padding: 2px 8px;
 }
 
-.run-state-strip .run-state-btn {
-    min-height: 26px;
-    padding: 4px 10px;
-}
 
 .run-state-strip .run-state-right {
     gap: 6px;
@@ -7803,4 +7803,11 @@ html[data-ui-tier="enhanced"]:not([data-theme="light"]) .control-group {
         flex: 0 0 auto;
         flex-wrap: nowrap;
     }
+}
+
+/* The mode's name is on the sidebar status card and the panel title; the
+   header badge was a third copy. Kept in the DOM (run-state.js reads it as a
+   fallback for the current mode), not shown. */
+header .active-mode-indicator {
+    display: none;
 }
