@@ -12,7 +12,7 @@ import shutil
 import subprocess
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Blueprint, Response, jsonify, request
 
@@ -80,7 +80,7 @@ def stream_vdl2_output(process: subprocess.Popen, is_text_mode: bool = False) ->
 
                 # Add our metadata
                 data["type"] = "vdl2"
-                data["timestamp"] = datetime.utcnow().isoformat() + "Z"
+                data["timestamp"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z"
 
                 # Flatten nested VDL2 identifying fields to top level for correlator matching
                 # dumpvdl2 nests flight/reg inside vdl2.avlc.acars and ICAO in avlc.src.addr

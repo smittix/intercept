@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from .constants import (
@@ -198,7 +198,7 @@ def parse_dsc_message(raw_line: str) -> dict[str, Any] | None:
         "format_code": format_code,
         "format_text": get_format_text(format_code),
         "category": data.get("category", "UNKNOWN").upper(),
-        "timestamp": data.get("timestamp") or datetime.utcnow().isoformat(),
+        "timestamp": data.get("timestamp") or datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
     }
 
     # Add country from MMSI

@@ -15,7 +15,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from subprocess import PIPE
 
 from flask import Blueprint, Response, jsonify, request
@@ -181,7 +181,7 @@ def parse_aprs_packet(raw_packet: str) -> dict | None:
             "callsign": callsign,
             "path": path,
             "raw": raw_packet,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
         }
 
         # Extract destination from path (first element before any comma)
@@ -1519,7 +1519,7 @@ def stream_aprs_output(master_fd: int, rtl_process: subprocess.Popen, decoder_pr
                             meter_msg = {
                                 "type": "meter",
                                 "level": audio_level,
-                                "ts": datetime.utcnow().isoformat() + "Z",
+                                "ts": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
                             }
                             app_module.aprs_queue.put(meter_msg)
                         continue  # Audio level lines are not packets

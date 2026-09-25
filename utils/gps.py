@@ -11,7 +11,7 @@ import logging
 import socket as _socket_mod
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
@@ -444,7 +444,7 @@ class GPSDClient:
         """Update the current position and notify callbacks."""
         with self._lock:
             self._position = position
-            self._last_update = datetime.utcnow()
+            self._last_update = datetime.now(timezone.utc).replace(tzinfo=None)
             self._error = None
 
         # Notify callbacks

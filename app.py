@@ -881,7 +881,7 @@ def export_aircraft() -> Response:
         return response
     else:
         return jsonify(
-            {"timestamp": __import__("datetime").datetime.utcnow().isoformat(), "aircraft": adsb_aircraft.values()}
+            {"timestamp": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).replace(tzinfo=None).isoformat(), "aircraft": adsb_aircraft.values()}
         )
 
 
@@ -916,7 +916,7 @@ def export_wifi() -> Response:
     else:
         return jsonify(
             {
-                "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
+                "timestamp": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).replace(tzinfo=None).isoformat(),
                 "networks": wifi_networks.values(),
                 "clients": wifi_clients.values(),
             }
@@ -954,7 +954,7 @@ def export_bluetooth() -> Response:
     else:
         return jsonify(
             {
-                "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
+                "timestamp": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).replace(tzinfo=None).isoformat(),
                 "devices": bt_devices.values(),
                 "beacons": bt_beacons.values(),
             }
