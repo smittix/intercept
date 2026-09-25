@@ -44,3 +44,16 @@ jobs:
           else
             pytest tests/test_[m-z]*.py --tb=short -q --timeout=120 --timeout-method=thread
           fi
+
+  # Every page and mode opened in headless Chromium; fails on JavaScript errors
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements-dev.txt playwright
+      - run: python -m playwright install --with-deps chromium
+      - run: pytest tests/smoke --tb=short -q --timeout=300 --timeout-method=thread

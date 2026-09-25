@@ -2,6 +2,22 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.27] - 2026-09-25
+
+Polish round 6.
+
+### Changed
+
+- **Browser smoke test** (`tests/smoke`, its own CI job): opens the main page in every mode and each dashboard in headless Chromium, and fails on an uncaught JavaScript error or a caught-and-logged TypeError/ReferenceError. Run with `pytest tests/smoke` (needs Playwright).
+- **Inline colours**: 59 text colours and 13 panel backgrounds in the main page's inline styles now use the theme's colours, so they suit the light theme.
+- **Bluetooth**'s missing-dependency note matches the other modes' "Needs …" note.
+- **Settings**: install commands on the Tools tab are shown in full and selectable; the window keeps one height across tabs; checkboxes, radios and sliders use the accent colour on every page.
+- **Quick Setup**: each check's status is a pill (amber pending, green done).
+- **Wi-Fi**: the channel heatmap says when recent scans found nothing on channels 1–11, instead of drawing tall black columns.
+- **Bluetooth**: Tracker Detection's empty state is centred and says what will appear.
+
+---
+
 ## [2.33.26] - 2026-09-25
 
 Polish round 5.

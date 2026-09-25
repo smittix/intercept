@@ -321,11 +321,30 @@
 }
 
 .setup-step-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border: 1px solid rgba(var(--accent-amber-rgb, 214, 168, 92), 0.45);
+    border-radius: 999px;
+    background: rgba(var(--accent-amber-rgb, 214, 168, 92), 0.1);
+    color: var(--accent-amber);
     font-size: 10px;
-    color: var(--text-dim, #8697aa);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.setup-step-status::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
 }
 
 .setup-step-status.done {
+    border-color: rgba(var(--accent-green-rgb, 56, 193, 128), 0.45);
+    background: rgba(var(--accent-green-rgb, 56, 193, 128), 0.1);
     color: var(--accent-green, #28c27a);
 }
 
