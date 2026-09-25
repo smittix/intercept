@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.27"
+VERSION = "2.33.28"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.28",
+        "date": "September 2026",
+        "highlights": [
+            "Polish round 7: the 3D globes work offline, native controls match the theme, and Settings gains Reset layout.",
+            "The browser smoke test now covers both themes and phone width; the notification count is no longer cut off.",
+        ],
+    },
     {
         "version": "2.33.27",
         "date": "September 2026",
