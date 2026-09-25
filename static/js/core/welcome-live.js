@@ -209,6 +209,21 @@
             const href = tile.getAttribute('href') || '';
             const key = call ? call[1] : href.includes('/adsb/') ? 'adsb' : href.includes('/ais/') ? 'ais' : null;
             tile.classList.toggle('is-running', !!key && on(key));
+
+            // A tool the mode cannot run without (ToolReadiness)
+            const needs = key && window.ToolReadiness ? ToolReadiness.forMode(key) : null;
+            let badge = tile.querySelector('.wl-needs');
+            if (needs) {
+                if (!badge) {
+                    badge = el('span', 'wl-needs');
+                    tile.append(badge);
+                }
+                badge.textContent = 'needs ' + needs.missing[0] + (needs.missing.length > 1 ? ' +' + (needs.missing.length - 1) : '');
+                tile.title = 'Needs ' + needs.missing.join(', ') + (needs.hint ? '. Install: ' + needs.hint : '');
+            } else if (badge) {
+                badge.remove();
+            }
+            tile.classList.toggle('needs-tool', !!needs);
         });
     }
 
@@ -228,6 +243,7 @@
         if (!welcome()) return;
         render();
         refreshHistogram();
+        if (window.ToolReadiness) ToolReadiness.load().then(markTiles);
         window.addEventListener('intercept:health', (event) => {
             health = event.detail;
             if (showing()) render();
