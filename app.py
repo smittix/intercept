@@ -831,6 +831,26 @@ def get_devices_debug() -> Response:
     return jsonify(diagnostics)
 
 
+@app.route("/settings/theme", methods=["GET", "POST"])
+def theme_setting() -> Response:
+    """Read or save the UI theme, so it can sync across devices.
+
+    The page also keeps the theme in localStorage for an instant, flash-free
+    load; this is the shared copy it reconciles against.
+    """
+    from utils.database import get_setting, set_setting
+
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        value = data.get("value") or data.get("theme")
+        if value not in ("dark", "light"):
+            return jsonify({"status": "error", "message": "theme must be 'dark' or 'light'"}), 400
+        set_setting("ui.theme", value)
+        return jsonify({"status": "success", "value": value})
+
+    return jsonify({"status": "success", "value": get_setting("ui.theme", None)})
+
+
 @app.route("/dependencies")
 def get_dependencies() -> Response:
     """Get status of all tool dependencies."""

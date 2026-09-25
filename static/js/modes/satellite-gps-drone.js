@@ -931,10 +931,10 @@ function toggleTheme() {
     localStorage.setItem('intercept-theme', newTheme);
 
     // Persist to server for cross-device sync
-    fetch('/settings', {
+    fetch('/settings/theme', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme: newTheme })
+        body: JSON.stringify({ value: newTheme })
     }).catch(err => console.warn('Failed to save theme to server:', err));
 }
 
