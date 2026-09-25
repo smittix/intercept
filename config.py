@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.25"
+VERSION = "2.33.26"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.26",
+        "date": "September 2026",
+        "highlights": [
+            "Polish round 5: modes that need an uninstalled tool say so up front, with the install command; a tidier header; the dashboards work in the light theme.",
+            "ADS-B aircraft rows show altitude at a glance and fade when an aircraft goes quiet; the map's zoom-in button is no longer hidden.",
+        ],
+    },
     {
         "version": "2.33.25",
         "date": "September 2026",

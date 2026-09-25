@@ -2,6 +2,26 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.26] - 2026-09-25
+
+Polish round 5.
+
+### Changed
+
+- **Missing tools, said up front**: welcome tiles for modes whose decoder is not installed say what they need, and the mode's sidebar status card shows it with this system's install command, before you press Start (Pager, 433 MHz, aircraft, vessels, APRS, Bluetooth, radiosonde, SubGHz).
+- **Header**: the mode badge (a third copy of the mode's name) and the Refresh and Tools buttons are gone; on a phone the header is a row shorter.
+- **Dashboards in the light theme**: ADS-B, AIS, Satellite Command and ADS-B history no longer leave dark panels and dark pop-ups on a light page.
+- **ADS-B aircraft list**: each row's edge takes its altitude colour (as on the map); aircraft quiet for 20 s are faded; rows are a line shorter.
+- **ADS-B on a phone**: pop-ups stack at the bottom instead of over the map.
+
+### Fixed
+
+- The map's top-left counter hid the zoom-in button on every map with it.
+- The SDR device list ran past the edge of narrower sidebars (OOK).
+- Change password showed "Operator: None" without a user name; the network monitor's links were default blue.
+
+---
+
 ## [2.33.25] - 2026-09-25
 
 ### Fixed
