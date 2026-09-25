@@ -2,6 +2,20 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.30] - 2026-09-25
+
+### Changed
+
+- **Map labels**: aircraft show callsign and flight level (GND on the ground), ships their name and speed. Shown only when zoomed in (zoom 8 for aircraft, 11 for ships); where two overlap the less important one hides. A "Labels" switch on each dashboard turns them off.
+- **Ships to scale**: zoomed in far enough, a ship is drawn to its real size and shape, placed around its GPS antenna and turned to its heading. The server now keeps the antenna's offsets from bow, stern, port and starboard.
+- **Ships at anchor or moored** are a dot, with no heading line.
+
+### Fixed
+
+- With the idle modes shown, the header's mode chips wrapped into rows that slid under the nav bar; they now stay on one line and scroll sideways.
+
+---
+
 ## [2.33.29] - 2026-09-25
 
 Map icons, and fixes.
