@@ -175,3 +175,50 @@
 .leaflet-container:has(> .map-hud-tl) .leaflet-top.leaflet-left {
     top: 52px;
 }
+
+/* Aircraft and vessel markers (components/track-icons.js) */
+.ti-marker .ti-shape {
+    display: block;
+    overflow: visible;
+    /* A dark outline, so the shape reads over satellite imagery */
+    filter: drop-shadow(0 0 0.6px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 1.2px rgba(0, 0, 0, 0.7));
+    transition: opacity 0.4s ease;
+}
+
+.ti-marker.selected .ti-shape {
+    filter: drop-shadow(0 0 0.6px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 6px rgba(255, 255, 255, 0.85));
+}
+
+/* Not heard for 20 s (set by the page) */
+.ti-marker.ti-stale .ti-shape {
+    opacity: 0.4;
+}
+
+/* Emergency squawk (7500 / 7600 / 7700) */
+.ti-emergency {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 34px;
+    height: 34px;
+    margin: -17px 0 0 -17px;
+    border: 2px solid #ff3b3b;
+    border-radius: 50%;
+    animation: ti-pulse 1.2s ease-out infinite;
+    pointer-events: none;
+}
+
+@keyframes ti-pulse {
+    from { transform: scale(0.6); opacity: 1; }
+    to { transform: scale(1.4); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ti-emergency { animation: none; }
+}
+
+/* Heading line: where the contact will be in a minute */
+.ti-vector {
+    stroke-linecap: round;
+    stroke-dasharray: 5 4;
+}
