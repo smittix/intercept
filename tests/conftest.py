@@ -36,6 +36,15 @@ from app import app as flask_app
 from routes import register_blueprints
 
 
+def pytest_ignore_collect(collection_path, config):
+    """The browser smoke test (tests/smoke) runs only when asked for by path,
+    e.g. `pytest tests/smoke`. It drives the whole app in a browser, which
+    leaves state (caches) that other tests do not expect."""
+    if "smoke" in collection_path.parts and not any("smoke" in str(arg) for arg in config.args):
+        return True
+    return None
+
+
 @pytest.fixture(scope="session")
 def app():
     """Create application for testing.
