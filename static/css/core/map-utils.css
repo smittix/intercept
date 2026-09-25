@@ -222,3 +222,36 @@
     stroke-linecap: round;
     stroke-dasharray: 5 4;
 }
+
+/* Labels beside markers (TrackIcons.labels shows them from a zoom level) */
+.ti-label {
+    position: absolute;
+    left: calc(100% + 4px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(6, 12, 18, 0.78);
+    color: #e6edf5;
+    font: 600 10px/1.4 var(--font-mono, monospace);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.ti-labels-on .ti-label {
+    display: block;
+}
+
+.ti-labels-on .ti-label.ti-label-hidden {
+    display: none;
+}
+
+/* A ship drawn to scale, and its icon hidden under it */
+.ti-hull {
+    cursor: pointer;
+}
+
+.ti-marker.ti-under-hull .ti-shape {
+    opacity: 0;
+}

@@ -7,10 +7,19 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.29"
+VERSION = "2.33.30"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.30",
+        "date": "September 2026",
+        "highlights": [
+            "Map labels: callsign and flight level beside aircraft, name and speed beside ships, when zoomed in and never overlapping.",
+            "Ships drawn to their real size and shape when zoomed in; ships at anchor or moored shown as dots.",
+            "Fix: the header's mode chips no longer slide under the nav when the idle modes are shown.",
+        ],
+    },
     {
         "version": "2.33.29",
         "date": "September 2026",

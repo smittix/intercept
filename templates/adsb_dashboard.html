@@ -315,6 +315,7 @@
                 <div class="control-group-items">
                     <label title="Show aircraft trails"><input type="checkbox" id="showTrails" checked onchange="toggleTrails()"> Trails</label>
                     <label title="Show range rings"><input type="checkbox" id="showRangeRings" checked onchange="drawRangeRings()"> Rings</label>
+                    <label title="Callsign and flight level beside each aircraft, when zoomed in"><input type="checkbox" id="showLabels" checked onchange="setMapLabels(this.checked)"> Labels</label>
                     <label title="Outline of the furthest contact heard in each direction"><input type="checkbox" id="showReach" checked onchange="receptionOutline && receptionOutline.setVisible(this.checked)"> Reach</label>
                     <button type="button" class="reach-reset" title="Forget the reception outline for this location" onclick="receptionOutline && receptionOutline.reset()">&#8634;</button>
                     <label title="Audio alerts for military/emergency"><input type="checkbox" id="alertToggle" checked onchange="toggleAlerts()"> Alerts</label>
@@ -440,6 +441,20 @@
         let radarMap = null;
         let receptionOutline = null;  // components/reception-outline.js
         let headingLines = null;       // components/track-icons.js
+        let mapLabels = null;          // components/track-icons.js
+        const LABELS_KEY = 'intercept.map.labels';
+
+        // "BAW123 FL350", or GND on the ground
+        function aircraftLabel(ac) {
+            const name = (ac.callsign || '').trim() || ac.icao;
+            if (ac.on_ground === true) return `${name} GND`;
+            return ac.altitude ? `${name} FL${String(Math.round(ac.altitude / 100)).padStart(3, '0')}` : name;
+        }
+
+        function setMapLabels(on) {
+            try { localStorage.setItem(LABELS_KEY, on ? '1' : '0'); } catch (e) { /* this visit only */ }
+            if (mapLabels) mapLabels.setEnabled(on);
+        }
         let mapOverlays = null;
         let aircraft = {};
         let markers = {};
@@ -2137,6 +2152,11 @@ ACARS: ${r.statistics.acarsMessages} messages`;
             });
 
             headingLines = TrackIcons.vectors(radarMap);
+            let labelsOn = true;
+            try { labelsOn = localStorage.getItem(LABELS_KEY) !== '0'; } catch (e) { /* default on */ }
+            const labelsBox = document.getElementById('showLabels');
+            if (labelsBox) labelsBox.checked = labelsOn;
+            mapLabels = TrackIcons.labels(radarMap, { minZoom: 8, enabled: labelsOn });
             // Fade aircraft not heard for 20 s (they drop off at 60 s)
             setInterval(() => {
                 const now = Date.now();
@@ -2818,10 +2838,12 @@ ACARS: ${r.statistics.acarsMessages} messages`;
             const isSelected = icao === selectedIcao;
             const ground = ac.on_ground === true;
             const emergency = TrackIcons.isEmergencySquawk(ac.squawk);
+            const label = aircraftLabel(ac);
 
             const prevState = markerState[icao] || {};
             const iconChanged = prevState.rotation !== rotation || prevState.color !== color || prevState.iconType !== iconType ||
-                prevState.isSelected !== isSelected || prevState.ground !== ground || prevState.emergency !== emergency;
+                prevState.isSelected !== isSelected || prevState.ground !== ground || prevState.emergency !== emergency ||
+                prevState.label !== label;
             const tooltipChanged = prevState.callsign !== callsign || prevState.alt !== alt || prevState.typeLabel !== typeLabel;
 
             const tooltipContent = typeLabel
@@ -2831,7 +2853,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
             if (markers[icao]) {
                 markers[icao].setLatLng([ac.lat, ac.lon]);
                 if (iconChanged) {
-                    markers[icao].setIcon(createMarkerIcon(rotation, color, iconType, isSelected, ground, emergency));
+                    markers[icao].setIcon(createMarkerIcon(rotation, color, iconType, isSelected, ground, emergency, label));
                 }
                 if (tooltipChanged) {
                     markers[icao].unbindTooltip();
@@ -2840,7 +2862,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                     });
                 }
             } else {
-                markers[icao] = L.marker([ac.lat, ac.lon], { icon: createMarkerIcon(rotation, color, iconType, isSelected, ground, emergency) })
+                markers[icao] = L.marker([ac.lat, ac.lon], { icon: createMarkerIcon(rotation, color, iconType, isSelected, ground, emergency, label) })
                     .addTo(radarMap)
                     .on('click', () => selectAircraft(icao, 'map'));
                 markers[icao].bindTooltip(tooltipContent, {
@@ -2848,7 +2870,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                 });
             }
 
-            markerState[icao] = { rotation, color, callsign, alt, typeLabel, iconType, isSelected, ground, emergency };
+            markerState[icao] = { rotation, color, callsign, alt, typeLabel, iconType, isSelected, ground, emergency, label };
 
             // Where it will be in a minute (not for aircraft on the ground)
             if (headingLines) {
@@ -2921,8 +2943,8 @@ ACARS: ${r.statistics.acarsMessages} messages`;
         // Markers and heading lines: components/track-icons.js
         // Military on the map: light khaki (the list's olive badge vanishes on dark imagery)
         const MILITARY_MAP_COLOR = '#b8c46a';
-        function createMarkerIcon(rotation, color, iconType = 'jet', isSelected = false, ground = false, emergency = false) {
-            return TrackIcons.aircraft({ type: iconType, color, heading: rotation, selected: isSelected, ground, emergency });
+        function createMarkerIcon(rotation, color, iconType = 'jet', isSelected = false, ground = false, emergency = false, label = '') {
+            return TrackIcons.aircraft({ type: iconType, color, heading: rotation, selected: isSelected, ground, emergency, label });
         }
 
         // ============================================
@@ -3190,7 +3212,8 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                     const iconType = getAircraftIconType(ac.type_code, militaryInfo.military);
                     const isSelected = targetIcao === icao;
                     markers[targetIcao].setIcon(createMarkerIcon(rotation, color, iconType, isSelected,
-                        ac.on_ground === true, TrackIcons.isEmergencySquawk(ac.squawk)));
+                        ac.on_ground === true, TrackIcons.isEmergencySquawk(ac.squawk), aircraftLabel(ac)));
+                    if (markerState[targetIcao]) markerState[targetIcao].label = aircraftLabel(ac);
                     // Update marker state to reflect selection
                     if (markerState[targetIcao]) {
                         markerState[targetIcao].isSelected = isSelected;

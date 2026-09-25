@@ -1685,7 +1685,7 @@ if (!window._settingsEscapeHandlerBound) {
 const LAYOUT_KEYS = [
     'mainSidebarCollapsed', 'acarsSidebarCollapsed', 'vdl2SidebarCollapsed',
     'intercept_nav_groups', 'intercept.runState.expanded',
-    'intercept.gps.skyView', 'intercept.spyStations.view', 'pagerView',
+    'intercept.gps.skyView', 'intercept.spyStations.view', 'pagerView', 'intercept.map.labels',
 ];
 const LAYOUT_PREFIXES = ['intercept.sidebar.open.'];
 
