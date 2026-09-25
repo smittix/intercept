@@ -1132,7 +1132,7 @@ body {
 
 .aircraft-details {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);  /* ALT, SPD, HDG, V/S on one line */
     gap: 6px;
     font-size: 10px;
 }
@@ -2617,3 +2617,13 @@ html[data-theme="light"] .squawk-modal {
 /* ...but their active, selected and hover states keep their own colours */
 html[data-theme="light"] .aircraft-item:hover { background: rgba(var(--accent-cyan-rgb), 0.05); }
 html[data-theme="light"] .aircraft-item.selected { background: rgba(var(--accent-cyan-rgb), 0.1); }
+
+/* Aircraft rows: an edge in the altitude colour, as on the map
+   (styleAircraftRow), and faded when the aircraft has gone quiet */
+.aircraft-item {
+    border-left: 3px solid var(--alt-color, rgba(var(--accent-cyan-rgb), 0.15));
+}
+
+.aircraft-item.stale {
+    opacity: 0.55;
+}

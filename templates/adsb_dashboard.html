@@ -2964,6 +2964,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                     div.setAttribute('data-icao', ac.icao);
                     div.onclick = () => selectAircraft(ac.icao, 'panel');
                     div.innerHTML = buildAircraftItemHTML(ac);
+                    styleAircraftRow(div, ac);
                     fragment.appendChild(div);
                 });
 
@@ -2981,9 +2982,18 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                     if (existingItem) {
                         existingItem.className = `aircraft-item ${selectedIcao === ac.icao ? 'selected' : ''} ${isOnWatchlist(ac) ? 'watched' : ''}`;
                         existingItem.innerHTML = buildAircraftItemHTML(ac);
+                        styleAircraftRow(existingItem, ac);
                     }
                 });
             }
+        }
+
+        // The row's edge in the aircraft's altitude colour (as on the map), and
+        // faded once it has been quiet for 20 s (it drops off at 60 s)
+        function styleAircraftRow(row, ac) {
+            row.style.setProperty('--alt-color', getAltitudeColor(ac.altitude));
+            row.classList.toggle('stale', Date.now() - (ac.lastSeen || 0) > 20000);
+            row.title = ac.altitude ? `${ac.altitude.toLocaleString()} ft` : 'Altitude unknown';
         }
 
         function buildAircraftItemHTML(ac) {
