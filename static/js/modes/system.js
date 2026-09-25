@@ -34,7 +34,7 @@ const SystemHealth = (function () {
     let globeInstance = null;
     let globeDestroyed = false;
 
-    const GLOBE_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/globe.gl@2.33.1/dist/globe.gl.min.js';
+    const GLOBE_SCRIPT_URL = '/static/vendor/globe/globe.gl-2.33.1.min.js';  // bundled, so it works offline
     const GLOBE_TEXTURE_URL = '/static/images/globe/earth-dark.jpg';
 
     // -----------------------------------------------------------------------

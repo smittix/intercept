@@ -2,6 +2,25 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.28] - 2026-09-25
+
+Polish round 7.
+
+### Changed
+
+- **3D globes work offline**: globe.gl is bundled (static/vendor/globe) for the WebSDR, System Health and GPS globes, instead of loaded from a CDN.
+- **Native controls match the theme** (number spinners, date pickers, dropdown lists).
+- **Settings**: Reset layout (Display tab) forgets opened sections and chosen views, keeping settings and location; the Location tab shows the saved location on one line instead of a second copy.
+- **Smoke test** runs in the dark and light themes at desktop and phone size, and fails on missing static files and on screens that scroll sideways on a phone.
+- **TSCM's code** moved out of index.html into static/js/modes/tscm.js (first stage of splitting the main page's script).
+
+### Fixed
+
+- The notification count on the bell was cut off by the toolbar.
+- The network monitor scrolled sideways on a phone.
+
+---
+
 ## [2.33.27] - 2026-09-25
 
 Polish round 6.

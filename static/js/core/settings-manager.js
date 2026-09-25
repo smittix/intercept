@@ -1675,3 +1675,31 @@ if (!window._settingsEscapeHandlerBound) {
         }
     });
 }
+
+
+/**
+ * Forget the layout this browser remembers (collapsed sidebars, open
+ * sections, chosen views), keeping settings, presets, watch lists and the
+ * observer location, then reload so every panel starts from its default.
+ */
+const LAYOUT_KEYS = [
+    'mainSidebarCollapsed', 'acarsSidebarCollapsed', 'vdl2SidebarCollapsed',
+    'intercept_nav_groups', 'intercept.runState.expanded',
+    'intercept.gps.skyView', 'intercept.spyStations.view', 'pagerView',
+];
+const LAYOUT_PREFIXES = ['intercept.sidebar.open.'];
+
+function resetLayoutPreferences() {
+    if (!window.confirm('Reset the layout?\n\nOpened and collapsed sections and chosen views go back to their defaults. Settings, presets and your location are kept.')) {
+        return;
+    }
+    try {
+        LAYOUT_KEYS.forEach((key) => localStorage.removeItem(key));
+        Object.keys(localStorage)
+            .filter((key) => LAYOUT_PREFIXES.some((prefix) => key.startsWith(prefix)))
+            .forEach((key) => localStorage.removeItem(key));
+    } catch (e) { /* nothing stored */ }
+    window.location.reload();
+}
+
+window.resetLayoutPreferences = resetLayoutPreferences;

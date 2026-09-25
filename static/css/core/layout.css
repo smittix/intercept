@@ -1389,18 +1389,22 @@ body.nav-more-open .app-toast-stack {
     position: relative;
 }
 
+/* Inside the button's corner: the toolbar clips anything outside its row */
 .nav-notices-count {
     position: absolute;
-    top: -5px;
-    right: -5px;
-    min-width: 15px;
-    height: 15px;
+    top: 1px;
+    right: 1px;
+    z-index: 1;
+    min-width: 13px;
+    height: 13px;
     padding: 0 3px;
-    border-radius: 8px;
+    border-radius: 7px;
     background: var(--accent-red);
+    box-shadow: 0 0 0 1.5px var(--bg-primary);
     color: #fff;
-    font: 700 9px/15px var(--font-sans);
+    font: 700 8px/13px var(--font-sans);
     text-align: center;
+    pointer-events: none;
 }
 
 .nav-notices-count[hidden] {
@@ -1593,4 +1597,15 @@ input[type="checkbox"],
 input[type="radio"],
 input[type="range"] {
     accent-color: var(--accent-cyan);
+}
+
+/* Tell the browser which theme is showing, so its own controls match:
+   number spinners, date pickers, open dropdown lists and scrollbar corners
+   were drawn light on the dark theme */
+:root {
+    color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
 }
