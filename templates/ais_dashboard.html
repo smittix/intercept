@@ -162,6 +162,7 @@
                 <div class="control-group-items">
                     <label title="Show vessel trails"><input type="checkbox" id="showTrails" onchange="toggleTrails()"> Trails</label>
                     <label title="Show range rings"><input type="checkbox" id="showRangeRings" checked onchange="drawRangeRings()"> Rings</label>
+                    <label title="Name and speed beside each vessel, when zoomed in"><input type="checkbox" id="showLabels" checked onchange="setMapLabels(this.checked)"> Labels</label>
                     <label title="Outline of the furthest contact heard in each direction"><input type="checkbox" id="showReach" checked onchange="receptionOutline && receptionOutline.setVisible(this.checked)"> Reach</label>
                     <button type="button" class="reach-reset" title="Forget the reception outline for this location" onclick="receptionOutline && receptionOutline.reset()">&#8634;</button>
                     <select id="rangeSelect" onchange="updateRange()" title="Range rings distance">
@@ -215,6 +216,30 @@
         let vesselMap = null;
         let receptionOutline = null;  // components/reception-outline.js
         let headingLines = null;       // components/track-icons.js
+        let mapLabels = null;          // components/track-icons.js
+        let hullShapes = null;         // components/track-icons.js
+        const LABELS_KEY = 'intercept.map.labels';
+
+        // AIS navigation status 1 = at anchor, 5 = moored
+        function isMoored(vessel) {
+            return vessel.nav_status === 1 || vessel.nav_status === 5 || vessel.nav_status === '1' || vessel.nav_status === '5';
+        }
+
+        // "EVER GIVEN 12.5 kn", or the MMSI when the name is not yet known
+        function vesselLabel(vessel) {
+            const name = (vessel.name || '').trim() || vessel.mmsi;
+            return vessel.speed >= 0.5 && !isMoored(vessel) ? `${name} ${vessel.speed} kn` : name;
+        }
+
+        function setMapLabels(on) {
+            try { localStorage.setItem(LABELS_KEY, on ? '1' : '0'); } catch (e) { /* this visit only */ }
+            if (mapLabels) mapLabels.setEnabled(on);
+        }
+
+        function markHull(mmsi, drawn) {
+            const el = markers[mmsi] && markers[mmsi].getElement && markers[mmsi].getElement();
+            if (el) el.classList.toggle('ti-under-hull', drawn);
+        }
         let aisMapOverlays = null;
         let vessels = {};
         let markers = {};
@@ -355,12 +380,14 @@
 
         // Create SVG vessel marker icon
         // Vessel markers with a dark outline (components/track-icons.js)
-        function createVesselMarkerIcon(rotation, vesselType, isSelected = false) {
+        function createVesselMarkerIcon(rotation, vesselType, isSelected = false, vessel = null) {
             return TrackIcons.vessel({
                 path: VESSEL_ICONS[vesselType] || VESSEL_ICONS.default,
                 color: VESSEL_COLORS[vesselType] || VESSEL_COLORS.default,
                 heading: rotation,
                 selected: isSelected,
+                moored: vessel ? isMoored(vessel) : false,
+                label: vessel ? vesselLabel(vessel) : '',
             });
         }
 
@@ -422,6 +449,13 @@
 
             // Six minutes ahead (a tenth of an hour), as marine radar shows it: a minute is too short at sea
             headingLines = TrackIcons.vectors(vesselMap, { seconds: 360, minKnots: 0.5 });
+            let labelsOn = true;
+            try { labelsOn = localStorage.getItem(LABELS_KEY) !== '0'; } catch (e) { /* default on */ }
+            const labelsBox = document.getElementById('showLabels');
+            if (labelsBox) labelsBox.checked = labelsOn;
+            mapLabels = TrackIcons.labels(vesselMap, { minZoom: 11, enabled: labelsOn });
+            hullShapes = TrackIcons.hulls(vesselMap, { onClick: (mmsi) => selectVessel(mmsi) });
+            hullShapes.onZoom = markHull;
             // Fade vessels not heard for 3 minutes (at anchor they report that rarely)
             setInterval(() => {
                 const now = Date.now();
@@ -818,12 +852,13 @@
             const heading = vessel.heading ?? vessel.course ?? 0;
             const vesselType = getVesselIconType(vessel.ship_type);
             const isSelected = mmsi === selectedMmsi;
-            const divIcon = createVesselMarkerIcon(heading, vesselType, isSelected);
+            const divIcon = createVesselMarkerIcon(heading, vesselType, isSelected, vessel);
+            const color = VESSEL_COLORS[vesselType] || VESSEL_COLORS.default;
 
             // Where it will be in six minutes, on its course and speed over ground
             if (headingLines) {
-                headingLines.update(mmsi, vessel.lat, vessel.lon, vessel.course, vessel.speed,
-                    VESSEL_COLORS[vesselType] || VESSEL_COLORS.default);
+                if (isMoored(vessel)) headingLines.remove(mmsi);
+                else headingLines.update(mmsi, vessel.lat, vessel.lon, vessel.course, vessel.speed, color);
             }
 
             if (markers[mmsi]) {
@@ -837,6 +872,13 @@
 
             const name = vessel.name || 'Unknown';
             markers[mmsi].bindTooltip(`${name}<br>MMSI: ${mmsi}`, { direction: 'top' });
+
+            // To scale when zoomed in far enough to see the hull
+            if (hullShapes) {
+                const hullHeading = vessel.heading ?? vessel.course;
+                const drawn = hullShapes.update(mmsi, vessel.lat, vessel.lon, hullHeading, vessel, color);
+                markHull(mmsi, drawn);
+            }
         }
 
         function selectVessel(mmsi) {
@@ -850,7 +892,9 @@
                     const heading = vessel.heading ?? vessel.course ?? 0;
                     const vesselType = getVesselIconType(vessel.ship_type);
                     const isSelected = m === mmsi;
-                    markers[m].setIcon(createVesselMarkerIcon(heading, vesselType, isSelected));
+                    markers[m].setIcon(createVesselMarkerIcon(heading, vesselType, isSelected, vessel));
+                    if (hullShapes) markHull(m, !!hullShapes.update(m, vessel.lat, vessel.lon, vessel.heading ?? vessel.course, vessel,
+                        VESSEL_COLORS[vesselType] || VESSEL_COLORS.default));
                 }
             });
 
@@ -985,6 +1029,7 @@
                         delete markers[mmsi];
                     }
                     if (headingLines) headingLines.remove(mmsi);
+                    if (hullShapes) hullShapes.remove(mmsi);
                     if (trailLines[mmsi]) {
                         vesselMap.removeLayer(trailLines[mmsi]);
                         delete trailLines[mmsi];

@@ -11,8 +11,12 @@
  * dark outline so they read over satellite imagery; only the selected one
  * glows. On the ground they are smaller and grey; an emergency squawk draws
  * a pulsing red ring. A heading line runs to where the contact will be after
- * `seconds` (a minute by default) at its present speed. Styles: .ti-* in
- * static/css/core/map-utils.css.
+ * `seconds` (a minute by default) at its present speed.
+ *
+ * Labels (`label` option) sit beside the marker, shown by TrackIcons.labels
+ * only when zoomed in and never on top of one another. TrackIcons.hulls draws
+ * a ship's real outline once it is big enough to see at the current zoom.
+ * Styles: .ti-* in static/css/core/map-utils.css.
  */
 const TrackIcons = (function () {
     'use strict';
@@ -36,6 +40,15 @@ const TrackIcons = (function () {
     const GROUND_COLOR = '#8a96a3';
     const EMERGENCY_COLOR = '#ff3b3b';
 
+    function esc(text) {
+        return String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    }
+
+    // Priority decides which of two overlapping labels stays
+    function labelHtml(text, priority) {
+        return text ? `<span class="ti-label" data-priority="${priority || 0}">${esc(text)}</span>` : '';
+    }
+
     function aircraft(opts) {
         const type = AIRCRAFT[opts.type] ? opts.type : 'jet';
         const ground = !!opts.ground;
@@ -50,20 +63,28 @@ const TrackIcons = (function () {
                 (ground ? ' ti-ground' : '') + (emergency ? ' ti-alert' : ''),
             html: ring + alert +
                 `<svg class="ti-shape" width="${size}" height="${size}" viewBox="0 0 24 24" style="transform: rotate(${heading}deg); color: ${color};">` +
-                `<path fill="currentColor" d="${AIRCRAFT[type]}"/>${EXTRAS[type] || ''}</svg>`,
+                `<path fill="currentColor" d="${AIRCRAFT[type]}"/>${EXTRAS[type] || ''}</svg>` +
+                labelHtml(opts.label, opts.selected ? 3 : emergency ? 2 : 0),
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2],
         });
     }
 
-    /** A vessel shape (from the page's own set) with the same outline treatment. */
+    /**
+     * A vessel shape (from the page's own set) with the same outline treatment;
+     * at anchor or moored (`moored`), a dot, since it points nowhere in particular.
+     */
     function vessel(opts) {
-        const size = opts.size || 24;
+        const size = opts.moored ? 14 : (opts.size || 24);
         const ring = opts.selected ? '<div class="tracking-ring"></div><div class="tracking-ring-inner"></div>' : '';
+        const shape = opts.moored
+            ? `<svg class="ti-shape" width="${size}" height="${size}" viewBox="0 0 24 24" style="color: ${opts.color};">` +
+              '<circle cx="12" cy="12" r="7" fill="currentColor"/><circle cx="12" cy="12" r="2.5" fill="rgba(0,0,0,0.55)"/></svg>'
+            : `<svg class="ti-shape" width="${size}" height="${size}" viewBox="0 0 24 24" style="transform: rotate(${opts.heading || 0}deg); color: ${opts.color};">` +
+              `<path fill="currentColor" d="${opts.path}"/></svg>`;
         return L.divIcon({
-            className: 'vessel-marker ti-marker' + (opts.selected ? ' selected' : ''),
-            html: ring + `<svg class="ti-shape" width="${size}" height="${size}" viewBox="0 0 24 24" style="transform: rotate(${opts.heading || 0}deg); color: ${opts.color};">` +
-                `<path fill="currentColor" d="${opts.path}"/></svg>`,
+            className: 'vessel-marker ti-marker' + (opts.selected ? ' selected' : '') + (opts.moored ? ' ti-moored' : ''),
+            html: ring + shape + labelHtml(opts.label, opts.selected ? 3 : 0),
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2],
         });
@@ -102,12 +123,128 @@ const TrackIcons = (function () {
         };
     }
 
+    /**
+     * Labels on or off (`setEnabled`) and shown only from `minZoom`; where two
+     * overlap, the one with the lower priority (then the later one) hides.
+     */
+    function labels(map, options) {
+        const opts = Object.assign({ minZoom: 8, enabled: true }, options || {});
+        const container = map.getContainer();
+        let enabled = opts.enabled;
+        let pending = false;
+
+        function declutter() {
+            pending = false;
+            const on = enabled && map.getZoom() >= opts.minZoom;
+            container.classList.toggle('ti-labels-on', on);
+            if (!on) return;
+            const els = Array.from(container.querySelectorAll('.ti-label'));
+            els.forEach((el) => el.classList.remove('ti-label-hidden'));
+            const placed = [];
+            els.map((el) => ({ el, p: Number(el.dataset.priority) || 0, r: el.getBoundingClientRect() }))
+                .filter((l) => l.r.width > 0)
+                .sort((a, b) => b.p - a.p)
+                .forEach((l) => {
+                    const clash = placed.some((r) => !(l.r.right < r.left || l.r.left > r.right || l.r.bottom < r.top || l.r.top > r.bottom));
+                    if (clash) l.el.classList.add('ti-label-hidden');
+                    else placed.push(l.r);
+                });
+        }
+
+        function schedule() {
+            if (pending) return;
+            pending = true;
+            requestAnimationFrame(declutter);
+        }
+
+        map.on('zoomend moveend', schedule);
+        setInterval(schedule, 2000);  // markers move and relabel between map moves
+        schedule();
+        return {
+            setEnabled(on) { enabled = !!on; schedule(); },
+            refresh: schedule,
+        };
+    }
+
+    // A point `east`, `north` metres from lat/lon (flat-earth, fine over a ship's length)
+    function offset(lat, lon, east, north) {
+        return [lat + north / 111320, lon + east / (111320 * Math.cos(lat * Math.PI / 180))];
+    }
+
+    /**
+     * A ship's hull to scale, from its size and where its antenna is: to_bow,
+     * to_stern, to_port, to_starboard (metres). Drawn only when the ship is at
+     * least `minPixels` long at the current zoom; `update` says whether it drew,
+     * so the page can hide the icon under it.
+     */
+    function hulls(map, options) {
+        const opts = Object.assign({ minPixels: 20, onClick: null }, options || {});
+        const shapes = {};
+        const last = {};
+
+        function outline(lat, lon, heading, d) {
+            const L2 = d.to_bow + d.to_stern;
+            const shoulder = d.to_bow - 0.18 * L2;  // where the bow begins to narrow
+            const mid = (d.to_starboard - d.to_port) / 2;
+            // Ship frame: x to starboard, y to the bow, antenna at the origin
+            const pts = [[-d.to_port, -d.to_stern], [d.to_starboard, -d.to_stern],
+                [d.to_starboard, shoulder], [mid, d.to_bow], [-d.to_port, shoulder]];
+            const h = heading * Math.PI / 180;
+            return pts.map(([x, y]) => offset(lat, lon, x * Math.cos(h) + y * Math.sin(h), -x * Math.sin(h) + y * Math.cos(h)));
+        }
+
+        function pixelsLong(lat, lon, heading, d) {
+            const [b, s] = [offset(lat, lon, 0, 0), offset(lat, lon, Math.sin(heading * Math.PI / 180) * (d.to_bow + d.to_stern),
+                Math.cos(heading * Math.PI / 180) * (d.to_bow + d.to_stern))];
+            return map.latLngToLayerPoint(b).distanceTo(map.latLngToLayerPoint(s));
+        }
+
+        function draw(id) {
+            const a = last[id];
+            const known = a && Number.isFinite(a.heading) && ['to_bow', 'to_stern', 'to_port', 'to_starboard'].every((k) => Number.isFinite(a.dims[k]));
+            if (!known || pixelsLong(a.lat, a.lon, a.heading, a.dims) < opts.minPixels) {
+                if (shapes[id]) { map.removeLayer(shapes[id]); delete shapes[id]; }
+                return false;
+            }
+            const points = outline(a.lat, a.lon, a.heading, a.dims);
+            if (shapes[id]) {
+                shapes[id].setLatLngs(points);
+                shapes[id].setStyle({ color: a.color, fillColor: a.color });
+            } else {
+                shapes[id] = L.polygon(points, {
+                    color: a.color, weight: 1.5, fillColor: a.color, fillOpacity: 0.35, className: 'ti-hull',
+                }).addTo(map);
+                if (opts.onClick) shapes[id].on('click', () => opts.onClick(id));
+            }
+            return true;
+        }
+
+        const api = {
+            update(id, lat, lon, heading, dims, color) {
+                last[id] = { lat, lon, heading, dims: dims || {}, color };
+                return draw(id);
+            },
+            remove(id) {
+                if (shapes[id]) { map.removeLayer(shapes[id]); delete shapes[id]; }
+                delete last[id];
+            },
+            onZoom: null,
+        };
+        map.on('zoomend', () => {
+            Object.keys(last).forEach((id) => {
+                const drawn = draw(id);
+                if (api.onZoom) api.onZoom(id, drawn);
+            });
+        });
+        return api;
+    }
+
     const EMERGENCY_SQUAWKS = new Set(['7500', '7600', '7700']);
     function isEmergencySquawk(squawk) {
         return EMERGENCY_SQUAWKS.has(String(squawk || '').trim());
     }
 
-    return { aircraft, vessel, vectors, isEmergencySquawk, AIRCRAFT };
+    return { aircraft, vessel, vectors, labels, hulls, isEmergencySquawk, AIRCRAFT };
 })();
 
 window.TrackIcons = TrackIcons;
