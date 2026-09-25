@@ -2,6 +2,7 @@
 <html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
 <head>
     <script src="{{ url_for('static', filename='js/core/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/track-icons.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/copy-id.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/device-notes.js') }}"></script>
@@ -213,6 +214,7 @@
         // State
         let vesselMap = null;
         let receptionOutline = null;  // components/reception-outline.js
+        let headingLines = null;       // components/track-icons.js
         let aisMapOverlays = null;
         let vessels = {};
         let markers = {};
@@ -352,22 +354,13 @@
         }
 
         // Create SVG vessel marker icon
+        // Vessel markers with a dark outline (components/track-icons.js)
         function createVesselMarkerIcon(rotation, vesselType, isSelected = false) {
-            const path = VESSEL_ICONS[vesselType] || VESSEL_ICONS.default;
-            const color = VESSEL_COLORS[vesselType] || VESSEL_COLORS.default;
-            const size = 24;
-            const glowColor = isSelected ? 'rgba(255,255,255,0.8)' : color;
-            const glowSize = isSelected ? '8px' : '4px';
-            const trackingRing = isSelected ?
-                '<div class="tracking-ring"></div><div class="tracking-ring-inner"></div>' : '';
-
-            return L.divIcon({
-                className: 'vessel-marker' + (isSelected ? ' selected' : ''),
-                html: `${trackingRing}<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="transform: rotate(${rotation}deg); filter: drop-shadow(0 0 ${glowSize} ${glowColor});">
-                    <path fill="${color}" d="${path}"/>
-                </svg>`,
-                iconSize: [size, size],
-                iconAnchor: [size/2, size/2]
+            return TrackIcons.vessel({
+                path: VESSEL_ICONS[vesselType] || VESSEL_ICONS.default,
+                color: VESSEL_COLORS[vesselType] || VESSEL_COLORS.default,
+                heading: rotation,
+                selected: isSelected,
             });
         }
 
@@ -426,6 +419,18 @@
                 },
                 scaleBar: true,
             });
+
+            // Six minutes ahead (a tenth of an hour), as marine radar shows it: a minute is too short at sea
+            headingLines = TrackIcons.vectors(vesselMap, { seconds: 360, minKnots: 0.5 });
+            // Fade vessels not heard for 3 minutes (at anchor they report that rarely)
+            setInterval(() => {
+                const now = Date.now();
+                Object.keys(markers).forEach((mmsi) => {
+                    const el = markers[mmsi].getElement && markers[mmsi].getElement();
+                    const seen = vessels[mmsi] && vessels[mmsi].last_seen ? vessels[mmsi].last_seen * 1000 : now;
+                    if (el) el.classList.toggle('ti-stale', now - seen > 180000);
+                });
+            }, 10000);
 
             if (window.ReceptionOutline) {
                 receptionOutline = ReceptionOutline.create(vesselMap, {
@@ -810,10 +815,16 @@
             const mmsi = vessel.mmsi;
             if (!vessel.lat || !vessel.lon) return;
 
-            const heading = vessel.heading || vessel.course || 0;
+            const heading = vessel.heading ?? vessel.course ?? 0;
             const vesselType = getVesselIconType(vessel.ship_type);
             const isSelected = mmsi === selectedMmsi;
             const divIcon = createVesselMarkerIcon(heading, vesselType, isSelected);
+
+            // Where it will be in six minutes, on its course and speed over ground
+            if (headingLines) {
+                headingLines.update(mmsi, vessel.lat, vessel.lon, vessel.course, vessel.speed,
+                    VESSEL_COLORS[vesselType] || VESSEL_COLORS.default);
+            }
 
             if (markers[mmsi]) {
                 markers[mmsi].setLatLng([vessel.lat, vessel.lon]);
@@ -836,7 +847,7 @@
             [prevSelected, mmsi].forEach(m => {
                 if (m && vessels[m] && markers[m]) {
                     const vessel = vessels[m];
-                    const heading = vessel.heading || vessel.course || 0;
+                    const heading = vessel.heading ?? vessel.course ?? 0;
                     const vesselType = getVesselIconType(vessel.ship_type);
                     const isSelected = m === mmsi;
                     markers[m].setIcon(createVesselMarkerIcon(heading, vesselType, isSelected));
@@ -973,6 +984,7 @@
                         vesselMap.removeLayer(markers[mmsi]);
                         delete markers[mmsi];
                     }
+                    if (headingLines) headingLines.remove(mmsi);
                     if (trailLines[mmsi]) {
                         vesselMap.removeLayer(trailLines[mmsi]);
                         delete trailLines[mmsi];
