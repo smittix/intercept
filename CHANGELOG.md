@@ -2,6 +2,25 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.29] - 2026-09-25
+
+Map icons, and fixes.
+
+### Changed
+
+- **Aircraft icons**: new top-down silhouettes per type (airliner, widebody, business jet, turboprop, light aircraft, helicopter, military, glider) with a thin dark outline instead of a glow, so they read over satellite imagery. Military aircraft are a lighter khaki on the map.
+- **Heading lines**: each moving aircraft shows where it will be in a minute; each moving ship where it will be in six minutes.
+- **Status on the map**: aircraft on the ground are smaller and grey; emergency squawks (7500/7600/7700) are red with a pulsing ring; aircraft not heard for 20 s, and ships for 3 minutes, fade.
+- **ADS-B** reads the "on ground" flag from the SBS feed.
+- **Ship markers** get the same dark outline.
+
+### Fixed
+
+- Satellite Command: the map's clock covered the Decoded Packets panel, and the grid button covered the track card.
+- On a slow device or connection, a mode whose script took over 5 s to load failed to start ("MeshCore is not defined"); it now starts when the script arrives.
+
+---
+
 ## [2.33.28] - 2026-09-25
 
 Polish round 7.

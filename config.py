@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.28"
+VERSION = "2.33.29"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.29",
+        "date": "September 2026",
+        "highlights": [
+            "New aircraft icons per type with dark outlines, heading lines on aircraft and ships, and status on the map: on the ground, emergency squawk, gone quiet.",
+            "Satellite Command's map controls no longer cover its panels; modes on slow devices no longer fail to start.",
+        ],
+    },
     {
         "version": "2.33.28",
         "date": "September 2026",
