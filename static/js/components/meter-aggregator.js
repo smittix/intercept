@@ -42,9 +42,12 @@ const MeterAggregator = (function() {
      */
     function ingest(data) {
         const msgData = data.Message || {};
-        const meterId = String(msgData.ID || data.id || 'Unknown');
+        // rtlamr names the meter's number per message type: ID (SCM, R900),
+        // EndpointID (SCM+), ERTSerialNumber (IDM, NetIDM). Reading ID alone
+        // put every SCM+ and IDM meter on one "Unknown" card.
+        const meterId = String(msgData.ID ?? msgData.EndpointID ?? msgData.ERTSerialNumber ?? data.id ?? 'Unknown');
         const timestamp = Date.now();
-        const consumption = msgData.Consumption !== undefined ? msgData.Consumption : data.consumption;
+        const consumption = msgData.Consumption ?? msgData.LastConsumptionCount ?? data.consumption;
 
         // Get meter type info if available
         const meterInfo = typeof getMeterTypeInfo === 'function'
@@ -154,7 +157,8 @@ const MeterAggregator = (function() {
         const consumptionDiff = newest.consumption - oldest.consumption;
         const timeDiffHours = (newest.timestamp - oldest.timestamp) / (1000 * 60 * 60);
 
-        if (timeDiffHours <= 0) return null;
+        // Under a minute of readings extrapolates noise to an hourly rate
+        if (timeDiffHours < 1 / 60) return null;
 
         return consumptionDiff / timeDiffHours;
     }
