@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import queue
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, jsonify, render_template, request
 
+from config import DEFAULT_LATITUDE, DEFAULT_LONGITUDE, SHARED_OBSERVER_LOCATION_ENABLED
 from utils.logging import get_logger
 from utils.meshtastic import (
     MeshtasticMessage,
@@ -55,6 +56,19 @@ def _message_callback(msg: MeshtasticMessage) -> None:
             _mesh_queue.put_nowait(msg_dict)
         except queue.Empty:
             pass
+
+
+@meshtastic_bp.route("/dashboard")
+def meshtastic_dashboard() -> Response:
+    """Popout Meshtastic mesh console dashboard."""
+    embedded = request.args.get("embedded", "false") == "true"
+    return render_template(
+        "meshtastic_dashboard.html",
+        shared_observer_location=SHARED_OBSERVER_LOCATION_ENABLED,
+        default_latitude=DEFAULT_LATITUDE,
+        default_longitude=DEFAULT_LONGITUDE,
+        embedded=embedded,
+    )
 
 
 @meshtastic_bp.route("/ports")

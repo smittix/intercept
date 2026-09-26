@@ -2,6 +2,16 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.34] - 2026-09-26
+
+### Added
+
+- **Meshtastic dashboard.** Meshtastic moves out of the main-page SPA to a dedicated `/meshtastic/dashboard` page: the mesh console (connection bar, live message feed and compose), the node map, the channels panel and the channel/traceroute tools, on a full-height layout. The Meshtastic nav buttons (desktop and mobile) now open the dashboard directly. Same client, endpoints and features as before.
+
+### Removed
+
+- The Meshtastic mode from the main-page SPA (its inline panel, mode partial and mode-registry entry), now that it lives on its own dashboard.
+
 ## [2.33.33] - 2026-09-26
 
 ### Added

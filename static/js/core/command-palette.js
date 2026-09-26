@@ -14,7 +14,6 @@ const CommandPalette = (function() {
         { mode: 'rtlamr', label: 'Meters' },
         { mode: 'subghz', label: 'SubGHz' },
         { mode: 'waterfall', label: 'Spectrum Waterfall' },
-        { mode: 'aprs', label: 'APRS' },
         { mode: 'wifi', label: 'WiFi Scanner' },
         { mode: 'bluetooth', label: 'Bluetooth Scanner' },
         { mode: 'bt_locate', label: 'BT Locate' },
@@ -23,7 +22,6 @@ const CommandPalette = (function() {
         { mode: 'weathersat', label: 'Weather Sat' },
         { mode: 'sstv_general', label: 'HF SSTV' },
         { mode: 'gps', label: 'GPS' },
-        { mode: 'meshtastic', label: 'Meshtastic' },
         { mode: 'websdr', label: 'WebSDR' },
         { mode: 'spaceweather', label: 'Space Weather' },
     ];
@@ -219,6 +217,44 @@ const CommandPalette = (function() {
                         stopActiveLocalScansForNavigation();
                     }
                     window.location.href = '/ais/dashboard';
+                }
+            },
+            {
+                title: 'View APRS Dashboard',
+                description: 'Open dedicated APRS dashboard page',
+                keyword: 'aprs packet radio dashboard',
+                run: () => {
+                    if (window.InterceptNavPerf && typeof window.InterceptNavPerf.markStart === 'function') {
+                        window.InterceptNavPerf.markStart({
+                            targetPath: '/aprs/dashboard',
+                            trigger: 'command-palette',
+                            sourceMode: (typeof currentMode === 'string' && currentMode) ? currentMode : null,
+                            activeScans: (typeof getActiveScanSummary === 'function') ? getActiveScanSummary() : null,
+                        });
+                    }
+                    if (typeof stopActiveLocalScansForNavigation === 'function') {
+                        stopActiveLocalScansForNavigation();
+                    }
+                    window.location.href = '/aprs/dashboard';
+                }
+            },
+            {
+                title: 'View Meshtastic Dashboard',
+                description: 'Open dedicated Meshtastic mesh console page',
+                keyword: 'meshtastic mesh lora dashboard',
+                run: () => {
+                    if (window.InterceptNavPerf && typeof window.InterceptNavPerf.markStart === 'function') {
+                        window.InterceptNavPerf.markStart({
+                            targetPath: '/meshtastic/dashboard',
+                            trigger: 'command-palette',
+                            sourceMode: (typeof currentMode === 'string' && currentMode) ? currentMode : null,
+                            activeScans: (typeof getActiveScanSummary === 'function') ? getActiveScanSummary() : null,
+                        });
+                    }
+                    if (typeof stopActiveLocalScansForNavigation === 'function') {
+                        stopActiveLocalScansForNavigation();
+                    }
+                    window.location.href = '/meshtastic/dashboard';
                 }
             },
             {

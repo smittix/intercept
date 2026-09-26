@@ -177,19 +177,6 @@ window.INTERCEPT_MODES = {
             WiFiLocate.init();
         },
     },
-    meshtastic: {
-        label: 'Meshtastic', indicator: 'MESHTASTIC', outputTitle: 'Meshtastic Mesh Monitor', group: 'wireless',
-        elementId: 'meshtasticMode',
-        visuals: true,
-        module: 'Meshtastic',
-        init: () => {
-            Meshtastic.init();
-            // Fix map sizing after container becomes visible
-            setTimeout(() => {
-                Meshtastic.invalidateMap();
-            }, 100);
-        },
-    },
     meshcore: {
         label: 'Meshcore', indicator: 'MESHCORE', outputTitle: 'Meshcore Mesh Monitor', group: 'wireless',
         elementId: 'meshcoreMode',

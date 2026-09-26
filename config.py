@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.33"
+VERSION = "2.33.34"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.34",
+        "date": "September 2026",
+        "highlights": [
+            "Meshtastic now has its own full-page dashboard (/meshtastic/dashboard) with the mesh console, node map, messaging and channels; the Meshtastic nav links open it directly.",
+        ],
+    },
     {
         "version": "2.33.33",
         "date": "September 2026",

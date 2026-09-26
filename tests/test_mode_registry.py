@@ -36,6 +36,8 @@ def test_no_orphan_mode_assets():
     referenced += (ROOT / "templates" / "satellite_dashboard.html").read_text()
     # aprs.css / markers belong to the APRS dashboard (migrated out of the SPA)
     referenced += (ROOT / "templates" / "aprs_dashboard.html").read_text()
+    # meshtastic.css / module belong to the Meshtastic dashboard (migrated out of the SPA)
+    referenced += (ROOT / "templates" / "meshtastic_dashboard.html").read_text()
     for asset_dir, ext in [("static/js/modes", ".js"), ("static/css/modes", ".css")]:
         for f in (ROOT / asset_dir).glob(f"*{ext}"):
             assert f.name in referenced, f"orphaned mode asset: {f}"
