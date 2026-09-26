@@ -242,7 +242,7 @@
         Messages
         </div>
         <div class="mesh-messages-filter">
-        <select id="meshVisualsFilter" onchange="Meshtastic.applyFilter()">
+        <select id="meshVisualsFilter" aria-label="Filter messages by channel" onchange="Meshtastic.applyFilter()">
         <option value="">All Channels</option>
         </select>
         </div>
@@ -266,7 +266,7 @@
         <input type="text" id="meshComposeTo" placeholder="^all (broadcast)" class="mesh-compose-to" title="Destination node ID or ^all for broadcast">
         </div>
         <div class="mesh-compose-body">
-        <input type="text" id="meshComposeText" placeholder="Type a message..." maxlength="237" class="mesh-compose-input" oninput="Meshtastic.updateCharCount()" onkeydown="Meshtastic.handleComposeKeydown(event)">
+        <input type="text" id="meshComposeText" aria-label="Message text" placeholder="Type a message..." maxlength="237" class="mesh-compose-input" oninput="Meshtastic.updateCharCount()" onkeydown="Meshtastic.handleComposeKeydown(event)">
         <button onclick="Meshtastic.sendMessage()" class="mesh-compose-send" title="Send message">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
         <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -314,11 +314,11 @@
                     <div class="signal-details-title">Channel Settings</div>
                     <div class="form-group" style="margin-bottom: 12px;">
                         <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">Channel Name (max 12 chars)</label>
-                        <input type="text" id="meshModalChannelName" maxlength="12" placeholder="MyChannel" style="width: 100%;">
+                        <input type="text" id="meshModalChannelName" aria-label="Channel name" maxlength="12" placeholder="MyChannel" style="width: 100%;">
                     </div>
                     <div class="form-group" style="margin-bottom: 12px;">
                         <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">Encryption (PSK)</label>
-                        <select id="meshModalPskFormat" onchange="Meshtastic.onPskFormatChange()" style="width: 100%; margin-bottom: 8px;">
+                        <select id="meshModalPskFormat" aria-label="Encryption (PSK) format" onchange="Meshtastic.onPskFormatChange()" style="width: 100%; margin-bottom: 8px;">
                             <option value="keep">Keep Current</option>
                             <option value="none">None (No Encryption)</option>
                             <option value="default">Default (Public Key - NOT SECURE)</option>
@@ -328,7 +328,7 @@
                             <option value="hex">Hex Key (0x...)</option>
                         </select>
                         <div id="meshModalPskInputContainer" style="display: none;">
-                            <input type="text" id="meshModalPskValue" placeholder="Enter key..." style="width: 100%;">
+                            <input type="text" id="meshModalPskValue" aria-label="Encryption key" placeholder="Enter key..." style="width: 100%;">
                         </div>
                         <div id="meshModalPskWarning" style="display: none; background: rgba(255,193,7,0.1); border: 1px solid var(--accent-yellow); border-radius: 4px; padding: 8px; margin-top: 8px; font-size: 10px;">
                             <strong style="color: var(--accent-yellow);">Warning:</strong>

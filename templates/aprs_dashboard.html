@@ -76,7 +76,7 @@
                 </div>
                 <div class="strip-divider"></div>
                 <div class="strip-control">
-                    <select id="aprsStripRegion" class="strip-select">
+                    <select id="aprsStripRegion" aria-label="APRS frequency region" class="strip-select">
                         <option value="north_america">N. America (144.390)</option>
                         <option value="europe">Europe (144.800)</option>
                         <option value="uk">UK (144.800)</option>
@@ -93,7 +93,7 @@
                 </div>
                 <div class="strip-control" id="aprsStripCustomFreqControl" style="display: none;">
                     <span class="strip-input-label">FREQ (MHz)</span>
-                    <input type="number" id="aprsStripCustomFreq" class="strip-input" placeholder="144.390" step="0.001" min="144" max="146">
+                    <input type="number" id="aprsStripCustomFreq" aria-label="Custom frequency in MHz" class="strip-input" placeholder="144.390" step="0.001" min="144" max="146">
                 </div>
                 <div class="strip-control">
                     <span class="strip-input-label">DEVICE</span>
@@ -103,7 +103,7 @@
                 </div>
                 <div class="strip-control">
                     <span class="strip-input-label">GAIN</span>
-                    <input type="number" id="aprsStripGain" class="strip-input" value="40" min="0" max="50">
+                    <input type="number" id="aprsStripGain" aria-label="Receiver gain" class="strip-input" value="40" min="0" max="50">
                 </div>
                 <div class="strip-divider"></div>
                 <div class="strip-tools">

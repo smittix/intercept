@@ -19,11 +19,11 @@
     </div>
   </div>
   <div id="meshcoreSerialConfig" class="meshcore-strip-group">
-    <select id="meshcorePortSelect" class="meshcore-strip-select">
+    <select id="meshcorePortSelect" aria-label="Serial port" class="meshcore-strip-select">
       <option value="">Auto-detect</option>
     </select>
     <button class="meshcore-strip-btn" onclick="MeshCore.refreshPorts()" title="Refresh port list">↻</button>
-    <select id="meshcoreBaudSelect" class="meshcore-strip-select" style="width:90px;">
+    <select id="meshcoreBaudSelect" aria-label="Baud rate" class="meshcore-strip-select" style="width:90px;">
       <option value="115200" selected>115200</option>
       <option value="921600">921600</option>
       <option value="57600">57600</option>
@@ -31,11 +31,11 @@
     </select>
   </div>
   <div id="meshcoreTcpConfig" class="meshcore-strip-group" style="display:none;">
-    <input id="meshcoreTcpHost" type="text" placeholder="Host / IP" value="localhost" class="meshcore-strip-input" style="width:120px;">
-    <input id="meshcoreTcpPort" type="number" placeholder="Port" value="5000" class="meshcore-strip-input" style="width:70px;">
+    <input id="meshcoreTcpHost" aria-label="TCP host" type="text" placeholder="Host / IP" value="localhost" class="meshcore-strip-input" style="width:120px;">
+    <input id="meshcoreTcpPort" aria-label="TCP port" type="number" placeholder="Port" value="5000" class="meshcore-strip-input" style="width:70px;">
   </div>
   <div id="meshcoreBleConfig" class="meshcore-strip-group" style="display:none;">
-    <select id="meshcoreBleSelect" class="meshcore-strip-select">
+    <select id="meshcoreBleSelect" aria-label="BLE device" class="meshcore-strip-select">
       <option value="">Scan for devices...</option>
     </select>
     <button class="meshcore-strip-btn" onclick="MeshCore.scanBle()">Scan</button>
@@ -97,10 +97,10 @@
         </div>
       </div>
       <div class="meshcore-compose">
-        <select id="meshcoreRecipientSelect" class="meshcore-compose-select">
+        <select id="meshcoreRecipientSelect" aria-label="Message recipient" class="meshcore-compose-select">
           <option value="BROADCAST">Broadcast</option>
         </select>
-        <input id="meshcoreComposeInput" type="text" placeholder="Type a message (max 237 chars)..." maxlength="237"
+        <input id="meshcoreComposeInput" aria-label="Message text" type="text" placeholder="Type a message (max 237 chars)..." maxlength="237"
                class="meshcore-compose-input" onkeydown="if(event.key==='Enter')MeshCore.sendMessage()">
         <button class="meshcore-compose-btn" onclick="MeshCore.sendMessage()">Send</button>
       </div>
@@ -129,7 +129,7 @@
     <div class="meshcore-tab-panel" id="meshcoreTabTelemetry" style="padding:12px;overflow-y:auto;">
       <div style="margin-bottom:8px;">
         <label class="meshcore-label">Node: </label>
-        <select id="meshcoreTelemetryNodeSelect" onchange="MeshCore.loadTelemetry(this.value)" class="meshcore-strip-select">
+        <select id="meshcoreTelemetryNodeSelect" aria-label="Telemetry node" onchange="MeshCore.loadTelemetry(this.value)" class="meshcore-strip-select">
           <option value="">Select a node</option>
         </select>
       </div>
@@ -150,15 +150,15 @@
     <div class="signal-details-modal-body" style="display:flex;flex-direction:column;gap:10px;">
       <div>
         <label class="meshcore-label" style="display:block;margin-bottom:3px;">Node ID</label>
-        <input id="meshcoreContactNodeId" type="text" placeholder="e.g. NODE001" class="mock-input" style="width:100%;box-sizing:border-box;">
+        <input id="meshcoreContactNodeId" aria-label="Contact node ID" type="text" placeholder="e.g. NODE001" class="mock-input" style="width:100%;box-sizing:border-box;">
       </div>
       <div>
         <label class="meshcore-label" style="display:block;margin-bottom:3px;">Name</label>
-        <input id="meshcoreContactName" type="text" placeholder="Display name" class="mock-input" style="width:100%;box-sizing:border-box;">
+        <input id="meshcoreContactName" aria-label="Contact name" type="text" placeholder="Display name" class="mock-input" style="width:100%;box-sizing:border-box;">
       </div>
       <div>
         <label class="meshcore-label" style="display:block;margin-bottom:3px;">Public Key</label>
-        <input id="meshcoreContactKey" type="text" placeholder="Base64 public key" class="mock-input" style="width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:11px;">
+        <input id="meshcoreContactKey" aria-label="Contact public key" type="text" placeholder="Base64 public key" class="mock-input" style="width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:11px;">
       </div>
     </div>
     <div class="signal-details-modal-footer" style="display:flex;gap:8px;">

@@ -57,6 +57,17 @@ body {
 html[data-ui-tier="lean"] .scanline,
 html[data-ui-tier="lean"] .radar-bg { display: none; }
 
+/* Keyboard focus ring for interactive controls (these dashboards only load
+   this stylesheet, so the selector is safe to keep broad). */
+select:focus-visible,
+input:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--accent-cyan);
+    outline-offset: 2px;
+}
+
 /* Header agent selector (used where the mode supports remote agents) */
 .status-bar {
     display: flex;
