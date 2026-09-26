@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.31"
+VERSION = "2.33.32"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.32",
+        "date": "September 2026",
+        "highlights": [
+            "Main page code split finished: the last large inline script (mode switching, SDR device handling, pager and APRS) now lives in static/js/modes/, so index.html is essentially markup plus linked scripts (down from 7,643 to about 4,000 lines).",
+            "No behaviour change — the moved code is byte-for-byte the original, verified by the browser smoke test across every mode.",
+        ],
+    },
     {
         "version": "2.33.31",
         "date": "September 2026",

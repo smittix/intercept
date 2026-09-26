@@ -2,6 +2,14 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.32] - 2026-09-26
+
+Under the hood; finishes the main page code split.
+
+### Changed
+
+- **Main page code split (final round):** the last large inline `<script>` in index.html — the mode-switch core, SDR device handling, pager, and APRS — moves into four files under static/js/modes/ (core-mode-switch.js, sdr-device.js, pager.js, aprs-spa.js), loaded in the same order as before. index.html goes from 7,643 to 4,014 lines and is now almost entirely markup plus linked scripts. Content moved unchanged (only de-indented; verified byte-for-byte against the original block). Two template-embedded values (the initial device list and the satellite-dashboard version fallback) now read from window.INTERCEPT_INITIAL_DEVICES / window.INTERCEPT_VERSION. No behaviour change; verified by the browser smoke test.
+
 ## [2.33.31] - 2026-09-25
 
 Mostly under the hood.
