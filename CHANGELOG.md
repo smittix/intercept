@@ -2,6 +2,12 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.39] - 2026-09-26
+
+### Added
+
+- **ADS-B \u2192 airband audio (#271).** Selecting an aircraft now shows a "Tune ATC" button that finds the nearest airport to the aircraft\u2019s position and loads its tower/approach/ATIS frequency into the airband receiver, then starts listening. Backed by a bundled OurAirports (public-domain) frequency dataset and a new `/adsb/nearest-airband` lookup. (Nearest-airport tower/approach only; enroute/centre frequencies are out of scope.)
+
 ## [2.33.38] - 2026-09-26
 
 ### Added
