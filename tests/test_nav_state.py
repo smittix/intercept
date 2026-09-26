@@ -9,12 +9,22 @@ def _logged_in_get(client, path):
 
 
 def test_index_page_includes_nav_state_init(client):
-    """nav group init function must be present in the index page."""
+    """nav group init logic must stay wired into the index page.
+
+    The function moved out of an inline <script> into
+    static/js/modes/core-mode-switch.js (main-page code split), so the page
+    must still load that script and the script must still define the init and
+    use localStorage.
+    """
+    from pathlib import Path
+
     resp = _logged_in_get(client, "/")
     assert resp.status_code == 200
     html = resp.data.decode()
-    assert "initNavGroupState" in html
-    assert "localStorage" in html
+    assert "js/modes/core-mode-switch.js" in html
+    src = (Path(__file__).resolve().parent.parent / "static" / "js" / "modes" / "core-mode-switch.js").read_text()
+    assert "initNavGroupState" in src
+    assert "localStorage" in src
 
 
 def test_nav_groups_have_data_group_attributes(client):
