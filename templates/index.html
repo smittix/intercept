@@ -96,7 +96,6 @@
     <script defer src="{{ url_for('static', filename='vendor/chartjs/chartjs-adapter-date-fns.bundle.min.js') }}"></script>
     <script>
         window.INTERCEPT_MODE_STYLE_MAP = {
-            aprs: "{{ url_for('static', filename='css/modes/aprs.css') }}",
             tscm: "{{ url_for('static', filename='css/modes/tscm.css') }}",
             tscmsurvey: "{{ url_for('static', filename='css/modes/tscm-survey.css') }}",
             activity: "{{ url_for('static', filename='css/modes/activity.css') }}",
@@ -376,10 +375,10 @@
                                 <span class="mode-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l2 2h14l2-2"/><path d="M5 18v-4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4"/><path d="M12 12V6"/></svg></span>
                                 <span class="mode-name">Vessels</span>
                             </a>
-                            <button class="mode-card mode-card-sm" onclick="selectMode('aprs')">
+                            <a href="/aprs/dashboard" class="mode-card mode-card-sm" style="text-decoration: none;">
                                 <span class="mode-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
                                 <span class="mode-name">APRS</span>
-                            </button>
+                            </a>
                             <button class="mode-card mode-card-sm" onclick="selectMode('gps')">
                                 <span class="mode-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z"/></svg></span>
                                 <span class="mode-name">GPS</span>
@@ -772,8 +771,6 @@
                 {% include 'partials/modes/wifi.html' %}
 
                 {% include 'partials/modes/bluetooth.html' %}
-
-                {% include 'partials/modes/aprs.html' %}
 
                 {% include 'partials/modes/satellite.html' %}
 
@@ -1265,128 +1262,6 @@
                         </div>
                         <div class="bt-modal-body" id="btModalBody">
                             <!-- Populated by JavaScript -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- APRS Visualizations -->
-                <div id="aprsVisuals" style="display: none; flex-direction: column; gap: 10px; flex: 1; padding: 10px; overflow: hidden; min-height: 0;">
-                    <!-- APRS Function Bar -->
-                    <div class="aprs-strip">
-                        <div class="aprs-strip-inner">
-                            <!-- Stats -->
-                            <div class="strip-stat">
-                                <span class="strip-value" id="aprsStripFreq">--</span>
-                                <span class="strip-label">MHz</span>
-                            </div>
-                            <div class="strip-stat">
-                                <span class="strip-value" id="aprsStripStations">0</span>
-                                <span class="strip-label">STATIONS</span>
-                            </div>
-                            <div class="strip-stat">
-                                <span class="strip-value" id="aprsStripPackets">0</span>
-                                <span class="strip-label">PACKETS</span>
-                            </div>
-                            <div class="strip-stat signal-stat" id="aprsStripSignalStat">
-                                <span class="strip-value" id="aprsStripSignal">--</span>
-                                <span class="strip-label">SIGNAL</span>
-                            </div>
-                            <div class="strip-divider"></div>
-                            <!-- Controls -->
-                            <div class="strip-control">
-                                <select id="aprsStripRegion" class="strip-select">
-                                    <option value="north_america">N. America (144.390)</option>
-                                    <option value="europe">Europe (144.800)</option>
-                                    <option value="uk">UK (144.800)</option>
-                                    <option value="australia">Australia (145.175)</option>
-                                    <option value="new_zealand">New Zealand (144.575)</option>
-                                    <option value="argentina">Argentina (144.930)</option>
-                                    <option value="brazil">Brazil (145.570)</option>
-                                    <option value="japan">Japan (144.640)</option>
-                                    <option value="china">China (144.640)</option>
-                                    <option value="iss">ISS (145.825)</option>
-                                    <option value="sonate2">SONATE-2 (145.825)</option>
-                                    <option value="custom">Custom Frequency</option>
-                                </select>
-                            </div>
-                            <div class="strip-control" id="aprsStripCustomFreqControl" style="display: none;">
-                                <span class="strip-input-label">FREQ (MHz)</span>
-                                <input type="number" id="aprsStripCustomFreq" class="strip-input" placeholder="144.390" step="0.001" min="144" max="146">
-                            </div>
-                            <div class="strip-control">
-                                <span class="strip-input-label">GAIN</span>
-                                <input type="number" id="aprsStripGain" class="strip-input" value="40" min="0" max="50">
-                            </div>
-                            <div class="strip-divider"></div>
-                            <!-- Tool Status Indicators -->
-                            <div class="strip-tools">
-                                <span class="strip-tool" id="aprsStripDirewolf" title="direwolf">DW</span>
-                                <span class="strip-tool" id="aprsStripMultimon" title="multimon-ng">MM</span>
-                            </div>
-                            <span id="aprsGpsIndicator" class="gps-indicator" style="display: none;"
-                                title="GPS connected via gpsd"><span class="gps-dot"></span> GPS</span>
-                            <div class="strip-divider"></div>
-                            <!-- Actions -->
-                            <button type="button" class="strip-btn primary" id="aprsStripStartBtn"
-                                onclick="startAprs()">
-                                ▶ START
-                            </button>
-                            <button type="button" class="strip-btn stop" id="aprsStripStopBtn" onclick="stopAprs()"
-                                style="display: none;">
-                                ◼ STOP
-                            </button>
-                            <!-- Status -->
-                            <div class="strip-status">
-                                <div class="status-dot inactive" id="aprsStripDot"></div>
-                                <span id="aprsStripStatus">STANDBY</span>
-                            </div>
-                            <div class="strip-time" id="aprsStripTime">--:--:-- UTC</div>
-                        </div>
-                    </div>
-                    <!-- Top row: Map and Station List side by side -->
-                    <div style="display: flex; gap: 10px; flex: 1; min-height: 0;">
-                        <!-- Map Panel (larger) -->
-                        <div class="wifi-visual-panel"
-                            style="flex: 2; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden;">
-                            <h5
-                                style="color: var(--accent-cyan); text-shadow: 0 0 10px var(--accent-cyan); padding: 0 10px; margin-bottom: 8px;">
-                                APRS STATION MAP</h5>
-                            <div class="aircraft-map-container" style="flex: 1; display: flex; flex-direction: column;">
-                                <div class="map-header">
-                                    <span id="aprsMapTime">--:--:--</span>
-                                    <span id="aprsMapStatus">STANDBY</span>
-                                </div>
-                                <div id="aprsMap" style="flex: 1; min-height: 350px;"></div>
-                                <div class="map-footer">
-                                    <span>STATIONS: <span id="aprsStationCount">0</span></span>
-                                    <span>PACKETS: <span id="aprsPacketCount">0</span></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Station List Panel -->
-                        <div class="wifi-visual-panel"
-                            style="flex: 1; min-width: 300px; max-width: 400px; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
-                            <h5
-                                style="color: var(--accent-green); text-shadow: 0 0 10px var(--accent-green); margin-bottom: 8px; flex-shrink: 0;">
-                                STATION LIST</h5>
-                            <div id="aprsFilterBarContainer" style="flex-shrink: 0;"></div>
-                            <div id="aprsStationList" class="signal-cards-container" style="flex: 1; overflow-y: auto; font-size: 11px; gap: 8px; min-height: 0;">
-                                <div class="signal-cards-placeholder" style="padding: 20px; text-align: center; color: var(--text-muted);">
-                                    No stations received yet
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bottom row: Packet Log -->
-                    <div class="wifi-visual-panel" style="display: flex; flex-direction: column; max-height: 200px; flex-shrink: 0;">
-                        <h5
-                            style="color: var(--accent-orange); text-shadow: 0 0 10px var(--accent-orange); margin-bottom: 8px;">
-                            PACKET LOG</h5>
-                        <div id="aprsPacketLog"
-                            style="flex: 1; overflow-y: auto; font-family: var(--font-mono); font-size: 10px; background: var(--surface-sunken); padding: 8px; border-radius: 4px;">
-                            <div style="color: var(--text-muted);">Waiting for packets...</div>
                         </div>
                     </div>
                 </div>
@@ -3708,7 +3583,6 @@
     <script src="{{ url_for('static', filename='js/modes/core-mode-switch.js') }}"></script>
     <script src="{{ url_for('static', filename='js/modes/sdr-device.js') }}"></script>
     <script src="{{ url_for('static', filename='js/modes/pager.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/modes/aprs-spa.js') }}"></script>
     <script src="{{ url_for('static', filename='js/modes/satellite-gps-drone.js') }}"></script>
     <script src="{{ url_for('static', filename='js/modes/wifi-dashboard.js') }}"></script>
     <script src="{{ url_for('static', filename='js/modes/feeds-sensor-meters.js') }}"></script>

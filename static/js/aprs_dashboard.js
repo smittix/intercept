@@ -1,14 +1,76 @@
 /**
- * APRS mode for the main page: the Leaflet map, station markers/list, decoder
- * start/stop, SSE/polling streams and the signal meter. (Slated to migrate
- * to a dedicated dashboard; kept isolated here in the meantime.)
- *
- * Moved out of templates/index.html unchanged (only de-indented); a classic
- * script loaded after the inline block, sharing its top-level names as before.
+ * APRS dashboard: full-page Leaflet map, station cards, packet log and signal
+ * meter for the /aprs/dashboard page. The map/marker/stream/meter logic is the
+ * same as the former SPA APRS mode; the glue below replaces the handful of
+ * main-page globals it used (device selection, stop helper, agent state) so the
+ * page is self-contained. Agent selection is handled by js/core/agents.js,
+ * which owns the global `currentAgent` and populates #deviceSelect for remotes.
  */
-// ============================================
-// APRS Functions
-// ============================================
+
+// Stop-request timeouts (the SPA defined these on the main page).
+const LOCAL_STOP_TIMEOUT_MS = 8000;
+const REMOTE_STOP_TIMEOUT_MS = 8000;
+
+// The dashboard has no live GPS stream; it centres on the observer location.
+let gpsLastPosition = null;
+let gpsConnected = false;
+
+function getSelectedDevice() {
+    const el = document.getElementById('deviceSelect');
+    return el ? el.value : '0';
+}
+
+function getSelectedSDRType() {
+    const el = document.getElementById('deviceSelect');
+    const opt = el && el.options[el.selectedIndex];
+    return (opt && opt.dataset.sdrType) || 'rtlsdr';
+}
+
+// No remote-SDR (rtl_tcp) UI on the dashboard; agent mode covers remote sources.
+function getRemoteSDRConfig() {
+    return null;
+}
+
+// Populate the local device selector. agents.js calls this when "Local" is
+// selected and populates the same #deviceSelect itself for remote agents.
+function refreshDevices() {
+    fetch('/devices')
+        .then((r) => r.json())
+        .then((devices) => {
+            const select = document.getElementById('deviceSelect');
+            if (!select) return;
+            select.innerHTML = '';
+            if (!devices || devices.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '0';
+                opt.textContent = 'No devices found';
+                select.appendChild(opt);
+                return;
+            }
+            devices.forEach((d) => {
+                const opt = document.createElement('option');
+                opt.value = d.index;
+                opt.dataset.sdrType = d.sdr_type || 'rtlsdr';
+                opt.textContent = `${d.index}: ${d.name}`;
+                select.appendChild(opt);
+            });
+        })
+        .catch(() => {});
+}
+
+// POST a stop request with a timeout (the SPA had a shared helper for this).
+async function postStopRequest(url, timeoutMs = LOCAL_STOP_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        await fetch(url, { method: 'POST', signal: controller.signal });
+    } catch (e) {
+        /* best effort; the UI has already returned to standby */
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 let aprsMap = null;
 let aprsMapOverlays = null;
 let aprsMarkers = {};
@@ -909,3 +971,12 @@ function updateAprsStationList(packet) {
     // Update filter counts if filter bar exists
     SignalCards.updateCounts(listEl);
 }
+
+// Bring the page up: check tools, build the map, load local devices, and
+// backfill any stations already tracked from a running decoder.
+document.addEventListener('DOMContentLoaded', function () {
+    checkAprsTools();
+    initAprsMap();
+    refreshDevices();
+    loadAprsStationSnapshot(false);
+});
