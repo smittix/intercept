@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.38"
+VERSION = "2.33.39"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.39",
+        "date": "September 2026",
+        "highlights": [
+            "ADS-B dashboard: a \"Tune ATC\" button on a selected aircraft tunes the airband receiver to the nearest airport\u2019s tower/approach frequency for that aircraft\u2019s position (#271).",
+        ],
+    },
     {
         "version": "2.33.38",
         "date": "September 2026",

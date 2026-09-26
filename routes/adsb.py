@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import math
 import os
 import queue
 import shutil
@@ -14,6 +15,8 @@ import threading
 import time
 from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from flask import Blueprint, Response, jsonify, make_response, render_template, request
@@ -1358,6 +1361,64 @@ def adsb_dashboard():
         default_longitude=DEFAULT_LONGITUDE,
         embedded=embedded,
     )
+
+
+_ATC_DATA_PATH = Path(__file__).resolve().parent.parent / "static" / "data" / "atc_frequencies.json"
+
+
+@lru_cache(maxsize=1)
+def _load_atc_airports() -> list[dict]:
+    """Load the bundled ATC-frequency dataset once (built by
+    scripts/build_atc_frequencies.py from OurAirports public-domain data)."""
+    try:
+        return json.loads(_ATC_DATA_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def _haversine_nm(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    r = 3440.065  # nautical miles
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return r * 2 * math.asin(math.sqrt(a))
+
+
+@adsb_bp.route("/nearest-airband")
+def nearest_airband() -> Response:
+    """Nearest airports (with TWR/APP/ATIS frequencies) to a lat/lon.
+
+    Used by the dashboard to tune the airband receiver to the ATC frequency
+    relevant to a selected aircraft's position (issue #271).
+    """
+    try:
+        lat = float(request.args["lat"])
+        lon = float(request.args["lon"])
+    except (KeyError, ValueError):
+        return api_error("lat and lon query parameters are required", 400)
+    try:
+        radius_nm = float(request.args.get("radius_nm", 60))
+    except ValueError:
+        radius_nm = 60.0
+
+    within = []
+    for ap in _load_atc_airports():
+        d = _haversine_nm(lat, lon, ap["lat"], ap["lon"])
+        if d <= radius_nm:
+            within.append((d, ap))
+    within.sort(key=lambda x: x[0])
+
+    airports = [
+        {
+            "ident": ap["ident"],
+            "name": ap["name"],
+            "distance_nm": round(d, 1),
+            "freqs": ap["freqs"],
+        }
+        for d, ap in within[:5]
+    ]
+    return jsonify({"count": len(airports), "airports": airports})
 
 
 @adsb_bp.route("/history")
