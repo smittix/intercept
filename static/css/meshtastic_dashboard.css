@@ -1,52 +1,5 @@
-/* Meshtastic dashboard: page chrome + full-page layout.
-   The mesh console styling (strip, messages, map, sidebar, modals) comes from
-   css/modes/meshtastic.css; this file adds only the page shell. */
-
-@keyframes scan {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(100vh); }
-}
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-}
-
-html, body { height: 100%; }
-body {
-    margin: 0;
-    background: var(--bg-dark);
-    color: var(--text-primary);
-    font-family: var(--font-sans);
-    overflow: hidden;
-}
-
-.radar-bg {
-    position: fixed;
-    inset: 0;
-    background-image:
-        var(--noise-image),
-        linear-gradient(var(--grid-line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 40px 40px, 50px 50px, 50px 50px;
-    pointer-events: none;
-    z-index: 0;
-}
-.scanline {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
-    color: var(--accent-cyan);
-    animation: scan 6s linear infinite;
-    pointer-events: none;
-    z-index: 1000;
-    opacity: 0.25;
-    box-shadow: 0 0 8px currentColor;
-}
-html[data-ui-tier="lean"] .scanline,
-html[data-ui-tier="lean"] .radar-bg { display: none; }
+/* Meshtastic dashboard layout. Page chrome is in dashboard-shell.css;
+   the mesh console styling is in css/modes/meshtastic.css. */
 
 /* Page layout: options rail on the left, mesh console filling the rest */
 .mesh-dashboard {
