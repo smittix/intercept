@@ -102,7 +102,8 @@ Each signal type has its own Flask blueprint:
 - `ais.py` - AIS vessel tracking and VHF DSC distress monitoring
 - `aprs.py` - Amateur packet radio via direwolf
 - `rtlamr.py` - Utility meter reading
-- `meshtastic_routes.py` - Meshtastic LoRa mesh networking
+- `meshtastic.py` - Meshtastic LoRa mesh networking
+- `meshcore.py` - Meshcore LoRa mesh networking
 
 ### Core Utilities (utils/)
 
@@ -163,10 +164,20 @@ Each signal type has its own Flask blueprint:
 
 ### Frontend Structure
 - **UI direction (decided 2026-06-12)**: map-heavy modes get dedicated dashboard
-  pages (`/adsb/dashboard`, `/ais/dashboard`, `/satellite/dashboard`); the SPA
-  in `index.html` keeps text/scan modes. APRS and Meshtastic are map-centric
-  and should migrate to dashboards under their own plans — do not grow their
-  SPA footprint.
+  pages; the SPA in `index.html` keeps text/scan modes. The migration is
+  complete — ADS-B, AIS, satellite, APRS, Meshtastic and Meshcore each have a
+  dashboard (`/adsb/dashboard`, `/ais/dashboard`, `/satellite/dashboard`,
+  `/aprs/dashboard`, `/meshtastic/dashboard`, `/meshcore/dashboard`) served by a
+  route on the mode's blueprint. Their nav buttons and welcome-catalog cards
+  link to the dashboard, and each path is in `DASHBOARD_NAV_PATHS`
+  (`static/js/modes/core-mode-switch.js`) so the SPA tears scans down on
+  navigation. Do not re-add these modes to the SPA registry.
+- **Dashboards**: `templates/<mode>_dashboard.html` — standalone pages using
+  bundled (offline) assets. APRS/Meshtastic/Meshcore share page chrome via
+  `static/css/dashboard-shell.css` (linked before each dashboard's own
+  `static/css/<mode>_dashboard.css`); ADS-B/AIS/satellite predate it and carry
+  their own chrome. Mesh dashboards reuse the existing self-contained
+  `static/js/modes/{meshtastic,meshcore}.js` modules unchanged.
 - **Templates**: `templates/index.html` (main SPA), `templates/partials/modes/*.html` (sidebar panels), `templates/partials/nav.html` (global nav)
 - **JS Modules**: `static/js/modes/*.js` - IIFE pattern per mode (e.g., `WeatherSat`, `SSTV`, `Meshtastic`)
 - **CSS**: `static/css/modes/*.css` - scoped styles per mode, CSS variables for theming (`--bg-card`, `--accent-cyan`, `--font-mono`)
