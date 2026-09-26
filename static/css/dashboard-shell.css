@@ -1,0 +1,127 @@
+/* Shared page chrome for the map dashboards authored together (APRS,
+   Meshtastic, Meshcore): radar-sweep background, scan line, the standard
+   keyframes, body base, and the header agent-selector / GPS indicator.
+   Each dashboard links this first, then its own *_dashboard.css for layout.
+
+   The older ADS-B / AIS / satellite dashboards predate this file and use a
+   slightly different chrome (scan keyframe, radar-bg); they are intentionally
+   left on their own styles until a visual-QA pass can unify them safely. */
+
+@keyframes scan {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(100vh); }
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+@keyframes gps-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+html, body { height: 100%; }
+body {
+    margin: 0;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    overflow: hidden;
+}
+
+.radar-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+        var(--noise-image),
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px, 50px 50px, 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+}
+.scanline {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+    color: var(--accent-cyan);
+    animation: scan 6s linear infinite;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.25;
+    box-shadow: 0 0 8px currentColor;
+}
+html[data-ui-tier="lean"] .scanline,
+html[data-ui-tier="lean"] .radar-bg { display: none; }
+
+/* Keyboard focus ring for interactive controls (these dashboards only load
+   this stylesheet, so the selector is safe to keep broad). */
+select:focus-visible,
+input:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--accent-cyan);
+    outline-offset: 2px;
+}
+
+/* Header agent selector (used where the mode supports remote agents) */
+.status-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+.agent-selector-compact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.agent-selector-compact .agent-select-sm {
+    padding: 4px 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 11px;
+    font-family: var(--font-mono);
+}
+.agent-selector-compact .agent-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    box-shadow: 0 0 6px var(--accent-green);
+}
+.agent-selector-compact .agent-status-dot.offline {
+    background: var(--accent-red);
+    box-shadow: 0 0 6px var(--accent-red);
+}
+
+/* GPS indicator */
+.gps-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid #22c55e;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #22c55e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 10px;
+}
+.gps-indicator .gps-dot {
+    width: 6px;
+    height: 6px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: gps-pulse 2s ease-in-out infinite;
+}

@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/help-modal.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/signal-cards.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/modes/meshtastic.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-shell.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/meshtastic_dashboard.css') }}">
     <script>
         window.INTERCEPT_SHARED_OBSERVER_LOCATION = {{ shared_observer_location | tojson }};
@@ -46,259 +47,182 @@
     {% endif %}
 
     <main class="mesh-dashboard">
-        <div id="meshtasticMode" class="mode-content mesh-sidebar-collapsed active">
-            <!-- Hide Sidebar Button -->
-            <button class="mesh-hide-sidebar-btn" onclick="Meshtastic.toggleSidebar()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="11 17 6 12 11 7"/>
-                    <polyline points="18 17 13 12 18 7"/>
-                </svg>
-                Hide Sidebar
-            </button>
-        
-            <!-- Collapse Toggle for Options Panel -->
-            <div class="mesh-sidebar-toggle" onclick="Meshtastic.toggleOptionsPanel()">
-                <span class="mesh-sidebar-toggle-icon" id="meshSidebarIcon">▶</span>
-                <span class="mesh-sidebar-toggle-text">Meshtastic Options</span>
-            </div>
-        
-            <!-- Collapsible Content -->
-            <div class="mesh-sidebar-content" id="meshSidebarContent">
-                <!-- Channels Panel - shown when connected -->
-                <div class="section" id="meshChannelsSection" style="display: none;">
-                    <h3>Channels</h3>
-                    <div id="meshChannelsList">
-                        <!-- Populated by JavaScript -->
-                    </div>
-                    <button class="preset-btn" onclick="Meshtastic.refreshChannels()" style="width: 100%; margin-top: 8px;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">
-                            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                        </svg>
-                        Refresh Channels
-                    </button>
-                </div>
-        
-                <div class="section">
-                    <h3>Help</h3>
-                    <button class="preset-btn" onclick="Meshtastic.showHelp()" style="width: 100%;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                            <line x1="12" y1="17" x2="12.01" y2="17"/>
-                        </svg>
-                        About Meshtastic
-                    </button>
-                </div>
-        
-                <div class="section">
-                    <h3>Resources</h3>
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <a href="https://meshtastic.org" target="_blank" rel="noopener" class="preset-btn" style="text-decoration: none; text-align: center;">
-                            Meshtastic.org
-                        </a>
-                        <a href="https://meshtastic.org/docs/" target="_blank" rel="noopener" class="preset-btn" style="text-decoration: none; text-align: center;">
-                            Documentation
-                        </a>
-                    </div>
-                </div>
-        
-                <!-- Antenna Guide -->
-                <div class="section">
-                    <h3>Antenna Guide</h3>
-                    <div style="font-size: 11px; color: var(--text-dim); line-height: 1.5;">
-                        <p style="margin-bottom: 8px; color: var(--accent-cyan); font-weight: 600;">
-                            LoRa ISM band &mdash; frequency depends on region
-                        </p>
-        
-                        <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; margin-bottom: 10px;">
-                            <strong style="color: var(--accent-cyan); font-size: 12px;">Stock Device Antenna</strong>
-                            <ul style="margin: 6px 0 0 14px; padding: 0;">
-                                <li><strong style="color: var(--text-primary);">Most devices:</strong> Ship with a small 915/868 MHz stubby antenna</li>
-                                <li><strong style="color: var(--text-primary);">Works for:</strong> Short range (&lt; 1 km) urban, indoor testing</li>
-                                <li><strong style="color: var(--text-primary);">Upgrade:</strong> Replace with tuned antenna for 5&ndash;20x range improvement</li>
-                            </ul>
-                        </div>
-        
-                        <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; margin-bottom: 10px;">
-                            <strong style="color: #00ff88; font-size: 12px;">Recommended Upgrades</strong>
-                            <ul style="margin: 6px 0 0 14px; padding: 0;">
-                                <li><strong style="color: var(--text-primary);">Whip antenna:</strong> ~$8&ndash;15, tuned 915/868 MHz, SMA connector</li>
-                                <li><strong style="color: var(--text-primary);">Ground plane:</strong> 8.2 cm vertical + 4 radials (915 MHz) on SMA</li>
-                                <li><strong style="color: var(--text-primary);">Yagi:</strong> ~$15&ndash;30, directional, great for point-to-point links</li>
-                                <li><strong style="color: var(--text-primary);">Collinear:</strong> ~$20&ndash;40, omnidirectional with higher gain (~5&ndash;8 dBi)</li>
-                            </ul>
-                        </div>
-        
-                        <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; margin-bottom: 10px;">
-                            <strong style="color: var(--accent-cyan); font-size: 12px;">Placement Tips</strong>
-                            <ul style="margin: 6px 0 0 14px; padding: 0;">
-                                <li><strong style="color: var(--text-primary);">Height wins:</strong> Elevating antenna 10m can double or triple range</li>
-                                <li><strong style="color: var(--text-primary);">Line of sight:</strong> LoRa works best with clear LOS to other nodes</li>
-                                <li><strong style="color: var(--text-primary);">Connector:</strong> Most devices use SMA or RP-SMA &mdash; check before buying</li>
-                            </ul>
-                        </div>
-        
-                        <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 10px;">
-                            <strong style="color: var(--accent-cyan); font-size: 12px;">Quick Reference</strong>
-                            <table style="width: 100%; margin-top: 6px; font-size: 10px; border-collapse: collapse;">
-                                <tr style="border-bottom: 1px solid var(--border-color);">
-                                    <td style="padding: 3px 4px; color: var(--text-dim);">US / Americas</td>
-                                    <td style="padding: 3px 4px; color: var(--text-primary); text-align: right;">915 MHz</td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid var(--border-color);">
-                                    <td style="padding: 3px 4px; color: var(--text-dim);">EU / UK / India</td>
-                                    <td style="padding: 3px 4px; color: var(--text-primary); text-align: right;">868 MHz</td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid var(--border-color);">
-                                    <td style="padding: 3px 4px; color: var(--text-dim);">915 MHz &lambda;/4</td>
-                                    <td style="padding: 3px 4px; color: var(--text-primary); text-align: right;">8.2 cm</td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid var(--border-color);">
-                                    <td style="padding: 3px 4px; color: var(--text-dim);">868 MHz &lambda;/4</td>
-                                    <td style="padding: 3px 4px; color: var(--text-primary); text-align: right;">8.6 cm</td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid var(--border-color);">
-                                    <td style="padding: 3px 4px; color: var(--text-dim);">Modulation</td>
-                                    <td style="padding: 3px 4px; color: var(--text-primary); text-align: right;">LoRa (CSS)</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 3px 4px; color: var(--text-dim);">Typical range</td>
-                                    <td style="padding: 3px 4px; color: var(--text-primary); text-align: right;">1&ndash;15 km</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Empty stub kept only so the module's #meshtasticMode lookups resolve. -->
+        <div id="meshtasticMode" class="mode-content" style="display:none;"></div>
 
         <div id="meshtasticVisuals" class="mesh-visuals-container">
-        <!-- Compact Status Strip -->
-        <div class="mesh-stats-strip">
-        <div class="mesh-strip-group">
-        <button class="mesh-strip-sidebar-toggle" onclick="Meshtastic.toggleSidebar()" title="Toggle sidebar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
-        </svg>
-        </button>
-        <div class="mesh-strip-status">
-        <span class="mesh-strip-dot disconnected" id="meshStripDot"></span>
-        <span class="mesh-strip-status-text" id="meshStripStatus">Disconnected</span>
-        </div>
-        <select id="meshStripConnType" class="mesh-strip-select" title="Connection Type" onchange="Meshtastic.onConnectionTypeChange()" style="width: 70px;">
-        <option value="serial">Serial</option>
-        <option value="tcp">TCP</option>
-        </select>
-        <select id="meshStripDevice" class="mesh-strip-select" title="Device">
-        <option value="">Auto-detect</option>
-        </select>
-        <input type="text" id="meshStripHostname" class="mesh-strip-input" placeholder="IP address" title="Hostname/IP for TCP" style="display: none; width: 120px;">
-        <button class="mesh-strip-btn connect" id="meshStripConnectBtn" onclick="Meshtastic.start()">Connect</button>
-        <button class="mesh-strip-btn disconnect" id="meshStripDisconnectBtn" onclick="Meshtastic.stop()" style="display: none;">Disconnect</button>
-        </div>
-        <div class="mesh-strip-divider"></div>
-        <div class="mesh-strip-group">
-        <div class="mesh-strip-stat">
-        <span class="mesh-strip-value" id="meshStripNodeName">--</span>
-        <span class="mesh-strip-label">NODE</span>
-        </div>
-        <div class="mesh-strip-stat">
-        <span class="mesh-strip-value mesh-strip-id" id="meshStripNodeId">--</span>
-        <span class="mesh-strip-label">ID</span>
-        </div>
-        <div class="mesh-strip-stat">
-        <span class="mesh-strip-value" id="meshStripModel">--</span>
-        <span class="mesh-strip-label">MODEL</span>
-        </div>
-        <div class="mesh-strip-stat" id="meshStripSatsRow" style="display: none;">
-        <span class="mesh-strip-value" id="meshStripSats">--</span>
-        <span class="mesh-strip-label">SATS</span>
-        </div>
-        </div>
-        <div class="mesh-strip-divider"></div>
-        <div class="mesh-strip-group">
-        <div class="mesh-strip-stat">
-        <span class="mesh-strip-value accent-cyan" id="meshStripMsgCount">0</span>
-        <span class="mesh-strip-label">MSGS</span>
-        </div>
-        <div class="mesh-strip-stat">
-        <span class="mesh-strip-value accent-green" id="meshStripNodeCount">0</span>
-        <span class="mesh-strip-label">NODES</span>
-        </div>
-        </div>
-        </div>
+            <div class="mesh-stats-strip">
+            <div class="mesh-strip-group">
+            <button class="mesh-strip-sidebar-toggle" onclick="Meshtastic.toggleSidebar()" title="Toggle sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
+            </svg>
+            </button>
+            <div class="mesh-strip-status">
+            <span class="mesh-strip-dot disconnected" id="meshStripDot"></span>
+            <span class="mesh-strip-status-text" id="meshStripStatus">Disconnected</span>
+            </div>
+            <select id="meshStripConnType" class="mesh-strip-select" title="Connection Type" onchange="Meshtastic.onConnectionTypeChange()" style="width: 70px;">
+            <option value="serial">Serial</option>
+            <option value="tcp">TCP</option>
+            </select>
+            <select id="meshStripDevice" class="mesh-strip-select" title="Device">
+            <option value="">Auto-detect</option>
+            </select>
+            <input type="text" id="meshStripHostname" class="mesh-strip-input" placeholder="IP address" title="Hostname/IP for TCP" style="display: none; width: 120px;">
+            <button class="mesh-strip-btn connect" id="meshStripConnectBtn" onclick="Meshtastic.start()">Connect</button>
+            <button class="mesh-strip-btn disconnect" id="meshStripDisconnectBtn" onclick="Meshtastic.stop()" style="display: none;">Disconnect</button>
+            </div>
+            <div class="mesh-strip-divider"></div>
+            <div class="mesh-strip-group">
+            <div class="mesh-strip-stat">
+            <span class="mesh-strip-value" id="meshStripNodeName">--</span>
+            <span class="mesh-strip-label">NODE</span>
+            </div>
+            <div class="mesh-strip-stat">
+            <span class="mesh-strip-value mesh-strip-id" id="meshStripNodeId">--</span>
+            <span class="mesh-strip-label">ID</span>
+            </div>
+            <div class="mesh-strip-stat">
+            <span class="mesh-strip-value" id="meshStripModel">--</span>
+            <span class="mesh-strip-label">MODEL</span>
+            </div>
+            <div class="mesh-strip-stat" id="meshStripSatsRow" style="display: none;">
+            <span class="mesh-strip-value" id="meshStripSats">--</span>
+            <span class="mesh-strip-label">SATS</span>
+            </div>
+            </div>
+            <div class="mesh-strip-divider"></div>
+            <div class="mesh-strip-group">
+            <div class="mesh-strip-stat">
+            <span class="mesh-strip-value accent-cyan" id="meshStripMsgCount">0</span>
+            <span class="mesh-strip-label">MSGS</span>
+            </div>
+            <div class="mesh-strip-stat">
+            <span class="mesh-strip-value accent-green" id="meshStripNodeCount">0</span>
+            <span class="mesh-strip-label">NODES</span>
+            </div>
+            </div>
+            </div>
 
-        <!-- Main Content Row (Messages + Map side by side) -->
-        <div class="mesh-main-row">
-        <!-- Messages Section -->
-        <div class="mesh-messages-section">
-        <div class="mesh-messages-header">
-        <div class="mesh-messages-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        Messages
-        </div>
-        <div class="mesh-messages-filter">
-        <select id="meshVisualsFilter" onchange="Meshtastic.applyFilter()">
-        <option value="">All Channels</option>
-        </select>
-        </div>
-        </div>
-        <div class="mesh-messages-list" id="meshMessagesGrid">
-        <div class="mesh-messages-empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
-        </svg>
-        <p>Connect to a Meshtastic device to see messages</p>
-        </div>
-        </div>
-        <!-- Message Compose Box -->
-        <div class="mesh-compose" id="meshCompose" style="display: none;">
-        <div class="mesh-compose-header">
-        <select id="meshComposeChannel" class="mesh-compose-channel" title="Channel to send on">
-        <option value="0">CH 0</option>
-        </select>
-        <input type="text" id="meshComposeTo" placeholder="^all (broadcast)" class="mesh-compose-to" title="Destination node ID or ^all for broadcast">
-        </div>
-        <div class="mesh-compose-body">
-        <input type="text" id="meshComposeText" placeholder="Type a message..." maxlength="237" class="mesh-compose-input" oninput="Meshtastic.updateCharCount()" onkeydown="Meshtastic.handleComposeKeydown(event)">
-        <button onclick="Meshtastic.sendMessage()" class="mesh-compose-send" title="Send message">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
-        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-        </svg>
-        </button>
-        </div>
-        <div class="mesh-compose-hint">
-        <span id="meshComposeCount">0</span>/237
-        </div>
-        </div>
-        </div>
+            <!-- Map (always visible) beside a tabbed side panel -->
+            <div class="mesh-main-row">
+                <div class="mesh-map-section">
+                <div class="mesh-map-header">
+                <div class="mesh-map-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
+                </svg>
+                Node Map
+                </div>
+                <div class="mesh-map-stats">
+                <span>NODES: <span id="meshMapNodeCount">0</span></span>
+                <span>WITH GPS: <span id="meshMapGpsCount">0</span></span>
+                </div>
+                </div>
+                <div id="meshMap" class="mesh-map"></div>
+                </div>
 
-        <!-- Node Map -->
-        <div class="mesh-map-section">
-        <div class="mesh-map-header">
-        <div class="mesh-map-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
-        <circle cx="12" cy="12" r="10"/>
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
-        </svg>
-        Node Map
-        </div>
-        <div class="mesh-map-stats">
-        <span>NODES: <span id="meshMapNodeCount">0</span></span>
-        <span>WITH GPS: <span id="meshMapGpsCount">0</span></span>
-        </div>
-        </div>
-        <div id="meshMap" class="mesh-map"></div>
-        </div>
-        </div>
+                <div class="mesh-side-tabs">
+                    <div class="mesh-tabbar" role="tablist">
+                        <button type="button" class="mesh-tabbtn active" data-mtab="messages" onclick="meshDashTab('messages')" aria-label="Messages tab">Messages</button>
+                        <button type="button" class="mesh-tabbtn" data-mtab="channels" onclick="meshDashTab('channels')" aria-label="Channels tab">Channels</button>
+                        <button type="button" class="mesh-tabbtn" data-mtab="info" onclick="meshDashTab('info')" aria-label="Info tab">Info</button>
+                    </div>
+                    <div class="mesh-tabpane active" data-mpane="messages">
+                        <div class="mesh-messages-section">
+                        <div class="mesh-messages-header">
+                        <div class="mesh-messages-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        Messages
+                        </div>
+                        <div class="mesh-messages-filter">
+                        <select id="meshVisualsFilter" aria-label="Filter messages by channel" onchange="Meshtastic.applyFilter()">
+                        <option value="">All Channels</option>
+                        </select>
+                        </div>
+                        </div>
+                        <div class="mesh-messages-list" id="meshMessagesGrid">
+                        <div class="mesh-messages-empty">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
+                        </svg>
+                        <p>Connect to a Meshtastic device to see messages</p>
+                        </div>
+                        </div>
+                        <!-- Message Compose Box -->
+                        <div class="mesh-compose" id="meshCompose" style="display: none;">
+                        <div class="mesh-compose-header">
+                        <select id="meshComposeChannel" class="mesh-compose-channel" title="Channel to send on">
+                        <option value="0">CH 0</option>
+                        </select>
+                        <input type="text" id="meshComposeTo" placeholder="^all (broadcast)" class="mesh-compose-to" title="Destination node ID or ^all for broadcast">
+                        </div>
+                        <div class="mesh-compose-body">
+                        <input type="text" id="meshComposeText" aria-label="Message text" placeholder="Type a message..." maxlength="237" class="mesh-compose-input" oninput="Meshtastic.updateCharCount()" onkeydown="Meshtastic.handleComposeKeydown(event)">
+                        <button onclick="Meshtastic.sendMessage()" class="mesh-compose-send" title="Send message">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                        </button>
+                        </div>
+                        <div class="mesh-compose-hint">
+                        <span id="meshComposeCount">0</span>/237
+                        </div>
+                        </div>
+                        </div>
+                    </div>
+                    <div class="mesh-tabpane" data-mpane="channels">
+                        <div class="section" id="meshChannelsSection" style="display: none;">
+                        <h3>Channels</h3>
+                        <div id="meshChannelsList">
+                        <!-- Populated by JavaScript -->
+                        </div>
+                        <button class="preset-btn" onclick="Meshtastic.refreshChannels()" style="width: 100%; margin-top: 8px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">
+                        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                        Refresh Channels
+                        </button>
+                        </div>
+                        <div class="mesh-tab-hint" id="meshChannelsHint">Connect to a device to load its channels.</div>
+                    </div>
+                    <div class="mesh-tabpane" data-mpane="info">
+                        <div class="section">
+                        <h3>Help</h3>
+                        <button class="preset-btn" onclick="Meshtastic.showHelp()" style="width: 100%;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        About Meshtastic
+                        </button>
+                        </div>
+                        <div class="section">
+                        <h3>Resources</h3>
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <a href="https://meshtastic.org" target="_blank" rel="noopener" class="preset-btn" style="text-decoration: none; text-align: center;">
+                        Meshtastic.org
+                        </a>
+                        <a href="https://meshtastic.org/docs/" target="_blank" rel="noopener" class="preset-btn" style="text-decoration: none; text-align: center;">
+                        Documentation
+                        </a>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
+
 
     <!-- Channel Configuration Modal -->
     <div id="meshChannelModal" class="signal-details-modal">
@@ -313,11 +237,11 @@
                     <div class="signal-details-title">Channel Settings</div>
                     <div class="form-group" style="margin-bottom: 12px;">
                         <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">Channel Name (max 12 chars)</label>
-                        <input type="text" id="meshModalChannelName" maxlength="12" placeholder="MyChannel" style="width: 100%;">
+                        <input type="text" id="meshModalChannelName" aria-label="Channel name" maxlength="12" placeholder="MyChannel" style="width: 100%;">
                     </div>
                     <div class="form-group" style="margin-bottom: 12px;">
                         <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">Encryption (PSK)</label>
-                        <select id="meshModalPskFormat" onchange="Meshtastic.onPskFormatChange()" style="width: 100%; margin-bottom: 8px;">
+                        <select id="meshModalPskFormat" aria-label="Encryption (PSK) format" onchange="Meshtastic.onPskFormatChange()" style="width: 100%; margin-bottom: 8px;">
                             <option value="keep">Keep Current</option>
                             <option value="none">None (No Encryption)</option>
                             <option value="default">Default (Public Key - NOT SECURE)</option>
@@ -327,7 +251,7 @@
                             <option value="hex">Hex Key (0x...)</option>
                         </select>
                         <div id="meshModalPskInputContainer" style="display: none;">
-                            <input type="text" id="meshModalPskValue" placeholder="Enter key..." style="width: 100%;">
+                            <input type="text" id="meshModalPskValue" aria-label="Encryption key" placeholder="Enter key..." style="width: 100%;">
                         </div>
                         <div id="meshModalPskWarning" style="display: none; background: rgba(255,193,7,0.1); border: 1px solid var(--accent-yellow); border-radius: 4px; padding: 8px; margin-top: 8px; font-size: 10px;">
                             <strong style="color: var(--accent-yellow);">Warning:</strong>
@@ -365,6 +289,16 @@
     <script src="{{ url_for('static', filename='js/core/global-nav.js') }}"></script>
     <script src="{{ url_for('static', filename='js/modes/meshtastic.js') }}"></script>
     <script>
+        // Side-panel tabs (presentation only; the map stays visible alongside).
+        function meshDashTab(name) {
+            document.querySelectorAll('.mesh-tabbtn').forEach(function (b) {
+                b.classList.toggle('active', b.dataset.mtab === name);
+            });
+            document.querySelectorAll('.mesh-tabpane').forEach(function (p) {
+                p.classList.toggle('active', p.dataset.mpane === name);
+            });
+        }
+
         // Bring the mesh console up on the dedicated page.
         document.addEventListener('DOMContentLoaded', function () {
             Meshtastic.init();
