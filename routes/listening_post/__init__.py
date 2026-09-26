@@ -18,7 +18,7 @@ import struct
 import subprocess
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from flask import Blueprint
@@ -178,7 +178,7 @@ def add_activity_log(event_type: str, frequency: float, details: str = ""):
     """Add entry to activity log."""
     with activity_log_lock:
         entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
             "type": event_type,
             "frequency": frequency,
             "details": details,

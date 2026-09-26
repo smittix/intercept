@@ -12,7 +12,7 @@ import shutil
 import subprocess
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Blueprint, Response, jsonify, request
 
@@ -120,7 +120,7 @@ def stream_acars_output(process: subprocess.Popen, is_text_mode: bool = False) -
 
                 # Add our metadata
                 data["type"] = "acars"
-                data["timestamp"] = datetime.utcnow().isoformat() + "Z"
+                data["timestamp"] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z"
 
                 # Enrich with translated label and parsed fields
                 try:

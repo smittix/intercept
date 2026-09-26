@@ -7,7 +7,7 @@ import math
 import threading
 import time
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import requests
 from flask import Blueprint, Response, jsonify, make_response, render_template, request
@@ -342,7 +342,7 @@ def _start_satellite_tracker():
                 msg = {
                     "type": "positions",
                     "positions": positions,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                 }
                 try:
                     app_module.satellite_queue.put_nowait(msg)
@@ -797,7 +797,7 @@ def get_satellite_position():
         except Exception as e:
             logger.warning(f"TLE write-back failed (non-fatal): {e}")
 
-    return jsonify({"status": "success", "positions": positions, "timestamp": datetime.utcnow().isoformat()})
+    return jsonify({"status": "success", "positions": positions, "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()})
 
 
 @satellite_bp.route("/transmitters/<int:norad_id>")

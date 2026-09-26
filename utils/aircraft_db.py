@@ -7,7 +7,7 @@ import json
 import logging
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from urllib.error import URLError
 from urllib.request import Request, urlopen
@@ -72,7 +72,7 @@ def _save_meta(version: str) -> None:
     try:
         meta = {
             "version": version,
-            "downloaded": datetime.utcnow().isoformat() + "Z",
+            "downloaded": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
         }
         with open(DB_META_FILE, "w") as f:
             json.dump(meta, f, indent=2)
@@ -222,7 +222,7 @@ def download_database(progress_callback=None) -> dict[str, Any]:
             json.dump(combined, f, separators=(",", ":"))  # Compact JSON
 
         # Get version from GitHub
-        version = datetime.utcnow().strftime("%Y-%m-%d")
+        version = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
         try:
             req = Request(GITHUB_API_URL, headers={"User-Agent": "Intercept-SIGINT"})
             with urlopen(req, timeout=10) as response:

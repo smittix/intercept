@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.30"
+VERSION = "2.33.31"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.31",
+        "date": "September 2026",
+        "highlights": [
+            "Main page slimmed: satellite/GPS/drone, device intelligence, Wi-Fi and the 433 MHz/meter feeds now live in their own files (index.html is roughly half its former size).",
+            "Theme now syncs across devices (the sync had been silently 404ing), and the deprecated datetime.utcnow() is gone.",
+        ],
+    },
     {
         "version": "2.33.30",
         "date": "September 2026",

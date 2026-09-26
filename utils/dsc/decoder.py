@@ -29,7 +29,7 @@ import json
 import logging
 import sys
 from collections.abc import Generator
-from datetime import datetime
+from datetime import datetime, timezone
 
 import numpy as np
 from scipy import signal as scipy_signal
@@ -528,7 +528,7 @@ class DSCDecoder:
             "format_text": FORMAT_TEXT.get(format_code, f"UNKNOWN-{format_code}"),
             "eos": eos,
             "eos_text": EOS_TEXT.get(eos, f"UNKNOWN-{eos}"),
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
         }
         if is_distress_ack:
             message["format_text"] = "DISTRESS_ACK_OR_SELF_CANCEL"
