@@ -1,6 +1,6 @@
 # Meshtastic & Meshcore → dedicated dashboards (Round B plan)
 
-Status: **proposed, awaiting approval.** No code written yet. Follow-up to the
+Status: **B1 (Meshtastic) done** in v2.33.34 — `/meshtastic/dashboard` shipped and Meshtastic removed from the SPA. B2 (Meshcore) remains. Follow-up to the
 APRS migration (Round A, shipped in v2.33.33); see
 [[aprs-meshtastic-dashboard-migration]].
 
