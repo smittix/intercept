@@ -9,8 +9,9 @@ from __future__ import annotations
 import json
 import queue
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, jsonify, render_template, request
 
+from config import DEFAULT_LATITUDE, DEFAULT_LONGITUDE, SHARED_OBSERVER_LOCATION_ENABLED
 from utils.logging import get_logger
 from utils.meshcore import (
     BLEConfig,
@@ -30,6 +31,19 @@ meshcore_bp = Blueprint("meshcore", __name__, url_prefix="/meshcore")
 
 def _client():
     return get_meshcore_client()
+
+
+@meshcore_bp.route("/dashboard")
+def meshcore_dashboard() -> Response:
+    """Popout Meshcore mesh console dashboard."""
+    embedded = request.args.get("embedded", "false") == "true"
+    return render_template(
+        "meshcore_dashboard.html",
+        shared_observer_location=SHARED_OBSERVER_LOCATION_ENABLED,
+        default_latitude=DEFAULT_LATITUDE,
+        default_longitude=DEFAULT_LONGITUDE,
+        embedded=embedded,
+    )
 
 
 # ---------------------------------------------------------------------------

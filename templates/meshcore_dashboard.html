@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
+<head>
+    <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/utils.js') }}"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MESHCORE // INTERCEPT - See the Invisible</title>
+    <script>(function(){var t=localStorage.getItem('intercept-ui-tier')||'enhanced';document.documentElement.setAttribute('data-ui-tier',t);})();</script>
+    <!-- Dedicated dashboards always use bundled assets so navigation is not
+         blocked by external CDN reachability. -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts-local.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/core/variables.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/ux-platform.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/core/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/core/map-utils.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/help-modal.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/signal-cards.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modes/meshcore.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/meshcore_dashboard.css') }}">
+    <script>
+        window.INTERCEPT_SHARED_OBSERVER_LOCATION = {{ shared_observer_location | tojson }};
+        window.INTERCEPT_DEFAULT_LAT = {{ default_latitude | tojson }};
+        window.INTERCEPT_DEFAULT_LON = {{ default_longitude | tojson }};
+    </script>
+    <script defer src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='vendor/chartjs/chart.umd.min.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='js/core/observer-location.js') }}"></script>
+</head>
+<body data-mode="meshcore">
+    <div class="radar-bg"></div>
+    <div class="scanline"></div>
+
+    <header class="header">
+        <div class="logo">
+            MESHCORE
+            <span>// <span class="brand-i"><svg viewBox="36 14 28 68" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="20" r="6" fill="#00ff88"/><rect x="44" y="33" width="12" height="45" rx="2" fill="#00d4ff"/><rect x="38" y="33" width="24" height="4" rx="1" fill="#00d4ff"/><rect x="38" y="74" width="24" height="4" rx="1" fill="#00d4ff"/></svg></span>NTERCEPT - Meshcore Mesh Monitor</span>
+        </div>
+    </header>
+
+    {% if not embedded %}
+    {% set active_mode = 'meshcore' %}
+    {% include 'partials/nav.html' with context %}
+    {% endif %}
+
+    <main class="meshcore-dashboard">
+        <div id="meshcoreVisuals" class="mesh-visuals-container">
+            {% include 'partials/modes/meshcore.html' %}
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/map-utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/global-nav.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/modes/meshcore.js') }}"></script>
+    <script>
+        // Bring the Meshcore console up on the dedicated page.
+        document.addEventListener('DOMContentLoaded', function () {
+            MeshCore.init();
+            setTimeout(function () {
+                if (MeshCore.invalidateMap) MeshCore.invalidateMap();
+            }, 200);
+        });
+    </script>
+</body>
+</html>

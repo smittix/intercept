@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.34"
+VERSION = "2.33.35"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.35",
+        "date": "September 2026",
+        "highlights": [
+            "Meshcore now has its own full-page dashboard (/meshcore/dashboard) with messages, node map, repeaters and telemetry; the Meshcore nav links open it directly. This completes moving the map-centric modes (ADS-B, AIS, satellite, APRS, Meshtastic, Meshcore) out of the main-page SPA into dedicated dashboards.",
+        ],
+    },
     {
         "version": "2.33.34",
         "date": "September 2026",
