@@ -479,28 +479,29 @@ def _stop_audio_stream_internal():
 
     had_processes = audio_process is not None or audio_rtl_process is not None
 
-    # Kill the pipeline processes and their groups
-    if audio_process:
+    def _stop_proc_group(proc):
+        if not proc:
+            return
         try:
-            # Kill entire process group (SDR demod + ffmpeg)
-            try:
-                os.killpg(os.getpgid(audio_process.pid), signal.SIGKILL)
-            except (ProcessLookupError, PermissionError):
-                audio_process.kill()
-            audio_process.wait(timeout=0.5)
-        except Exception:
-            pass
-
-    if audio_rtl_process:
+            pgid = os.getpgid(proc.pid)
+            os.killpg(pgid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            with contextlib.suppress(Exception):
+                proc.terminate()
         try:
+            proc.wait(timeout=0.5)
+        except subprocess.TimeoutExpired:
             try:
-                os.killpg(os.getpgid(audio_rtl_process.pid), signal.SIGKILL)
+                pgid = os.getpgid(proc.pid)
+                os.killpg(pgid, signal.SIGKILL)
             except (ProcessLookupError, PermissionError):
-                audio_rtl_process.kill()
-            audio_rtl_process.wait(timeout=0.5)
-        except Exception:
-            pass
+                with contextlib.suppress(Exception):
+                    proc.kill()
+            with contextlib.suppress(Exception):
+                proc.wait(timeout=0.5)
 
+    _stop_proc_group(audio_process)
+    _stop_proc_group(audio_rtl_process)
     audio_process = None
     audio_rtl_process = None
 

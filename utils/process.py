@@ -223,7 +223,8 @@ def cleanup_stale_processes() -> None:
     processes_to_kill = ["rtl_adsb", "rtl_433", "multimon-ng", "rtl_fm"]
     for proc_name in processes_to_kill:
         with contextlib.suppress(subprocess.SubprocessError, OSError):
-            subprocess.run(["pkill", "-9", proc_name], capture_output=True)
+            # Use SIGTERM instead of SIGKILL (-9) to allow SDR hardware handles to close clean
+            subprocess.run(["pkill", proc_name], capture_output=True)
 
 
 _DUMP1090_PID_FILE = Path(__file__).resolve().parent.parent / "instance" / "dump1090.pid"

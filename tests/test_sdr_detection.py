@@ -18,13 +18,15 @@ def _clear_detection_caches():
 
 
 @patch("utils.sdr.detection.get_tool_path", return_value="/usr/bin/rtl_test")
-@patch("utils.sdr.detection.subprocess.run")
-def test_detect_rtlsdr_devices_filters_empty_serial_entries(mock_run, _mock_tool_path):
+@patch("utils.sdr.detection.subprocess.Popen")
+def test_detect_rtlsdr_devices_filters_empty_serial_entries(mock_popen, _mock_tool_path):
     """Ignore malformed rtl_test rows that have an empty SN field."""
-    mock_result = MagicMock()
-    mock_result.stdout = ""
-    mock_result.stderr = "Found 3 device(s):\n  0:  ??C?, , SN:\n  1:  ??C?, , SN:\n  2:  RTLSDRBlog, Blog V4, SN: 1\n"
-    mock_run.return_value = mock_result
+    mock_proc = MagicMock()
+    mock_proc.communicate.return_value = (
+        "",
+        "Found 3 device(s):\n  0:  ??C?, , SN:\n  1:  ??C?, , SN:\n  2:  RTLSDRBlog, Blog V4, SN: 1\n",
+    )
+    mock_popen.return_value = mock_proc
 
     devices = detect_rtlsdr_devices()
 
@@ -36,20 +38,40 @@ def test_detect_rtlsdr_devices_filters_empty_serial_entries(mock_run, _mock_tool
 
 
 @patch("utils.sdr.detection.get_tool_path", return_value="/usr/bin/rtl_test")
-@patch("utils.sdr.detection.subprocess.run")
-def test_detect_rtlsdr_devices_uses_replace_decode_mode(mock_run, _mock_tool_path):
+@patch("utils.sdr.detection.subprocess.Popen")
+def test_detect_rtlsdr_devices_uses_replace_decode_mode(mock_popen, _mock_tool_path):
     """Run rtl_test with tolerant decoding for malformed output bytes."""
-    mock_result = MagicMock()
-    mock_result.stdout = ""
-    mock_result.stderr = "Found 0 device(s):"
-    mock_run.return_value = mock_result
+    mock_proc = MagicMock()
+    mock_proc.communicate.return_value = ("", "Found 0 device(s):")
+    mock_popen.return_value = mock_proc
 
     detect_rtlsdr_devices()
 
-    _, kwargs = mock_run.call_args
+    _, kwargs = mock_popen.call_args
     assert kwargs["text"] is True
     assert kwargs["encoding"] == "utf-8"
     assert kwargs["errors"] == "replace"
+
+
+@patch("utils.sdr.detection.get_tool_path", return_value="/usr/bin/rtl_test")
+@patch("utils.sdr.detection.subprocess.Popen")
+def test_detect_rtlsdr_devices_timeout_graceful_recovery(mock_popen, _mock_tool_path):
+    """Gracefully catch timeout, terminate with SIGINT, and recover parsed devices."""
+    import subprocess
+
+    mock_proc = MagicMock()
+    # First communicate raises TimeoutExpired, second returns output captured so far
+    mock_proc.communicate.side_effect = [
+        subprocess.TimeoutExpired(cmd=["rtl_test"], timeout=5),
+        ("", "Found 1 device(s):\n  0:  Realtek, RTL2838UHIDIR, SN: 00000001\n"),
+    ]
+    mock_popen.return_value = mock_proc
+
+    devices = detect_rtlsdr_devices()
+
+    assert len(devices) == 1
+    assert devices[0].serial == "00000001"
+    assert mock_proc.send_signal.called
 
 
 # ---- HackRF detection tests ----
