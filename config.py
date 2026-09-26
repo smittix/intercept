@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.35"
+VERSION = "2.33.36"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.36",
+        "date": "September 2026",
+        "highlights": [
+            "Meshtastic dashboard reworked into a map + tabbed side panel (Messages / Channels / Info), with the node map always visible.",
+            "Accessibility: keyboard focus rings and control labels added across the APRS, Meshtastic and Meshcore dashboards.",
+        ],
+    },
     {
         "version": "2.33.35",
         "date": "September 2026",

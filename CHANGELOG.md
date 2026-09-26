@@ -2,6 +2,14 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.36] - 2026-09-26
+
+### Changed
+
+- **Meshtastic dashboard layout.** Reworked into a map + tabbed side panel (Messages / Channels / Info) with the node map always visible, closing the earlier layout gap and matching the Meshcore dashboard. Presentation-only; the module and its element ids are unchanged.
+- **Accessibility (map dashboards).** Added a shared keyboard focus ring and aria-labels for the selects and inputs that lacked a visible label on the APRS, Meshtastic and Meshcore dashboards.
+- **Internal.** The APRS/Meshtastic/Meshcore dashboards now share their page chrome (background, scan line, header controls) via a single `dashboard-shell.css` instead of duplicating it.
+
 ## [2.33.35] - 2026-09-26
 
 ### Added
