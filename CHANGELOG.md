@@ -2,6 +2,16 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.35] - 2026-09-26
+
+### Added
+
+- **Meshcore dashboard.** Meshcore moves out of the main-page SPA to a dedicated `/meshcore/dashboard` page: the mesh console (connection bar, transports, messages/compose), the node/contacts panel and the Messages/Map/Repeaters/Telemetry tabs, on a full-height layout. The Meshcore nav buttons (desktop and mobile) now open the dashboard directly. This completes the migration of the map-centric modes (ADS-B, AIS, satellite, APRS, Meshtastic, Meshcore) to dedicated dashboards.
+
+### Removed
+
+- The Meshcore mode from the main-page SPA (its inline panel and mode-registry entry), now that it lives on its own dashboard.
+
 ## [2.33.34] - 2026-09-26
 
 ### Added
