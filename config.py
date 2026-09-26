@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.36"
+VERSION = "2.33.37"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.37",
+        "date": "September 2026",
+        "highlights": [
+            "Housekeeping: the APRS/Meshtastic/Meshcore dashboards now share a common page <head> partial, the docs were brought in line with the dashboard migration, and the satellite dashboard tab title casing was fixed.",
+        ],
+    },
     {
         "version": "2.33.36",
         "date": "September 2026",
