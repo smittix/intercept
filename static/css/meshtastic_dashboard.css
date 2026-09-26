@@ -1,62 +1,102 @@
 /* Meshtastic dashboard layout. Page chrome is in dashboard-shell.css;
-   the mesh console styling is in css/modes/meshtastic.css. */
+   the mesh console styling is in css/modes/meshtastic.css.
 
-/* Page layout: options rail on the left, mesh console filling the rest */
+   Layout: the connection strip sits on top, then the node map (always
+   visible, left) beside a tabbed side panel (Messages / Channels / Info). */
+
 .mesh-dashboard {
     position: relative;
     z-index: 2;
     display: flex;
-    flex-direction: row;
     height: calc(100vh - 52px);
     min-height: 0;
     box-sizing: border-box;
 }
 
-/* The options sidebar (#meshtasticMode) as a left rail */
-#meshtasticMode {
-    display: block;
-    flex-shrink: 0;
-    max-width: 320px;
-    overflow-y: auto;
-    border-right: 1px solid var(--border-color);
-    background: var(--bg-panel);
-    padding: 12px;
-    box-sizing: border-box;
-}
-#meshtasticMode.mesh-sidebar-collapsed {
-    max-width: 220px;
-}
+/* #meshtasticMode is a hidden stub kept only for the module's DOM lookups. */
+#meshtasticMode { display: none; }
 
-/* The console (strip + messages + map) fills the remaining space */
+/* The console (strip on top, map + tabs below) fills the page. */
 #meshtasticVisuals {
     display: flex;
+    flex-direction: column;
     flex: 1;
     min-width: 0;
 }
 
-/* These two controls only make sense inside the SPA layout (they toggle the
-   main-content sidebar, which does not exist here). */
-.mesh-dashboard .mesh-hide-sidebar-btn,
-.mesh-dashboard .mesh-strip-sidebar-toggle {
+/* Map takes the lion's share; the tabbed panel is a fixed-ish side column. */
+.mesh-map-section { flex: 2; min-width: 0; }
+
+.mesh-side-tabs {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 320px;
+    max-width: 460px;
+    min-height: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+}
+.mesh-tabbar {
+    display: flex;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.mesh-tabbtn {
+    flex: 1;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.mesh-tabbtn:hover { color: var(--text-primary); }
+.mesh-tabbtn.active {
+    color: var(--accent-cyan);
+    border-bottom-color: var(--accent-cyan);
+}
+.mesh-tabpane {
     display: none;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+.mesh-tabpane.active {
+    display: flex;
+    flex-direction: column;
+}
+.mesh-tab-hint {
+    padding: 12px;
+    font-size: 11px;
+    color: var(--text-muted);
 }
 
-/* Phone: stack the options rail above the console */
+/* The messages section, now inside a tab, fills the pane. */
+.mesh-side-tabs .mesh-messages-section {
+    width: 100%;
+    min-width: 0;
+    flex: 1;
+    min-height: 0;
+}
+
+/* The strip's sidebar toggle targets the SPA main-content, absent here. */
+.mesh-dashboard .mesh-strip-sidebar-toggle { display: none; }
+
+/* Phone: stack the map above the tabbed panel */
 @media (max-width: 767px) {
     body { overflow: auto; }
     .mesh-dashboard {
-        flex-direction: column;
         height: auto;
         min-height: calc(100vh - 52px);
     }
-    #meshtasticMode,
-    #meshtasticMode.mesh-sidebar-collapsed {
-        max-width: 100%;
-        border-right: none;
-        border-bottom: 1px solid var(--border-color);
-    }
-    .mesh-main-row {
-        flex-direction: column !important;
-    }
+    .mesh-main-row { flex-direction: column !important; }
+    .mesh-side-tabs { max-width: 100%; min-width: 0; }
     .mesh-map { min-height: 320px; }
 }
