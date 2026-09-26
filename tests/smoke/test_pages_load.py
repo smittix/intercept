@@ -36,6 +36,7 @@ DASHBOARDS = [
     "/satellite/dashboard",
     "/aprs/dashboard",
     "/meshtastic/dashboard",
+    "/meshcore/dashboard",
     "/adsb/history",
     "/controller/manage",
     "/controller/monitor",

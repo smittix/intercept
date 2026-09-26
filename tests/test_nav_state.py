@@ -42,6 +42,7 @@ NAV_PAGES = [
     "/satellite/dashboard",
     "/aprs/dashboard",
     "/meshtastic/dashboard",
+    "/meshcore/dashboard",
     "/adsb/history",
     "/controller/monitor",
     "/controller/manage",

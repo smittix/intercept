@@ -734,6 +734,7 @@ const DASHBOARD_NAV_PATHS = new Set([
     '/satellite/dashboard',
     '/aprs/dashboard',
     '/meshtastic/dashboard',
+    '/meshcore/dashboard',
 ]);
 
 // Shared module destroy map — closes SSE EventSources, timers, etc.
@@ -1116,7 +1117,6 @@ async function switchMode(mode, options = {}) {
     const satelliteVisuals = document.getElementById('satelliteVisuals');
     const tscmVisuals = document.getElementById('tscmVisuals');
     const spyStationsVisuals = document.getElementById('spyStationsVisuals');
-    const meshcoreVisuals = document.getElementById('meshcoreVisuals');
     const sstvVisuals = document.getElementById('sstvVisuals');
     const weatherSatVisuals = document.getElementById('weatherSatVisuals');
     const sstvGeneralVisuals = document.getElementById('sstvGeneralVisuals');
@@ -1159,7 +1159,6 @@ async function switchMode(mode, options = {}) {
     }
     if (tscmVisuals) tscmVisuals.style.display = mode === 'tscm' ? 'flex' : 'none';
     if (spyStationsVisuals) spyStationsVisuals.style.display = mode === 'spystations' ? 'flex' : 'none';
-    if (meshcoreVisuals) meshcoreVisuals.style.display = mode === 'meshcore' ? 'flex' : 'none';
     if (sstvVisuals) sstvVisuals.style.display = mode === 'sstv' ? 'flex' : 'none';
     if (weatherSatVisuals) weatherSatVisuals.style.display = mode === 'weathersat' ? 'flex' : 'none';
     if (sstvGeneralVisuals) sstvGeneralVisuals.style.display = mode === 'sstv_general' ? 'flex' : 'none';
@@ -1197,16 +1196,6 @@ async function switchMode(mode, options = {}) {
     }
     if (typeof WiFiLocate !== 'undefined' && WiFiLocate.setActiveMode) {
         WiFiLocate.setActiveMode(mode === 'wifi_locate');
-    }
-
-    // Hide sidebar by default for Meshtastic mode, show for others
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-        if (mode === 'meshcore') {
-            mainContent.classList.add('mesh-sidebar-hidden');
-        } else {
-            mainContent.classList.remove('mesh-sidebar-hidden');
-        }
     }
 
     // Show/hide mode-specific timeline containers
@@ -1308,14 +1297,6 @@ async function switchMode(mode, options = {}) {
     const showStatusBar = ['pager', 'sensor', 'rtlamr', 'ook'].includes(mode);
     const statusBar = document.querySelector('.status-bar');
     if (statusBar) statusBar.style.display = showStatusBar ? 'flex' : 'none';
-
-    // Restore sidebar when leaving Meshtastic mode (user may have collapsed it)
-    if (mode !== 'meshtastic' && mode !== 'meshcore') {
-        const mainContent = document.querySelector('.main-content');
-        if (mainContent) {
-            mainContent.classList.remove('mesh-sidebar-hidden');
-        }
-    }
 
     // Load interfaces and initialize visualizations when switching modes
     const modeDef = window.INTERCEPT_MODES[mode];

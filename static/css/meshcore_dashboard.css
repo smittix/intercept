@@ -1,0 +1,73 @@
+/* Meshcore dashboard: page chrome + full-page layout.
+   The console styling (strip, body, tabs, map, panels, modals) comes from
+   css/modes/meshcore.css; this file adds only the page shell. */
+
+@keyframes scan {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(100vh); }
+}
+
+html, body { height: 100%; }
+body {
+    margin: 0;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    overflow: hidden;
+}
+
+.radar-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+        var(--noise-image),
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px, 50px 50px, 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+}
+.scanline {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+    color: var(--accent-cyan);
+    animation: scan 6s linear infinite;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.25;
+    box-shadow: 0 0 8px currentColor;
+}
+html[data-ui-tier="lean"] .scanline,
+html[data-ui-tier="lean"] .radar-bg { display: none; }
+
+/* Full-page console: strip on top, body (panels + tabs) filling the rest */
+.meshcore-dashboard {
+    position: relative;
+    z-index: 2;
+    height: calc(100vh - 52px);
+    min-height: 0;
+    box-sizing: border-box;
+    padding: 10px;
+}
+#meshcoreVisuals.mesh-visuals-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Phone: let the console scroll and give the map a usable height */
+@media (max-width: 767px) {
+    body { overflow: auto; }
+    .meshcore-dashboard { height: auto; min-height: calc(100vh - 52px); }
+    #meshcoreVisuals.mesh-visuals-container { height: auto; overflow: visible; }
+    .meshcore-body { flex-direction: column !important; overflow: visible !important; }
+    .meshcore-panel { width: 100% !important; min-width: 0 !important; border-right: none; }
+    #meshcoreMap { min-height: 320px; }
+}

@@ -100,7 +100,6 @@
             tscmsurvey: "{{ url_for('static', filename='css/modes/tscm-survey.css') }}",
             activity: "{{ url_for('static', filename='css/modes/activity.css') }}",
             spystations: "{{ url_for('static', filename='css/modes/spy-stations.css') }}",
-            meshcore: "{{ url_for('static', filename='css/modes/meshcore.css') }}",
             sstv: "{{ url_for('static', filename='css/modes/sstv.css') }}",
             weathersat: "{{ url_for('static', filename='css/modes/weather-satellite.css') }}",
             sstv_general: "{{ url_for('static', filename='css/modes/sstv-general.css') }}",
@@ -187,7 +186,6 @@
             spystations: "{{ url_for('static', filename='js/modes/spy-stations.js') }}",
             tscmsurvey: "{{ url_for('static', filename='js/modes/tscm-survey.js') }}",
             activity: "{{ url_for('static', filename='js/modes/activity.js') }}",
-            meshcore: "{{ url_for('static', filename='js/modes/meshcore.js') }}",
             sstv: "{{ url_for('static', filename='js/modes/sstv.js') }}",
             weathersat: "{{ url_for('static', filename='js/modes/weather-satellite.js') }}",
             sstv_general: "{{ url_for('static', filename='js/modes/sstv-general.js') }}",
@@ -443,10 +441,10 @@
                                 <span class="mode-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg></span>
                                 <span class="mode-name">Meshtastic</span>
                             </a>
-                            <button class="mode-card mode-card-sm" onclick="selectMode('meshcore')">
+                            <a href="/meshcore/dashboard" class="mode-card mode-card-sm" style="text-decoration: none;">
                                 <span class="mode-icon icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h8M6 8v8M18 8v8M8 18h8"/></svg></span>
                                 <span class="mode-name">Meshcore</span>
-                            </button>
+                            </a>
                         </div>
                     </div>
 
@@ -2141,11 +2139,6 @@
                     </div>
                 </div>
 
-
-                <!-- Meshcore Dashboard -->
-                <div id="meshcoreVisuals" class="mesh-visuals-container" style="display: none;">
-                    {% include 'partials/modes/meshcore.html' %}
-                </div>
 
                 <!-- SSTV Decoder Dashboard -->
                 <div id="sstvVisuals" class="sstv-visuals-container" style="display: none;">

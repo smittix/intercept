@@ -177,18 +177,6 @@ window.INTERCEPT_MODES = {
             WiFiLocate.init();
         },
     },
-    meshcore: {
-        label: 'Meshcore', indicator: 'MESHCORE', outputTitle: 'Meshcore Mesh Monitor', group: 'wireless',
-        elementId: 'meshcoreMode',
-        visuals: true,
-        module: 'MeshCore',
-        init: () => {
-            MeshCore.init();
-            setTimeout(() => {
-                MeshCore.invalidateMap();
-            }, 100);
-        },
-    },
     tscm: {
         label: 'TSCM', indicator: 'TSCM', outputTitle: 'TSCM Counter-Surveillance', group: 'intel',
         elementId: 'tscmMode',
