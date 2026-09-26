@@ -335,6 +335,15 @@
                         <option value="200">200nm</option>
                         <option value="300">300nm</option>
                     </select>
+                    <label title="Only show aircraft within the range distance above (useful for busy remote/aggregated feeds)"><input type="checkbox" id="limitRange" onchange="toggleRangeLimit()"> In range</label>
+                    <select id="retentionSelect" onchange="setRetention()" title="Drop aircraft not heard from for this long">
+                        <option value="30000">Keep 30s</option>
+                        <option value="60000" selected>Keep 1m</option>
+                        <option value="120000">Keep 2m</option>
+                        <option value="300000">Keep 5m</option>
+                        <option value="600000">Keep 10m</option>
+                        <option value="900000">Keep 15m</option>
+                    </select>
                 </div>
             </div>
 
@@ -499,6 +508,8 @@
         const MAX_TRAIL_POINTS = 100;
 
         let maxRange = 50;  // nautical miles
+        let limitToRange = false;        // only display aircraft within maxRange of the observer
+        let aircraftRetentionMs = 60000; // drop aircraft not heard from for this long
 
         // Statistics
         let stats = {
@@ -1504,6 +1515,21 @@ ACARS: ${r.statistics.acarsMessages} messages`;
         function updateRange() {
             maxRange = parseInt(document.getElementById('rangeSelect').value);
             drawRangeRings();
+            if (limitToRange) applyFilter();  // re-cull to the new range
+        }
+
+        function toggleRangeLimit() {
+            limitToRange = document.getElementById('limitRange').checked;
+            try { localStorage.setItem('adsb.limitRange', limitToRange ? '1' : '0'); } catch (e) { /* private mode */ }
+            applyFilter();  // add/remove out-of-range markers immediately
+        }
+
+        function setRetention() {
+            const v = parseInt(document.getElementById('retentionSelect').value, 10);
+            if (isNaN(v)) return;
+            aircraftRetentionMs = v;
+            try { localStorage.setItem('adsb.retentionMs', String(v)); } catch (e) { /* private mode */ }
+            cleanupOldAircraft();  // apply the new retention right away
         }
 
         // ============================================
@@ -1742,6 +1768,14 @@ ACARS: ${r.statistics.acarsMessages} messages`;
         }
 
         function passesFilter(icao, ac) {
+            // Range limit: hide positioned aircraft beyond the selected range.
+            // Aircraft without a position are kept (they draw no marker anyway).
+            if (limitToRange && observerLocation &&
+                ac.lat !== undefined && ac.lat !== null && ac.lon !== undefined && ac.lon !== null) {
+                if (calculateDistanceNm(observerLocation.lat, observerLocation.lon, ac.lat, ac.lon) > maxRange) {
+                    return false;
+                }
+            }
             if (currentFilter === 'all') return true;
             const militaryInfo = isMilitaryAircraft(icao, ac.callsign);
             const squawkInfo = checkSquawkCode(ac);
@@ -1830,6 +1864,21 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                         console.error('ADS-B device selector retry warning:', e);
                     });
             }, 6000);
+
+            // Restore saved display preferences (range limit + retention)
+            try {
+                if (localStorage.getItem('adsb.limitRange') === '1') {
+                    limitToRange = true;
+                    const el = document.getElementById('limitRange');
+                    if (el) el.checked = true;
+                }
+                const savedRet = parseInt(localStorage.getItem('adsb.retentionMs'), 10);
+                if (!isNaN(savedRet)) {
+                    aircraftRetentionMs = savedRet;
+                    const el = document.getElementById('retentionSelect');
+                    if (el) el.value = String(savedRet);
+                }
+            } catch (e) { /* private mode: keep defaults */ }
 
             try {
                 updateClock();
@@ -3542,7 +3591,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
 
         function cleanupOldAircraft() {
             const now = Date.now();
-            const timeout = 60000;
+            const timeout = aircraftRetentionMs;
             let needsUpdate = false;
 
             Object.keys(aircraft).forEach(icao => {
