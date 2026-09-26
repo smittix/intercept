@@ -2,6 +2,16 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.37] - 2026-09-26
+
+Housekeeping.
+
+### Changed
+
+- **Shared dashboard `<head>`.** The APRS/Meshtastic/Meshcore dashboards now pull their common `<head>` (meta, fonts, core CSS, globals, leaflet) from `templates/partials/dashboard_head.html` instead of repeating it. No behaviour change.
+- **Docs.** `CLAUDE.md` updated to reflect the completed dashboard migration (correct mesh route filenames; dashboards, routes and `dashboard-shell.css` documented).
+- **Consistency.** Fixed the satellite dashboard browser-tab title casing to match the other dashboards.
+
 ## [2.33.36] - 2026-09-26
 
 ### Changed

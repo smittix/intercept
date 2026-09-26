@@ -1,0 +1,36 @@
+{# Shared <head> for the map dashboards that share page chrome (APRS,
+   Meshtastic, Meshcore). The caller sets, before including this:
+     dash_title       - the <title> text
+     dash_mode_css    - path to the mode's own CSS (e.g. css/modes/aprs.css)
+     dash_layout_css  - path to the dashboard layout CSS (e.g. css/aprs_dashboard.css)
+     dash_needs_chart - true to also defer-load vendored Chart.js
+   Dedicated dashboards use bundled assets so navigation is not blocked by CDN
+   reachability. Order: shared foundation CSS, then dashboard-shell.css, then
+   the mode/layout CSS so per-dashboard rules win the cascade. #}
+<script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
+<script src="{{ url_for('static', filename='js/core/utils.js') }}"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ dash_title }}</title>
+<script>(function(){var t=localStorage.getItem('intercept-ui-tier')||'enhanced';document.documentElement.setAttribute('data-ui-tier',t);})();</script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/fonts-local.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/core/variables.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/ux-platform.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/core/layout.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/core/map-utils.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/help-modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/signal-cards.css') }}">
+{% if dash_mode_css %}<link rel="stylesheet" href="{{ url_for('static', filename=dash_mode_css) }}">{% endif %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-shell.css') }}">
+{% if dash_layout_css %}<link rel="stylesheet" href="{{ url_for('static', filename=dash_layout_css) }}">{% endif %}
+<script>
+    window.INTERCEPT_SHARED_OBSERVER_LOCATION = {{ shared_observer_location | tojson }};
+    window.INTERCEPT_DEFAULT_LAT = {{ default_latitude | tojson }};
+    window.INTERCEPT_DEFAULT_LON = {{ default_longitude | tojson }};
+</script>
+<script defer src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
+{% if dash_needs_chart %}<script defer src="{{ url_for('static', filename='vendor/chartjs/chart.umd.min.js') }}"></script>{% endif %}
+<script defer src="{{ url_for('static', filename='js/core/observer-location.js') }}"></script>
