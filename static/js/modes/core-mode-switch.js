@@ -733,6 +733,7 @@ const DASHBOARD_NAV_PATHS = new Set([
     '/ais/dashboard',
     '/satellite/dashboard',
     '/aprs/dashboard',
+    '/meshtastic/dashboard',
 ]);
 
 // Shared module destroy map — closes SSE EventSources, timers, etc.
@@ -1115,7 +1116,6 @@ async function switchMode(mode, options = {}) {
     const satelliteVisuals = document.getElementById('satelliteVisuals');
     const tscmVisuals = document.getElementById('tscmVisuals');
     const spyStationsVisuals = document.getElementById('spyStationsVisuals');
-    const meshtasticVisuals = document.getElementById('meshtasticVisuals');
     const meshcoreVisuals = document.getElementById('meshcoreVisuals');
     const sstvVisuals = document.getElementById('sstvVisuals');
     const weatherSatVisuals = document.getElementById('weatherSatVisuals');
@@ -1159,7 +1159,6 @@ async function switchMode(mode, options = {}) {
     }
     if (tscmVisuals) tscmVisuals.style.display = mode === 'tscm' ? 'flex' : 'none';
     if (spyStationsVisuals) spyStationsVisuals.style.display = mode === 'spystations' ? 'flex' : 'none';
-    if (meshtasticVisuals) meshtasticVisuals.style.display = mode === 'meshtastic' ? 'flex' : 'none';
     if (meshcoreVisuals) meshcoreVisuals.style.display = mode === 'meshcore' ? 'flex' : 'none';
     if (sstvVisuals) sstvVisuals.style.display = mode === 'sstv' ? 'flex' : 'none';
     if (weatherSatVisuals) weatherSatVisuals.style.display = mode === 'weathersat' ? 'flex' : 'none';
@@ -1203,9 +1202,7 @@ async function switchMode(mode, options = {}) {
     // Hide sidebar by default for Meshtastic mode, show for others
     const mainContent = document.querySelector('.main-content');
     if (mainContent) {
-        if (mode === 'meshtastic') {
-            mainContent.classList.add('mesh-sidebar-hidden');
-        } else if (mode === 'meshcore') {
+        if (mode === 'meshcore') {
             mainContent.classList.add('mesh-sidebar-hidden');
         } else {
             mainContent.classList.remove('mesh-sidebar-hidden');

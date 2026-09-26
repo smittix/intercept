@@ -1,0 +1,109 @@
+/* Meshtastic dashboard: page chrome + full-page layout.
+   The mesh console styling (strip, messages, map, sidebar, modals) comes from
+   css/modes/meshtastic.css; this file adds only the page shell. */
+
+@keyframes scan {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(100vh); }
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+html, body { height: 100%; }
+body {
+    margin: 0;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    overflow: hidden;
+}
+
+.radar-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+        var(--noise-image),
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px, 50px 50px, 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+}
+.scanline {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+    color: var(--accent-cyan);
+    animation: scan 6s linear infinite;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.25;
+    box-shadow: 0 0 8px currentColor;
+}
+html[data-ui-tier="lean"] .scanline,
+html[data-ui-tier="lean"] .radar-bg { display: none; }
+
+/* Page layout: options rail on the left, mesh console filling the rest */
+.mesh-dashboard {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: row;
+    height: calc(100vh - 52px);
+    min-height: 0;
+    box-sizing: border-box;
+}
+
+/* The options sidebar (#meshtasticMode) as a left rail */
+#meshtasticMode {
+    display: block;
+    flex-shrink: 0;
+    max-width: 320px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border-color);
+    background: var(--bg-panel);
+    padding: 12px;
+    box-sizing: border-box;
+}
+#meshtasticMode.mesh-sidebar-collapsed {
+    max-width: 220px;
+}
+
+/* The console (strip + messages + map) fills the remaining space */
+#meshtasticVisuals {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+}
+
+/* These two controls only make sense inside the SPA layout (they toggle the
+   main-content sidebar, which does not exist here). */
+.mesh-dashboard .mesh-hide-sidebar-btn,
+.mesh-dashboard .mesh-strip-sidebar-toggle {
+    display: none;
+}
+
+/* Phone: stack the options rail above the console */
+@media (max-width: 767px) {
+    body { overflow: auto; }
+    .mesh-dashboard {
+        flex-direction: column;
+        height: auto;
+        min-height: calc(100vh - 52px);
+    }
+    #meshtasticMode,
+    #meshtasticMode.mesh-sidebar-collapsed {
+        max-width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .mesh-main-row {
+        flex-direction: column !important;
+    }
+    .mesh-map { min-height: 320px; }
+}
