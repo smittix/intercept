@@ -2,6 +2,12 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.38] - 2026-09-26
+
+### Added
+
+- **ADS-B dashboard \u2014 range limit and configurable retention (#313).** A new "In range" toggle shows only aircraft within the selected range-ring distance of the observer, and a "Keep" selector sets how long aircraft with no fresh updates remain (30s / 1m / 2m / 5m / 10m / 15m, default 1m). This tames busy remote/aggregated feeds (e.g. FR24 via a remote agent) that could flood the map with hundreds of aircraft and lock up the browser. Both settings are per-browser and default to the previous behaviour.
+
 ## [2.33.37] - 2026-09-26
 
 Housekeeping.

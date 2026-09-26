@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.37"
+VERSION = "2.33.38"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.38",
+        "date": "September 2026",
+        "highlights": [
+            "ADS-B dashboard: new \"In range\" toggle limits the map to aircraft within the selected range, and a \"Keep\" selector controls how long stale aircraft stay (30s\u201315m) \u2014 helps busy remote/aggregated feeds that were flooding the map (#313).",
+        ],
+    },
     {
         "version": "2.33.37",
         "date": "September 2026",
