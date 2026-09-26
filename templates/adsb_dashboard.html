@@ -131,6 +131,10 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                 Lookup
             </button>
+            <button type="button" class="strip-btn" onclick="tuneNearestAtc()" title="Tune the airband receiver to the nearest airport's ATC frequency for the selected aircraft" id="tuneAtcBtn" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4M18 12h4M12 2v4M12 18v4"/><circle cx="12" cy="12" r="4"/></svg>
+                Tune ATC
+            </button>
             <button type="button" class="strip-btn primary" onclick="generateReport()" title="Generate Session Report">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 Report
@@ -1409,6 +1413,17 @@ ACARS: ${r.statistics.acarsMessages} messages`;
             } else {
                 btn.disabled = true;
                 btn.title = 'Select an aircraft first';
+            }
+
+            // "Tune ATC" needs a selected aircraft with a position
+            const atcBtn = document.getElementById('tuneAtcBtn');
+            if (atcBtn) {
+                const ac = selectedIcao ? aircraft[selectedIcao] : null;
+                const hasPos = ac && ac.lat !== undefined && ac.lat !== null && ac.lon !== undefined && ac.lon !== null;
+                atcBtn.disabled = !hasPos;
+                atcBtn.title = hasPos
+                    ? "Tune the airband receiver to the nearest airport's ATC frequency"
+                    : 'Select an aircraft with a position first';
             }
         }
 
@@ -3820,6 +3835,48 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                 return parseFloat(document.getElementById('airbandCustomFreq').value) || 121.5;
             }
             return parseFloat(select.value);
+        }
+
+        // Tune the airband receiver to the nearest airport's ATC frequency for
+        // the selected aircraft (issue #271). Picks TWR, else APP, else ATIS.
+        async function tuneNearestAtc() {
+            if (!selectedIcao || !aircraft[selectedIcao]) return;
+            const ac = aircraft[selectedIcao];
+            if (ac.lat === undefined || ac.lat === null || ac.lon === undefined || ac.lon === null) {
+                AppFeedback.toast({ type: 'error', title: 'No position', message: 'This aircraft has no position yet.' });
+                return;
+            }
+            let data;
+            try {
+                const resp = await fetchJsonWithTimeout(`/adsb/nearest-airband?lat=${ac.lat}&lon=${ac.lon}`, {}, 5000);
+                data = await resp.json();
+            } catch (e) {
+                AppFeedback.toast({ type: 'error', title: 'ATC lookup failed', message: e.message || 'Request failed' });
+                return;
+            }
+            if (!data || !data.airports || data.airports.length === 0) {
+                AppFeedback.toast({ title: 'No ATC nearby', message: 'No airport with published tower/approach frequencies within range.' });
+                return;
+            }
+            const ap = data.airports[0];
+            const freq = ap.freqs.find(f => f.type === 'TWR')
+                || ap.freqs.find(f => f.type === 'APP')
+                || ap.freqs[0];
+
+            document.getElementById('airbandFreqSelect').value = 'custom';
+            document.getElementById('airbandCustomFreq').value = freq.mhz;
+            updateAirbandFreq();  // reveal the custom input
+            if (isAirbandPlaying) {
+                stopAirband();
+                setTimeout(startAirband, 300);
+            } else {
+                startAirband();
+            }
+            AppFeedback.toast({
+                type: 'success',
+                title: `Tuned ${ap.ident} ${freq.type} ${freq.mhz} MHz`,
+                message: `${ap.name} — ${ap.distance_nm} nm from the aircraft`,
+            });
         }
 
         function toggleAirband() {
