@@ -1,34 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
 <head>
-    <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/core/utils.js') }}"></script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MESHTASTIC // INTERCEPT - See the Invisible</title>
-    <script>(function(){var t=localStorage.getItem('intercept-ui-tier')||'enhanced';document.documentElement.setAttribute('data-ui-tier',t);})();</script>
-    <!-- Dedicated dashboards always use bundled assets so navigation is not
-         blocked by external CDN reachability. -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts-local.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/core/variables.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/ux-platform.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/core/layout.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/core/map-utils.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/help-modal.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/signal-cards.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/modes/meshtastic.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-shell.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/meshtastic_dashboard.css') }}">
-    <script>
-        window.INTERCEPT_SHARED_OBSERVER_LOCATION = {{ shared_observer_location | tojson }};
-        window.INTERCEPT_DEFAULT_LAT = {{ default_latitude | tojson }};
-        window.INTERCEPT_DEFAULT_LON = {{ default_longitude | tojson }};
-    </script>
-    <script defer src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
-    <script defer src="{{ url_for('static', filename='js/core/observer-location.js') }}"></script>
+    {% set dash_title = 'MESHTASTIC // INTERCEPT - See the Invisible' %}
+    {% set dash_mode_css = 'css/modes/meshtastic.css' %}
+    {% set dash_layout_css = 'css/meshtastic_dashboard.css' %}
+    {% include 'partials/dashboard_head.html' %}
 </head>
 <body data-mode="meshtastic">
     <div class="radar-bg"></div>
