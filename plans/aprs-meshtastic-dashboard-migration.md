@@ -1,6 +1,8 @@
 # APRS & Meshtastic → dedicated dashboards (migration plan)
 
-Status: **proposed, awaiting approval.** No code in this plan has been written.
+Status: **Round A (APRS) done** in v2.33.33 — `/aprs/dashboard` shipped and APRS
+removed from the SPA. Round B (Meshtastic/Meshcore) remains proposed and awaiting
+its own plan.
 
 ## Why
 

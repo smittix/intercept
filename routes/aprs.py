@@ -18,9 +18,10 @@ import time
 from datetime import datetime, timezone
 from subprocess import PIPE
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, jsonify, render_template, request
 
 import app as app_module
+from config import DEFAULT_LATITUDE, DEFAULT_LONGITUDE, SHARED_OBSERVER_LOCATION_ENABLED
 from utils.constants import (
     PROCESS_START_WAIT,
     PROCESS_TERMINATE_TIMEOUT,
@@ -1607,6 +1608,19 @@ def stream_aprs_output(master_fd: int, rtl_process: subprocess.Popen, decoder_pr
             app_module.release_sdr_device(my_device, aprs_active_sdr_type or "rtlsdr")
             aprs_active_device = None
             aprs_active_sdr_type = None
+
+
+@aprs_bp.route("/dashboard")
+def aprs_dashboard() -> Response:
+    """Popout APRS tracking dashboard."""
+    embedded = request.args.get("embedded", "false") == "true"
+    return render_template(
+        "aprs_dashboard.html",
+        shared_observer_location=SHARED_OBSERVER_LOCATION_ENABLED,
+        default_latitude=DEFAULT_LATITUDE,
+        default_longitude=DEFAULT_LONGITUDE,
+        embedded=embedded,
+    )
 
 
 @aprs_bp.route("/tools")

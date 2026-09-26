@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" class="{% if offline_settings.tile_provider in ['cartodb_dark', 'cartodb_dark_cyan'] %}map-cyber-enabled{% endif %}">
+<head>
+    <script src="{{ url_for('static', filename='js/core/visible-interval.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/utils.js') }}"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APRS TRACKER // INTERCEPT - See the Invisible</title>
+    <script>(function(){var t=localStorage.getItem('intercept-ui-tier')||'enhanced';document.documentElement.setAttribute('data-ui-tier',t);})();</script>
+    <!-- Dedicated dashboards always use bundled assets so navigation is not
+         blocked by external CDN reachability. -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts-local.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/core/variables.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/ux-platform.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/core/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/core/map-utils.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/help-modal.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/signal-cards.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modes/aprs.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/aprs_dashboard.css') }}">
+    <script>
+        window.INTERCEPT_SHARED_OBSERVER_LOCATION = {{ shared_observer_location | tojson }};
+        window.INTERCEPT_DEFAULT_LAT = {{ default_latitude | tojson }};
+        window.INTERCEPT_DEFAULT_LON = {{ default_longitude | tojson }};
+    </script>
+    <script defer src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='js/core/observer-location.js') }}"></script>
+</head>
+<body data-mode="aprs">
+    <div class="radar-bg"></div>
+    <div class="scanline"></div>
+
+    <header class="header">
+        <div class="logo">
+            APRS TRACKER
+            <span>// <span class="brand-i"><svg viewBox="36 14 28 68" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="20" r="6" fill="#00ff88"/><rect x="44" y="33" width="12" height="45" rx="2" fill="#00d4ff"/><rect x="38" y="33" width="24" height="4" rx="1" fill="#00d4ff"/><rect x="38" y="74" width="24" height="4" rx="1" fill="#00d4ff"/></svg></span>NTERCEPT - Amateur Packet Radio</span>
+        </div>
+        <div class="status-bar">
+            <div class="agent-selector-compact" id="agentSection">
+                <select id="agentSelect" class="agent-select-sm" title="Select signal source">
+                    <option value="local">Local</option>
+                </select>
+                <span class="agent-status-dot online" id="agentStatusDot"></span>
+            </div>
+        </div>
+    </header>
+
+    {% if not embedded %}
+    {% set active_mode = 'aprs' %}
+    {% include 'partials/nav.html' with context %}
+    {% endif %}
+
+    <main class="aprs-dashboard">
+        <!-- APRS Function Bar (same control set as the former SPA mode) -->
+        <div class="aprs-strip">
+            <div class="aprs-strip-inner">
+                <div class="strip-stat">
+                    <span class="strip-value" id="aprsStripFreq">--</span>
+                    <span class="strip-label">MHz</span>
+                </div>
+                <div class="strip-stat">
+                    <span class="strip-value" id="aprsStripStations">0</span>
+                    <span class="strip-label">STATIONS</span>
+                </div>
+                <div class="strip-stat">
+                    <span class="strip-value" id="aprsStripPackets">0</span>
+                    <span class="strip-label">PACKETS</span>
+                </div>
+                <div class="strip-stat signal-stat" id="aprsStripSignalStat">
+                    <span class="strip-value" id="aprsStripSignal">--</span>
+                    <span class="strip-label">SIGNAL</span>
+                </div>
+                <div class="strip-divider"></div>
+                <div class="strip-control">
+                    <select id="aprsStripRegion" class="strip-select">
+                        <option value="north_america">N. America (144.390)</option>
+                        <option value="europe">Europe (144.800)</option>
+                        <option value="uk">UK (144.800)</option>
+                        <option value="australia">Australia (145.175)</option>
+                        <option value="new_zealand">New Zealand (144.575)</option>
+                        <option value="argentina">Argentina (144.930)</option>
+                        <option value="brazil">Brazil (145.570)</option>
+                        <option value="japan">Japan (144.640)</option>
+                        <option value="china">China (144.640)</option>
+                        <option value="iss">ISS (145.825)</option>
+                        <option value="sonate2">SONATE-2 (145.825)</option>
+                        <option value="custom">Custom Frequency</option>
+                    </select>
+                </div>
+                <div class="strip-control" id="aprsStripCustomFreqControl" style="display: none;">
+                    <span class="strip-input-label">FREQ (MHz)</span>
+                    <input type="number" id="aprsStripCustomFreq" class="strip-input" placeholder="144.390" step="0.001" min="144" max="146">
+                </div>
+                <div class="strip-control">
+                    <span class="strip-input-label">DEVICE</span>
+                    <select id="deviceSelect" class="strip-select" title="SDR device">
+                        <option value="0">SDR 0</option>
+                    </select>
+                </div>
+                <div class="strip-control">
+                    <span class="strip-input-label">GAIN</span>
+                    <input type="number" id="aprsStripGain" class="strip-input" value="40" min="0" max="50">
+                </div>
+                <div class="strip-divider"></div>
+                <div class="strip-tools">
+                    <span class="strip-tool" id="aprsStripDirewolf" title="direwolf">DW</span>
+                    <span class="strip-tool" id="aprsStripMultimon" title="multimon-ng">MM</span>
+                </div>
+                <span id="aprsGpsIndicator" class="gps-indicator" style="display: none;"
+                    title="GPS connected via gpsd"><span class="gps-dot"></span> GPS</span>
+                <div class="strip-divider"></div>
+                <button type="button" class="strip-btn primary" id="aprsStripStartBtn" onclick="startAprs()">
+                    ▶ START
+                </button>
+                <button type="button" class="strip-btn stop" id="aprsStripStopBtn" onclick="stopAprs()" style="display: none;">
+                    ◼ STOP
+                </button>
+                <div class="strip-status">
+                    <div class="status-dot inactive" id="aprsStripDot"></div>
+                    <span id="aprsStripStatus">STANDBY</span>
+                </div>
+                <div class="strip-time" id="aprsStripTime">--:--:-- UTC</div>
+            </div>
+        </div>
+
+        <div class="aprs-body">
+            <section class="aprs-map-panel">
+                <div class="aprs-map-wrap">
+                    <div class="map-header">
+                        <span id="aprsMapTime">--:--:--</span>
+                        <span id="aprsMapStatus">STANDBY</span>
+                    </div>
+                    <div id="aprsMap"></div>
+                    <div class="map-footer">
+                        <span>STATIONS: <span id="aprsStationCount">0</span></span>
+                        <span>PACKETS: <span id="aprsPacketCount">0</span></span>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="aprs-side">
+                <div class="aprs-panel station-panel">
+                    <div class="aprs-panel-title">STATION LIST</div>
+                    <div id="aprsFilterBarContainer"></div>
+                    <div id="aprsStationList" class="signal-cards-container">
+                        <div class="signal-cards-placeholder">No stations received yet</div>
+                    </div>
+                </div>
+                <div class="aprs-panel log-panel">
+                    <div class="aprs-panel-title">PACKET LOG</div>
+                    <div id="aprsPacketLog">
+                        <div style="color: var(--text-muted);">Waiting for packets...</div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/components/signal-cards.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/map-utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/agents.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/core/global-nav.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/aprs_dashboard.js') }}"></script>
+</body>
+</html>

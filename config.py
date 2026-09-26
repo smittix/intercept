@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.32"
+VERSION = "2.33.33"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.33",
+        "date": "September 2026",
+        "highlights": [
+            "APRS now has its own full-screen dashboard (/aprs/dashboard) with a full-height map, station list and packet log, matching the Aircraft and Vessels dashboards; the APRS nav links open it directly.",
+        ],
+    },
     {
         "version": "2.33.32",
         "date": "September 2026",

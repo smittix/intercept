@@ -37,27 +37,6 @@ window.INTERCEPT_MODES = {
             SubGhz.init();
         },
     },
-    aprs: {
-        label: 'APRS', indicator: 'APRS', outputTitle: 'APRS Tracker', group: 'tracking',
-        elementId: 'aprsMode',
-        visuals: true,
-        destroy: () => {
-            if (typeof destroyAprsMode === 'function') {
-                destroyAprsMode();
-            } else if (aprsEventSource) {
-                aprsEventSource.close();
-                aprsEventSource = null;
-            }
-        },
-        init: () => {
-            checkAprsTools();
-            initAprsMap();
-            // Fix map sizing on mobile after container becomes visible
-            setTimeout(() => {
-                if (aprsMap) aprsMap.invalidateSize();
-            }, 100);
-        },
-    },
     gps: {
         label: 'GPS', indicator: 'GPS', outputTitle: 'GPS Receiver', group: 'tracking',
         elementId: 'gpsMode',

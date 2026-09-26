@@ -2,6 +2,16 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.33] - 2026-09-26
+
+### Added
+
+- **APRS dashboard.** APRS moves out of the main-page SPA to a dedicated `/aprs/dashboard` page, matching the Aircraft and Vessels dashboards: a full-height Leaflet map with station markers, a filterable station list, a live packet log and a signal meter, plus the agent selector for remote sources. The APRS nav buttons (desktop and mobile) now open the dashboard directly. Same decoder and endpoints as before; the map/marker/stream logic is unchanged.
+
+### Removed
+
+- The APRS mode from the main-page SPA (its inline panel, `aprs-spa.js` and mode-registry entry), now that it lives on its own dashboard.
+
 ## [2.33.32] - 2026-09-26
 
 Under the hood; finishes the main page code split.

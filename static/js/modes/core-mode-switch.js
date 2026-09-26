@@ -732,6 +732,7 @@ const DASHBOARD_NAV_PATHS = new Set([
     '/adsb/dashboard',
     '/ais/dashboard',
     '/satellite/dashboard',
+    '/aprs/dashboard',
 ]);
 
 // Shared module destroy map — closes SSE EventSources, timers, etc.
@@ -772,7 +773,6 @@ function getActiveScanSummary() {
         bluetooth: Boolean(
             ((typeof BluetoothMode !== 'undefined' && typeof BluetoothMode.isScanning === 'function' && BluetoothMode.isScanning()) || isBtRunning)
         ),
-        aprs: Boolean(typeof isAprsRunning !== 'undefined' && isAprsRunning),
         tscm: Boolean(typeof isTscmRunning !== 'undefined' && isTscmRunning),
     };
 }
@@ -812,9 +812,6 @@ function stopActiveLocalScansForNavigation() {
         Promise.resolve(stopBtScan()).catch(() => { });
     }
 
-    if (typeof isAprsRunning !== 'undefined' && isAprsRunning && typeof stopAprs === 'function') {
-        Promise.resolve(stopAprs()).catch(() => { });
-    }
     if (typeof isTscmRunning !== 'undefined' && isTscmRunning && typeof stopTscmSweep === 'function') {
         Promise.resolve(stopTscmSweep()).catch(() => { });
     }
@@ -1028,9 +1025,6 @@ async function switchMode(mode, options = {}) {
         if (btScanActive && !isBtModeTransition && typeof stopBtScan === 'function') {
             stopTasks.push(awaitStopAction('bluetooth', () => stopBtScan(), LOCAL_STOP_TIMEOUT_MS));
         }
-        if (isAprsRunning) {
-            stopTasks.push(awaitStopAction('aprs', () => stopAprs(), LOCAL_STOP_TIMEOUT_MS));
-        }
         if (isTscmRunning) {
             stopTasks.push(awaitStopAction('tscm', () => stopTscmSweep(), LOCAL_STOP_TIMEOUT_MS));
         }
@@ -1119,7 +1113,6 @@ async function switchMode(mode, options = {}) {
     const wifiLayoutContainer = document.getElementById('wifiLayoutContainer');
     const btLayoutContainer = document.getElementById('btLayoutContainer');
     const satelliteVisuals = document.getElementById('satelliteVisuals');
-    const aprsVisuals = document.getElementById('aprsVisuals');
     const tscmVisuals = document.getElementById('tscmVisuals');
     const spyStationsVisuals = document.getElementById('spyStationsVisuals');
     const meshtasticVisuals = document.getElementById('meshtasticVisuals');
@@ -1164,7 +1157,6 @@ async function switchMode(mode, options = {}) {
         const existing = document.getElementById('weatherSatHandoffBanner');
         if (existing) existing.remove();
     }
-    if (aprsVisuals) aprsVisuals.style.display = mode === 'aprs' ? 'flex' : 'none';
     if (tscmVisuals) tscmVisuals.style.display = mode === 'tscm' ? 'flex' : 'none';
     if (spyStationsVisuals) spyStationsVisuals.style.display = mode === 'spystations' ? 'flex' : 'none';
     if (meshtasticVisuals) meshtasticVisuals.style.display = mode === 'meshtastic' ? 'flex' : 'none';
@@ -1370,7 +1362,6 @@ async function switchMode(mode, options = {}) {
 
 // Handle window resize for maps (especially important on mobile orientation change)
 window.addEventListener('resize', function () {
-    if (aprsMap) aprsMap.invalidateSize();
     if (typeof Meshtastic !== 'undefined') Meshtastic.invalidateMap();
     if (typeof BtLocate !== 'undefined') BtLocate.invalidateMap();
     if (typeof SSTV !== 'undefined' && SSTV.invalidateMap) SSTV.invalidateMap();
@@ -1393,7 +1384,6 @@ window.addEventListener('popstate', function () {
 // Also handle orientation changes explicitly for mobile
 window.addEventListener('orientationchange', function () {
     setTimeout(() => {
-        if (aprsMap) aprsMap.invalidateSize();
         if (typeof Meshtastic !== 'undefined') Meshtastic.invalidateMap();
         if (typeof SSTV !== 'undefined' && SSTV.invalidateMap) SSTV.invalidateMap();
     }, 200);

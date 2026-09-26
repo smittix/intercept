@@ -40,6 +40,7 @@ NAV_PAGES = [
     "/adsb/dashboard",
     "/ais/dashboard",
     "/satellite/dashboard",
+    "/aprs/dashboard",
     "/adsb/history",
     "/controller/monitor",
     "/controller/manage",

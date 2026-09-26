@@ -146,7 +146,7 @@ function updateCapabilitiesDisplay(sdrType) {
         document.getElementById('capGainRange').textContent = `${caps.gain_min}-${caps.gain_max} dB`;
         // Update max attribute on all mode gain inputs so constraints match the SDR
         const gainMax = caps.gain_max;
-        ['gain', 'sensorGain', 'aprsStripGain', 'weatherSatGain'].forEach(id => {
+        ['gain', 'sensorGain', 'weatherSatGain'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.max = gainMax;
         });
