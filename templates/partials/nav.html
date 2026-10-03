@@ -664,29 +664,129 @@
     // core module because no single JS bundle is loaded on all pages.
     if (typeof killAllProcesses === 'undefined') {
         window.killAllProcesses = function() {
-            if (!window.confirm('Stop all running processes?\n\nThis kills every decoder and scan currently running.')) {
-                return;
-            }
+            // Use a custom styled modal matching the platform's UI
+            showCustomConfirm(
+                'Stop all running processes?',
+                'This kills every decoder and scan currently running.',
+                () => {
+                    // The main dashboard has its own killAll(): it posts to /killall and
+                    // also resets SPA state (device reservations, run flags, SSE). Prefer
+                    // it so that state stays consistent; posting again here would double
+                    // up the request.
+                    if (typeof killAll === 'function') {
+                        killAll();
+                        return;
+                    }
 
-            // The main dashboard has its own killAll(): it posts to /killall and
-            // also resets SPA state (device reservations, run flags, SSE). Prefer
-            // it so that state stays consistent; posting again here would double
-            // up the request.
-            if (typeof killAll === 'function') {
-                killAll();
-                return;
-            }
-
-            fetch('/killall', { method: 'POST' })
-                .then(r => r.json())
-                .then(data => {
-                    const n = (data && data.processes) ? data.processes.length : 0;
-                    navNotify('All processes stopped' + (n ? ' (' + n + ' killed)' : ' (none were running)'), false);
-                })
-                .catch(err => navNotify('Failed to stop processes: ' + err.message, true));
+                    fetch('/killall', { method: 'POST' })
+                        .then(r => r.json())
+                        .then(data => {
+                            const n = (data && data.processes) ? data.processes.length : 0;
+                            navNotify('All processes stopped' + (n ? ' (' + n + ' killed)' : ' (none were running)'), false);
+                        })
+                        .catch(err => navNotify('Failed to stop processes: ' + err.message, true));
+                }
+            );
         };
     }
 
+    // Dynamically creates and manages the confirmation modal adapting to Light/Night mode
+    function showCustomConfirm(title, message, onConfirm) {
+        let modal = document.getElementById('intercept-confirm-modal');
+        
+        // Read the exact theme attribute used by the platform
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        const isLightMode = currentTheme === 'light';
+
+        // Color palette matched to the platform's aesthetic
+        const theme = isLightMode ? {
+            overlay: 'rgba(0, 0, 0, 0.4)',
+            bg: '#ffffff',
+            textMain: '#1f2937',
+            textMuted: '#4b5563',
+            border: '#e5e7eb',
+            btnCancelBg: '#f3f4f6',
+            btnCancelText: '#374151',
+            btnCancelBorder: '#d1d5db',
+            btnActionBg: '#dc2626',
+            btnActionText: '#ffffff'
+        } : {
+            overlay: 'rgba(5, 7, 12, 0.4)',
+            bg: '#0a0e17',              // Deep dark background matching the login/dashboard cards
+            textMain: '#f3f4f6',
+            textMuted: '#9ca3af',
+            border: '#1e293b',          // Thin sharp subtle borders
+            btnCancelBg: '#111827',
+            btnCancelText: '#d1d5db',
+            btnCancelBorder: '#374151',
+            btnActionBg: '#dc2626',     // Red warning accent for stopping processes
+            btnActionText: '#ffffff'
+        };
+
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'intercept-confirm-modal';
+            modal.innerHTML = `
+                <div id="intercept-confirm-box" style="padding: 24px; border-radius: 4px; max-width: 380px; width: 90%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);">
+                    <h3 id="intercept-confirm-title" style="margin: 0 0 10px 0; font-size: 1rem; font-weight: 600;"></h3>
+                    <p id="intercept-confirm-text" style="margin: 0 0 20px 0; font-size: 0.85rem; line-height: 1.5;"></p>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button id="intercept-cancel-btn" style="padding: 8px 16px; border-radius: 2px; cursor: pointer; font-size: 0.8rem; font-weight: 500;">Cancel</button>
+                        <button id="intercept-ok-btn" style="border: none; padding: 8px 16px; border-radius: 2px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">Yes, Stop All</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Apply container overlay styles dynamically
+        modal.style.cssText = `
+            position: fixed; inset: 0; background: ${theme.overlay}; 
+            display: flex; align-items: center; justify-content: center; z-index: 9999;
+            font-family: system-ui, -apple-system, sans-serif;
+        `;
+
+        // Apply box theme styles dynamically
+        const box = document.getElementById('intercept-confirm-box');
+        box.style.cssText = `
+            background: ${theme.bg}; color: ${theme.textMain}; padding: 24px; border-radius: 4px; 
+            border: 1px solid ${theme.border}; max-width: 380px; width: 90%; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+        `;
+
+        // Apply text and button theme styles
+        document.getElementById('intercept-confirm-title').innerText = title;
+        document.getElementById('intercept-confirm-title').style.color = isLightMode ? '#dc2626' : '#f87171';
+        
+        const textEl = document.getElementById('intercept-confirm-text');
+        textEl.innerText = message;
+        textEl.style.color = theme.textMuted;
+
+        const cancelBtn = document.getElementById('intercept-cancel-btn');
+        cancelBtn.style.background = theme.btnCancelBg;
+        cancelBtn.style.color = theme.btnCancelText;
+        cancelBtn.style.border = `1px solid ${theme.btnCancelBorder}`;
+
+        const okBtn = document.getElementById('intercept-ok-btn');
+        okBtn.style.background = theme.btnActionBg;
+        okBtn.style.color = theme.btnActionText;
+
+        modal.style.display = 'flex';
+
+        // Clear previous event listeners by cloning the buttons
+        const newOk = okBtn.cloneNode(true);
+        const newCancel = cancelBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOk, okBtn);
+        cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+
+        newOk.onclick = () => {
+            modal.style.display = 'none';
+            onConfirm();
+        };
+        newCancel.onclick = () => {
+            modal.style.display = 'none';
+        };
+}
     // Minimal, dependency-free notification. Uses the shared toast component
     // when the page has loaded it, so the main dashboard keeps its usual look.
     function navNotify(message, isError) {
