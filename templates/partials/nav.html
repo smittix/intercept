@@ -664,29 +664,174 @@
     // core module because no single JS bundle is loaded on all pages.
     if (typeof killAllProcesses === 'undefined') {
         window.killAllProcesses = function() {
-            if (!window.confirm('Stop all running processes?\n\nThis kills every decoder and scan currently running.')) {
-                return;
-            }
+            // Use a custom styled modal matching the platform's UI
+            showCustomConfirm(
+                'Stop all running processes?',
+                'This kills every decoder and scan currently running.',
+                () => {
+                    // The main dashboard has its own killAll(): it posts to /killall and
+                    // also resets SPA state (device reservations, run flags, SSE). Prefer
+                    // it so that state stays consistent; posting again here would double
+                    // up the request.
+                    if (typeof killAll === 'function') {
+                        killAll();
+                        return;
+                    }
 
-            // The main dashboard has its own killAll(): it posts to /killall and
-            // also resets SPA state (device reservations, run flags, SSE). Prefer
-            // it so that state stays consistent; posting again here would double
-            // up the request.
-            if (typeof killAll === 'function') {
-                killAll();
-                return;
-            }
-
-            fetch('/killall', { method: 'POST' })
-                .then(r => r.json())
-                .then(data => {
-                    const n = (data && data.processes) ? data.processes.length : 0;
-                    navNotify('All processes stopped' + (n ? ' (' + n + ' killed)' : ' (none were running)'), false);
-                })
-                .catch(err => navNotify('Failed to stop processes: ' + err.message, true));
+                    fetch('/killall', { method: 'POST' })
+                        .then(r => r.json())
+                        .then(data => {
+                            const n = (data && data.processes) ? data.processes.length : 0;
+                            navNotify('All processes stopped' + (n ? ' (' + n + ' killed)' : ' (none were running)'), false);
+                        })
+                        .catch(err => navNotify('Failed to stop processes: ' + err.message, true));
+                },
+                'Yes, Stop All'
+            );
         };
     }
 
+    // Dynamically creates and manages a reusable confirmation modal adapting to theme variables
+    function showCustomConfirm(title, message, onConfirm, confirmLabel = 'Confirm') {
+        let modal = document.getElementById('intercept-confirm-modal');
+        
+        // Unified theme configuration leveraging platform CSS variables directly
+        const theme = {
+            overlay: 'rgba(5, 7, 12, 0.6)',
+            bg: 'var(--bg-card)',
+            textMain: 'var(--text-primary)',
+            textMuted: 'var(--text-secondary)',
+            border: 'var(--border-color)',
+            btnCancelBg: 'var(--bg-panel)',
+            btnCancelText: 'var(--text-primary)',
+            btnCancelBorder: 'var(--border-color)',
+            btnActionBg: 'var(--accent-red)',
+            btnActionText: '#ffffff',
+            titleColor: 'var(--accent-red)',
+            fontFamily: 'var(--font-family, system-ui, -apple-system, sans-serif)'
+        };
+
+        // Keep track of the element that had focus before opening the modal
+        const previousActiveElement = document.activeElement;
+
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'intercept-confirm-modal';
+            modal.innerHTML = `
+                <div id="intercept-confirm-box" tabindex="-1" style="padding: 24px; border-radius: 4px; max-width: 380px; width: 90%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);">
+                    <h3 id="intercept-confirm-title" style="margin: 0 0 10px 0; font-size: 1rem; font-weight: 600;"></h3>
+                    <p id="intercept-confirm-text" style="margin: 0 0 20px 0; font-size: 0.85rem; line-height: 1.5;"></p>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button id="intercept-cancel-btn" style="padding: 8px 16px; border-radius: 2px; cursor: pointer; font-size: 0.8rem; font-weight: 500; outline: none; transition: box-shadow 0.15s ease, border-color 0.15s ease;"></button>
+                        <button id="intercept-ok-btn" style="border: none; padding: 8px 16px; border-radius: 2px; cursor: pointer; font-size: 0.8rem; font-weight: 600; outline: none; transition: opacity 0.15s ease;"></button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Close when clicking directly on the dark backdrop overlay
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+        }
+
+        // Apply container overlay styles dynamically
+        modal.style.cssText = `
+            position: fixed; inset: 0; background: ${theme.overlay}; 
+            display: flex; align-items: center; justify-content: center; z-index: 9999;
+            font-family: ${theme.fontFamily};
+        `;
+
+        // Apply box theme styles dynamically
+        const box = document.getElementById('intercept-confirm-box');
+        box.style.cssText = `
+            background: ${theme.bg}; color: ${theme.textMain}; padding: 24px; border-radius: 4px; 
+            border: 1px solid ${theme.border}; max-width: 380px; width: 90%; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); outline: none;
+        `;
+
+        // Apply content and theme styles
+        const titleEl = document.getElementById('intercept-confirm-title');
+        titleEl.innerText = title;
+        titleEl.style.color = theme.titleColor;
+        
+        const textEl = document.getElementById('intercept-confirm-text');
+        textEl.innerText = message;
+        textEl.style.color = theme.textMuted;
+
+        const cancelBtn = document.getElementById('intercept-cancel-btn');
+        cancelBtn.innerText = 'Cancel';
+        cancelBtn.style.background = theme.btnCancelBg;
+        cancelBtn.style.color = theme.btnCancelText;
+        cancelBtn.style.border = `1px solid ${theme.btnCancelBorder}`;
+
+        const okBtn = document.getElementById('intercept-ok-btn');
+        okBtn.innerText = confirmLabel;
+        okBtn.style.background = theme.btnActionBg;
+        okBtn.style.color = theme.btnActionText;
+
+        modal.style.display = 'flex';
+
+        // Clear previous event listeners by cloning the buttons
+        const newOk = okBtn.cloneNode(true);
+        const newCancel = cancelBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOk, okBtn);
+        cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+
+        // Add explicit focus styles dynamically so the visual ring appears when focused
+        const applyFocusStyle = (btn, isCancel = true) => {
+            if (isCancel) {
+                btn.style.boxShadow = '0 0 0 2px var(--accent-cyan, #38bdf8)';
+                btn.style.borderColor = 'var(--accent-cyan, #38bdf8)';
+            } else {
+                btn.style.boxShadow = '0 0 0 2px rgba(220, 38, 38, 0.5)';
+            }
+        };
+
+        const removeFocusStyle = (btn) => {
+            btn.style.boxShadow = 'none';
+            btn.style.border = isCancel ? `1px solid ${theme.btnCancelBorder}` : 'none';
+        };
+
+        newCancel.addEventListener('focus', () => applyFocusStyle(newCancel, true));
+        newCancel.addEventListener('blur', () => removeFocusStyle(newCancel));
+        
+        newOk.addEventListener('focus', () => applyFocusStyle(newOk, false));
+        newOk.addEventListener('blur', () => removeFocusStyle(newOk));
+
+        function closeModal() {
+            modal.style.display = 'none';
+            document.removeEventListener('keydown', handleKeyDown);
+            if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+                previousActiveElement.focus();
+            }
+        }
+
+        newOk.onclick = () => {
+            closeModal();
+            onConfirm();
+        };
+
+        newCancel.onclick = () => {
+            closeModal();
+        };
+
+        // Keyboard handler for Escape dismissal
+        function handleKeyDown(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        }
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Focus management: move focus safely to Cancel button on open with a clear visual ring
+        setTimeout(() => {
+            newCancel.focus();
+            applyFocusStyle(newCancel, true);
+        }, 50);
+    }
     // Minimal, dependency-free notification. Uses the shared toast component
     // when the page has loaded it, so the main dashboard keeps its usual look.
     function navNotify(message, isError) {
