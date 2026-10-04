@@ -179,6 +179,9 @@
                             <span style="color: var(--accent-yellow);">⚠</span> Requires separate SDR (VHF ~131 MHz)
                         </div>
                         <div class="acars-controls" style="padding: 8px; border-bottom: 1px solid var(--border-color);">
+                            <select id="acarsSourceSelect" title="Where ACARS runs: with ADS-B, on this machine, or on an agent" aria-label="ACARS source" onfocus="fillPanelSourceSelect(this)" onchange="onPanelSourceChange('acars')" style="width: 100%; font-size: 10px; margin-bottom: 5px;">
+                                <option value="">Source: same as ADS-B</option>
+                            </select>
                             <div style="display: flex; gap: 5px; margin-bottom: 5px;">
                                 <select id="acarsDeviceSelect" style="flex: 1; font-size: 10px;">
                                     <option value="0">SDR 0</option>
@@ -234,6 +237,9 @@
                             <span style="color: var(--accent-yellow);">&#9888;</span> Requires separate SDR (VHF ~137 MHz)
                         </div>
                         <div class="vdl2-controls" style="padding: 8px; border-bottom: 1px solid var(--border-color);">
+                            <select id="vdl2SourceSelect" title="Where VDL2 runs: with ADS-B, on this machine, or on an agent" aria-label="VDL2 source" onfocus="fillPanelSourceSelect(this)" onchange="onPanelSourceChange('vdl2')" style="width: 100%; font-size: 10px; margin-bottom: 5px;">
+                                <option value="">Source: same as ADS-B</option>
+                            </select>
                             <div style="display: flex; gap: 5px; margin-bottom: 5px;">
                                 <select id="vdl2DeviceSelect" style="flex: 1; font-size: 10px;">
                                     <option value="0">SDR 0</option>
@@ -2045,8 +2051,8 @@ ACARS: ${r.statistics.acarsMessages} messages`;
 
                 populateCompositeDeviceSelect(adsbSelect, devices, 'No SDR found');
                 populateCompositeDeviceSelect(airbandSelect, devices, 'No SDR found');
-                populateCompositeDeviceSelect(acarsSelect, devices);
-                populateCompositeDeviceSelect(vdl2Select, devices);
+                if (panelFollowsPage('acars')) populateCompositeDeviceSelect(acarsSelect, devices);
+                if (panelFollowsPage('vdl2')) populateCompositeDeviceSelect(vdl2Select, devices);
 
                 if (!devices || devices.length === 0) {
                     if (airbandSelect) airbandSelect.disabled = true;
@@ -4176,6 +4182,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                     if (data.running) {
                         isAcarsRunning = true;
                         acarsMessageCount = data.message_count || 0;
+                        document.getElementById('acarsSourceSelect').disabled = true;
                         document.getElementById('acarsCount').textContent = acarsMessageCount;
                         document.getElementById('acarsToggleBtn').textContent = '■ STOP ACARS';
                         document.getElementById('acarsToggleBtn').classList.add('active');
@@ -4248,12 +4255,13 @@ ACARS: ${r.statistics.acarsMessages} messages`;
             const device = deviceIdx;
             const frequencies = getAcarsRegionFreqs();
 
-            // Check if using agent mode
-            const isAgentMode = typeof adsbCurrentAgent !== 'undefined' && adsbCurrentAgent !== 'local';
-            acarsCurrentAgent = isAgentMode ? adsbCurrentAgent : null;
+            // Run where the panel's source says (by default, wherever ADS-B is set to run)
+            const source = panelSource('acars');
+            const isAgentMode = source !== 'local';
+            acarsCurrentAgent = isAgentMode ? source : null;
 
-            // Warn if using same device as ADS-B (only for local mode)
-            if (!isAgentMode && isTracking && adsbActiveDevice !== null && device === String(adsbActiveDevice)) {
+            // Warn if using the same local device as ADS-B
+            if (!isAgentMode && isTracking && (adsbTrackingSource || 'local') === 'local' && adsbActiveDevice !== null && device === String(adsbActiveDevice)) {
                 const useAnyway = await AppFeedback.confirmAction({
                     title: 'SDR Device Conflict',
                     message: `ADS-B tracking is using SDR device ${adsbActiveDevice}. ACARS uses VHF frequencies (129-131 MHz) while ADS-B uses 1090 MHz. You need TWO separate SDR devices to receive both simultaneously. Continue to start ACARS on device ${device} anyway.`,
@@ -4265,7 +4273,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
 
             // Determine endpoint based on agent mode
             const endpoint = isAgentMode
-                ? `/controller/agents/${adsbCurrentAgent}/acars/start`
+                ? `/controller/agents/${source}/acars/start`
                 : '/acars/start';
 
             fetch(endpoint, {
@@ -4281,6 +4289,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                 if (scanResult.status === 'started' || scanResult.status === 'success') {
                     isAcarsRunning = true;
                     acarsMessageCount = 0;
+                    document.getElementById('acarsSourceSelect').disabled = true;
                     document.getElementById('acarsToggleBtn').textContent = '■ STOP ACARS';
                     document.getElementById('acarsToggleBtn').classList.add('active');
                     document.getElementById('acarsPanelIndicator').classList.add('active');
@@ -4303,6 +4312,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                 .then(() => {
                     isAcarsRunning = false;
                     acarsCurrentAgent = null;
+                    document.getElementById('acarsSourceSelect').disabled = false;
                     document.getElementById('acarsToggleBtn').textContent = '▶ START ACARS';
                     document.getElementById('acarsToggleBtn').classList.remove('active');
                     document.getElementById('acarsPanelIndicator').classList.remove('active');
@@ -4320,7 +4330,11 @@ ACARS: ${r.statistics.acarsMessages} messages`;
 
         // Sync ACARS UI state (called by syncModeUI in agents.js)
         function setAcarsRunning(running, agentId = null) {
+            // A status sync from one source must not overwrite ACARS running on
+            // another, e.g. switching the header to an agent while ACARS runs locally
+            if (isAcarsRunning && String(acarsCurrentAgent) !== String(agentId)) return;
             isAcarsRunning = running;
+            document.getElementById('acarsSourceSelect').disabled = running;
             const btn = document.getElementById('acarsToggleBtn');
             const indicator = document.getElementById('acarsPanelIndicator');
 
@@ -4681,12 +4695,13 @@ ACARS: ${r.statistics.acarsMessages} messages`;
             const device = deviceIdx;
             const frequencies = getVdl2RegionFreqs();
 
-            // Check if using agent mode
-            const isAgentMode = typeof adsbCurrentAgent !== 'undefined' && adsbCurrentAgent !== 'local';
-            vdl2CurrentAgent = isAgentMode ? adsbCurrentAgent : null;
+            // Run where the panel's source says (by default, wherever ADS-B is set to run)
+            const source = panelSource('vdl2');
+            const isAgentMode = source !== 'local';
+            vdl2CurrentAgent = isAgentMode ? source : null;
 
-            // Warn if using same device as ADS-B (only for local mode)
-            if (!isAgentMode && isTracking && adsbActiveDevice !== null && device === String(adsbActiveDevice)) {
+            // Warn if using the same local device as ADS-B
+            if (!isAgentMode && isTracking && (adsbTrackingSource || 'local') === 'local' && adsbActiveDevice !== null && device === String(adsbActiveDevice)) {
                 const useAnyway = await AppFeedback.confirmAction({
                     title: 'SDR Device Conflict',
                     message: `ADS-B tracking is using SDR device ${adsbActiveDevice}. VDL2 uses VHF frequencies (~137 MHz) while ADS-B uses 1090 MHz. You need TWO separate SDR devices to receive both simultaneously. Continue to start VDL2 on device ${device} anyway.`,
@@ -4698,7 +4713,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
 
             // Determine endpoint based on agent mode
             const endpoint = isAgentMode
-                ? `/controller/agents/${adsbCurrentAgent}/vdl2/start`
+                ? `/controller/agents/${source}/vdl2/start`
                 : '/vdl2/start';
 
             fetch(endpoint, {
@@ -4715,6 +4730,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                     isVdl2Running = true;
                     vdl2MessageCount = 0;
                     vdl2CollectedData = [];
+                    document.getElementById('vdl2SourceSelect').disabled = true;
                     document.getElementById('vdl2ToggleBtn').innerHTML = '&#9632; STOP VDL2';
                     document.getElementById('vdl2ToggleBtn').classList.add('active');
                     document.getElementById('vdl2PanelIndicator').classList.add('active');
@@ -4761,6 +4777,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
 
                 isVdl2Running = false;
                 vdl2CurrentAgent = null;
+                document.getElementById('vdl2SourceSelect').disabled = false;
                 document.getElementById('vdl2ToggleBtn').innerHTML = '&#9654; START VDL2';
                 document.getElementById('vdl2ToggleBtn').classList.remove('active');
                 document.getElementById('vdl2PanelIndicator').classList.remove('active');
@@ -4780,7 +4797,10 @@ ACARS: ${r.statistics.acarsMessages} messages`;
 
         // Sync VDL2 UI state (called by syncModeUI in agents.js)
         function setVdl2Running(running, agentId = null) {
+            // A status sync from one source must not overwrite VDL2 running on another
+            if (isVdl2Running && String(vdl2CurrentAgent) !== String(agentId)) return;
             isVdl2Running = running;
+            document.getElementById('vdl2SourceSelect').disabled = running;
             const btn = document.getElementById('vdl2ToggleBtn');
             const indicator = document.getElementById('vdl2PanelIndicator');
 
@@ -5131,6 +5151,7 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                     if (data.running) {
                         isVdl2Running = true;
                         vdl2MessageCount = data.message_count || 0;
+                        document.getElementById('vdl2SourceSelect').disabled = true;
                         document.getElementById('vdl2Count').textContent = vdl2MessageCount;
                         document.getElementById('vdl2ToggleBtn').innerHTML = '&#9632; STOP VDL2';
                         document.getElementById('vdl2ToggleBtn').classList.add('active');
@@ -5939,6 +5960,48 @@ ACARS: ${r.statistics.acarsMessages} messages`;
             updateSourceIndicator();
         }
 
+        // ACARS/VDL2 source (#264): "same as ADS-B" follows the header's agent;
+        // Local or an agent runs that decoder there instead, so it can run on a
+        // local SDR while ADS-B runs on an agent, or the other way round.
+        function fillPanelSourceSelect(select) {
+            const value = select.value;
+            select.innerHTML = '<option value="">Source: same as ADS-B</option><option value="local">Source: Local</option>';
+            (typeof agents !== 'undefined' ? agents : []).forEach(agent => {
+                const opt = document.createElement('option');
+                opt.value = agent.id;
+                opt.textContent = `Source: ${agent.name}`;
+                select.appendChild(opt);
+            });
+            select.value = Array.from(select.options).some(o => o.value === String(value)) ? value : '';
+        }
+
+        function panelFollowsPage(panel) {
+            return !document.getElementById(`${panel}SourceSelect`)?.value;
+        }
+
+        // 'local' or an agent id
+        function panelSource(panel) {
+            return document.getElementById(`${panel}SourceSelect`)?.value || adsbCurrentAgent;
+        }
+
+        // List the SDRs of the panel's source
+        async function onPanelSourceChange(panel) {
+            const source = panelSource(panel);
+            let devices = [];
+            if (source === 'local') {
+                devices = await getDetectedDevices();
+            } else {
+                try {
+                    const data = await (await fetch(`/controller/agents/${source}?refresh=true`)).json();
+                    const interfaces = data.agent?.interfaces || {};
+                    devices = interfaces.sdr_devices || interfaces.devices || [];
+                } catch (err) {
+                    console.error(`Failed to load ${panel} devices for agent ${source}:`, err);
+                }
+            }
+            populateCompositeDeviceSelect(document.getElementById(`${panel}DeviceSelect`), devices);
+        }
+
         // Enable/disable airband controls based on local vs remote agent
         function setAirbandEnabled(enabled) {
             const airbandControls = document.querySelectorAll('.airband-controls');
@@ -6117,8 +6180,8 @@ ACARS: ${r.statistics.acarsMessages} messages`;
         function populateAdsbDeviceSelects(devices) {
             const adsbSelect = document.getElementById('adsbDeviceSelect');
             const airbandSelect = document.getElementById('airbandDeviceSelect');
-            const acarsSelect = document.getElementById('acarsDeviceSelect');
-            const vdl2Select = document.getElementById('vdl2DeviceSelect');
+            const acarsSelect = panelFollowsPage('acars') ? document.getElementById('acarsDeviceSelect') : null;
+            const vdl2Select = panelFollowsPage('vdl2') ? document.getElementById('vdl2DeviceSelect') : null;
 
             [adsbSelect, airbandSelect, acarsSelect, vdl2Select].forEach(select => {
                 if (!select) return;
