@@ -355,10 +355,17 @@ const MapUtils = {
         const clockEl = tr.querySelector('.map-hud-clock');
         const dotEl   = tr.querySelector('.map-hud-dot');
 
-        // Clock tick
+        // Clock tick — user's timezone (browser-local by default) plus UTC.
         const updateClock = () => {
             if (!document.body.contains(container)) return;
-            clockEl.textContent = new Date().toISOString().substring(11, 19) + ' UTC';
+            const now = new Date();
+            const utc = now.toISOString().substring(11, 19) + ' UTC';
+            // 'local' maps to no IANA zone, so getIANA() is empty for the default.
+            if (typeof InterceptTime !== 'undefined') {
+                clockEl.textContent = InterceptTime.fullTime(now) + InterceptTime.tzSuffix() + '  ·  ' + utc;
+            } else {
+                clockEl.textContent = utc;
+            }
         };
         updateClock();
         const clockInterval = VisibleInterval.set(updateClock, 1000);
