@@ -14,4 +14,4 @@ mypy>=1.0.0
 pre-commit>=3.0.0
 
 # Type stubs
-types-flask>=1.1.0
+types-flask>=1.1.6
