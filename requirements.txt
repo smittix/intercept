@@ -4,7 +4,7 @@ flask-wtf>=1.2.0
 flask-compress>=1.15
 flask-limiter>=2.5.4
 requests>=2.28.0
-Werkzeug>=3.1.5
+Werkzeug>=3.1.9
 
 # ADS-B history (optional - only needed for Postgres persistence)
 psycopg2-binary>=2.9.9
