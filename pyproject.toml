@@ -35,7 +35,7 @@ dependencies = [
     "websocket-client>=1.6.0",
     "skyfield>=1.45",
     "pyserial>=3.5",
-    "Werkzeug>=3.1.5",
+    "Werkzeug>=3.1.9",
     "bleak>=0.21.0",
     "requests>=2.28.0",
 ]
