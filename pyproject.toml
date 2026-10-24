@@ -32,7 +32,7 @@ dependencies = [
     "flask-limiter>=2.5.4",
     "flask-sock",
     "simple-websocket>=0.5.1",
-    "websocket-client>=1.6.0",
+    "websocket-client>=1.9.2",
     "skyfield>=1.45",
     "pyserial>=3.5",
     "Werkzeug>=3.1.5",
