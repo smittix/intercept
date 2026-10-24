@@ -35,7 +35,7 @@ meshtastic>=2.7.9
 meshcore>=2.3.0,!=2.3.16
 
 # Deauthentication attack detection (optional - for WiFi TSCM)
-scapy>=2.4.5
+scapy>=2.8.0
 
 # QR code generation for Meshtastic channels (optional)
 qrcode[pil]>=7.4
