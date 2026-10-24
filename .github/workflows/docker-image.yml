@@ -63,7 +63,7 @@ jobs:
 
       # Step 6: Build and push the Docker image
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
