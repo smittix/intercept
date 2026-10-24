@@ -51,7 +51,7 @@ cryptography>=41.0.0
 # mypy>=1.0.0
 # WebSocket support for in-app audio streaming (KiwiSDR, Listening Post)
 flask-sock
-simple-websocket>=0.5.1
+simple-websocket>=1.1.0
 websocket-client>=1.6.0
 
 # System health monitoring (optional - graceful fallback if unavailable)
