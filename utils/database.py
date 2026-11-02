@@ -721,6 +721,35 @@ def init_db() -> None:
         if "reply_id" not in mesh_msg_columns:
             conn.execute("ALTER TABLE meshtastic_messages ADD COLUMN reply_id INTEGER")
 
+        # Reticulum LXMF messages (both directions) and nodes heard announcing
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS reticulum_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                msg_hash TEXT UNIQUE,
+                direction TEXT NOT NULL,
+                peer_hash TEXT NOT NULL,
+                title TEXT,
+                content TEXT,
+                timestamp REAL NOT NULL,
+                state TEXT
+            )
+        """)
+
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_reticulum_messages_peer
+            ON reticulum_messages(peer_hash, timestamp)
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS reticulum_nodes (
+                dest_hash TEXT PRIMARY KEY,
+                name TEXT,
+                hops INTEGER,
+                first_heard REAL NOT NULL,
+                last_heard REAL NOT NULL
+            )
+        """)
+
         # =====================================================================
         # Remote Agent Tables (for distributed/controller mode)
         # =====================================================================
@@ -2572,6 +2601,83 @@ def cleanup_old_meshtastic_messages(max_age_days: int = 90) -> int:
             (max_age_days * 86400,),
         )
         return cursor.rowcount
+
+
+_RETICULUM_MESSAGE_FIELDS = ("msg_hash", "direction", "peer_hash", "title", "content", "timestamp", "state")
+
+
+def store_reticulum_message(msg: dict) -> bool:
+    """Store an LXMF message. Returns False when its hash is already stored."""
+    with get_db() as conn:
+        cursor = conn.execute(
+            f"INSERT OR IGNORE INTO reticulum_messages ({', '.join(_RETICULUM_MESSAGE_FIELDS)}) "
+            f"VALUES ({', '.join('?' * len(_RETICULUM_MESSAGE_FIELDS))})",
+            tuple(msg.get(f) for f in _RETICULUM_MESSAGE_FIELDS),
+        )
+        return cursor.rowcount == 1
+
+
+def update_reticulum_message_state(msg_hash: str, state: str) -> bool:
+    """Set the delivery state of a stored outbound message."""
+    with get_db() as conn:
+        cursor = conn.execute("UPDATE reticulum_messages SET state = ? WHERE msg_hash = ?", (state, msg_hash))
+        return cursor.rowcount == 1
+
+
+def get_reticulum_messages(peer_hash: str | None = None, limit: int = 500) -> list[dict]:
+    """Most recent stored messages (optionally with one peer), oldest first."""
+    query = f"SELECT {', '.join(_RETICULUM_MESSAGE_FIELDS)} FROM reticulum_messages"
+    params: list = []
+    if peer_hash:
+        query += " WHERE peer_hash = ?"
+        params.append(peer_hash)
+    query += " ORDER BY timestamp DESC, id DESC LIMIT ?"
+    params.append(limit)
+    with get_db() as conn:
+        rows = conn.execute(query, params).fetchall()
+    return [dict(row) for row in reversed(rows)]
+
+
+def get_reticulum_conversations() -> list[dict]:
+    """One entry per peer: last message, message count and the peer's announced name."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT m.peer_hash, n.name, COUNT(*) AS count, MAX(m.timestamp) AS last_timestamp,
+                   (SELECT content FROM reticulum_messages l WHERE l.peer_hash = m.peer_hash
+                    ORDER BY l.timestamp DESC, l.id DESC LIMIT 1) AS last_content
+            FROM reticulum_messages m
+            LEFT JOIN reticulum_nodes n ON n.dest_hash = m.peer_hash
+            GROUP BY m.peer_hash
+            ORDER BY last_timestamp DESC
+        """).fetchall()
+    return [dict(row) for row in rows]
+
+
+def upsert_reticulum_node(dest_hash: str, name: str | None, hops: int | None, heard_at: float) -> None:
+    """Record an LXMF announce; keeps the last known name when one arrives without it."""
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO reticulum_nodes (dest_hash, name, hops, first_heard, last_heard)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(dest_hash) DO UPDATE SET
+                name = COALESCE(excluded.name, reticulum_nodes.name),
+                hops = excluded.hops,
+                last_heard = excluded.last_heard
+            """,
+            (dest_hash, name, hops, heard_at, heard_at),
+        )
+
+
+def get_reticulum_nodes(limit: int = 1000) -> list[dict]:
+    """Nodes heard announcing, most recently heard first."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT dest_hash, name, hops, first_heard, last_heard FROM reticulum_nodes "
+            "ORDER BY last_heard DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 # =============================================================================

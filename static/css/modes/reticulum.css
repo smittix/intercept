@@ -1,0 +1,182 @@
+/* Reticulum mode: scoped styles (rns-*), modelled on meshcore.css */
+
+/* ── Connection strip ── */
+.rns-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.rns-strip-group { display: flex; align-items: center; gap: 6px; }
+.rns-strip-divider { width: 1px; height: 20px; background: var(--border-color); margin: 0 4px; }
+.rns-strip-status-text { font-size: 12px; color: var(--text-muted); max-width: 380px; }
+
+.rns-strip-input {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 4px 6px;
+    font-size: 12px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+}
+.rns-strip-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-primary);
+}
+.rns-strip-btn:hover { opacity: 0.85; }
+.rns-strip-btn.connect { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
+.rns-strip-btn.disconnect { border-color: #f44336; color: #f44336; }
+.rns-strip-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.rns-transport-tabs { display: flex; gap: 2px; }
+.rns-transport-tab {
+    padding: 3px 8px;
+    font-size: 11px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+.rns-transport-tab.active { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
+.rns-transport-tab:disabled { cursor: not-allowed; opacity: 0.6; }
+
+.rns-strip-stat { display: flex; flex-direction: column; align-items: center; min-width: 40px; }
+.rns-strip-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+    font-family: var(--font-data);
+    line-height: 1;
+}
+.rns-strip-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.rns-address { font-family: var(--font-mono); font-size: 11px; color: var(--accent-cyan); cursor: copy; }
+
+/* ── Status dot ── */
+.rns-status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+}
+.rns-status-dot.online   { background: #4caf50; box-shadow: 0 0 5px #4caf50; }
+.rns-status-dot.starting { background: #ff9800; animation: rns-pulse 1s infinite; }
+.rns-status-dot.waiting  { background: #ff9800; }
+.rns-status-dot.error    { background: #f44336; }
+@keyframes rns-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ── Body ── */
+.rns-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.rns-panel {
+    width: 240px;
+    min-width: 240px;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.rns-panel-section { padding: 10px; border-bottom: 1px solid var(--border-color); overflow-y: auto; max-height: 45%; }
+.rns-panel-section--grow { flex: 1; max-height: none; }
+.rns-panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 8px; }
+.rns-empty { font-size: 11px; color: var(--text-muted); }
+
+.rns-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 5px 4px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+}
+.rns-item:last-child { border-bottom: none; }
+.rns-item:hover, .rns-item.active { background: var(--bg-input); }
+.rns-item[hidden] { display: none; }
+.rns-item-name { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rns-item-meta { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.rns-node-search input {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 6px;
+    padding: 5px 8px;
+    font-size: 11px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+}
+.rns-node-search input:focus { outline: none; border-color: var(--accent-cyan); }
+
+/* ── Conversation ── */
+.rns-content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.rns-conversation-header {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--accent-cyan);
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.rns-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.rns-feed-placeholder { padding: 24px; text-align: center; }
+.rns-message {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    max-width: 80%;
+    align-self: flex-start;
+}
+.rns-message.out { align-self: flex-end; border-left: 3px solid var(--accent-cyan); }
+.rns-message.failed { border-color: #f44336; }
+.rns-message-header { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 4px; font-size: 11px; color: var(--text-muted); }
+.rns-message-sender { color: var(--accent-cyan); font-weight: 600; }
+.rns-message-text { color: var(--text-primary); white-space: pre-wrap; word-break: break-word; }
+
+.rns-compose {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-card);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.rns-compose-dest, .rns-compose-input {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 6px 10px;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-family: var(--font-mono);
+}
+.rns-compose-dest { width: 270px; }
+.rns-compose-input { flex: 1; min-width: 160px; font-size: 13px; }
+.rns-compose-dest:focus, .rns-compose-input:focus { outline: none; border-color: var(--accent-cyan); }
+.rns-compose-btn {
+    padding: 6px 16px;
+    background: var(--accent-cyan);
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+}

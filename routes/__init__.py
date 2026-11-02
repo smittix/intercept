@@ -35,6 +35,7 @@ def register_blueprints(app):
     from .pager import pager_bp
     from .radiosonde import radiosonde_bp
     from .recordings import recordings_bp
+    from .reticulum import reticulum_bp
     from .rtlamr import rtlamr_bp
     from .satellite import satellite_bp
     from .sensor import sensor_bp
@@ -75,6 +76,7 @@ def register_blueprints(app):
     app.register_blueprint(receiver_bp)
     app.register_blueprint(meshtastic_bp)
     app.register_blueprint(meshcore_bp)
+    app.register_blueprint(reticulum_bp)
     app.register_blueprint(tscm_bp)
     app.register_blueprint(spy_stations_bp)
     app.register_blueprint(controller_bp)  # Remote agent controller
