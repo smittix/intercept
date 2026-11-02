@@ -736,6 +736,7 @@ const DASHBOARD_NAV_PATHS = new Set([
     '/aprs/dashboard',
     '/meshtastic/dashboard',
     '/meshcore/dashboard',
+    '/reticulum/dashboard',
 ]);
 
 // Shared module destroy map — closes SSE EventSources, timers, etc.
