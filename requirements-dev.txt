@@ -11,7 +11,7 @@ pytest-timeout>=2.3.0
 ruff>=0.1.0
 black>=23.0.0
 mypy>=1.0.0
-pre-commit>=3.0.0
+pre-commit>=4.6.2
 
 # Type stubs
 types-flask>=1.1.0
