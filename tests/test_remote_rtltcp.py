@@ -3,7 +3,8 @@
 Found against real rtl_tcp servers: stock rtl_fm cannot open
 ``rtl_tcp:host:port`` and exits at once with "No supported devices found.",
 yet Pager and DSC reported "started". Meters ignored the remote host and
-claimed the local dongle instead.
+claimed the local dongle instead. rtl_fm modes now demodulate remote devices
+with the rtltcp_iq.py | csdr pipeline.
 """
 
 from __future__ import annotations
@@ -20,20 +21,27 @@ from tests.test_mode_lifecycle import _decoders, _executable, _live, _message
 REMOTE = {"rtl_tcp_host": "100.85.185.5", "rtl_tcp_port": 1234}
 
 
-class _RtlFmCannotOpen(FakeProcess):
-    """rtl_fm as osmocom builds it: rtl_tcp:host:port is not a device it knows."""
+BUSY = b"rtltcp_iq: no RTL0 header from rtl_tcp server 100.85.185.5:1234 (busy with another client, or not rtl_tcp)\n"
+
+
+def _is_remote_pipeline(proc):
+    return _executable(proc) == "bash" and any("rtltcp_iq.py" in arg for arg in proc.args)
+
+
+class _RtlTcpBusy(FakeProcess):
+    """The rtl_tcp server is serving another client: the pipeline exits at once."""
 
     def __init__(self, args, *a, **k):
         super().__init__(args, *a, **k)
-        if _executable(self) == "rtl_fm":
-            self.emit(b"No supported devices found.\n", stream="stderr")
+        if _is_remote_pipeline(self):
+            self.emit(BUSY, stream="stderr")
             self._exit(1)
 
 
 @pytest.fixture
 def clean(client):
     yield client
-    for path in ("/stop", "/dsc/stop", "/stop_rtlamr"):
+    for path in ("/stop", "/dsc/stop", "/aprs/stop", "/morse/stop", "/stop_rtlamr"):
         client.post(path, json={})
     for proc in FakeProcess.instances:
         proc.kill()
@@ -48,16 +56,37 @@ def clean(client):
         ("/dsc/start", dict(REMOTE)),
     ],
 )
-def test_rtl_fm_exiting_at_startup_is_reported(clean, start, body):
-    with _decoders(installed=True), patch("subprocess.Popen", _RtlFmCannotOpen):
+def test_remote_source_exiting_at_startup_is_reported(clean, start, body):
+    with _decoders(installed=True), patch("subprocess.Popen", _RtlTcpBusy):
         resp = clean.post(start, json=body)
         time.sleep(0.1)
         live = _live()
     assert resp.status_code >= 400, resp.get_json()
     text = _message(resp)
-    assert "No supported devices found" in text
+    assert "busy with another client" in text
     assert "rtl_tcp" in text
     assert live == [], [p.args for p in live]
+    assert app_module.sdr_device_registry == {}
+
+
+@pytest.mark.parametrize(
+    "start,body",
+    [
+        ("/start", {"frequency": "153.35", **REMOTE}),
+        ("/dsc/start", dict(REMOTE)),
+        ("/aprs/start", dict(REMOTE)),
+        ("/morse/start", {"frequency": "14.06", **REMOTE}),
+    ],
+)
+def test_remote_start_streams_through_rtltcp_client_not_rtl_fm(clean, start, body):
+    with _decoders(installed=True):
+        FakeProcess.startup_output["bash"] = bytes(32_768)  # the pipeline's audio
+        resp = clean.post(start, json=body)
+        procs = list(FakeProcess.instances)
+    assert resp.status_code == 200, _message(resp)
+    assert "rtl_fm" not in [_executable(p) for p in procs]
+    script = next(p for p in procs if _is_remote_pipeline(p)).args[2]
+    assert "--host 100.85.185.5 --port 1234" in script
     assert app_module.sdr_device_registry == {}
 
 

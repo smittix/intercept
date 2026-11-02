@@ -24,7 +24,7 @@ CSDR_MODULATIONS = FM_MODULATIONS | {"am", "usb", "lsb"}
 _SSB_HIGH_CUT_HZ = 3000
 
 
-def _decimations(sample_rate: int, modulation: str, min_capture_rate: int) -> tuple[int, int]:
+def decimations(sample_rate: int, modulation: str, min_capture_rate: int) -> tuple[int, int]:
     """(channel_decim, audio_decim) for a capture rate >= min_capture_rate."""
     min_channel_rate = _WFM_MIN_CHANNEL_RATE if modulation == "wfm" else _NFM_MIN_CHANNEL_RATE
     audio_decim = max(1, math.ceil(min_channel_rate / sample_rate))
@@ -43,7 +43,7 @@ def capture_plan(frequency_mhz: float, sample_rate: int, modulation: str, min_ca
     The source tunes capture_rate/8 above the target so the DC spike falls
     outside the channel; shift_addition_cc 0.125 moves the signal back.
     """
-    channel_decim, audio_decim = _decimations(sample_rate, modulation, min_capture_rate)
+    channel_decim, audio_decim = decimations(sample_rate, modulation, min_capture_rate)
     capture_rate = sample_rate * audio_decim * channel_decim
     return capture_rate, round(frequency_mhz * 1e6) + capture_rate // 8
 
@@ -59,7 +59,7 @@ def csdr_demod_script(
 
     source_cmd must stream CU8 at capture_plan()'s rate and tune frequency.
     """
-    channel_decim, audio_decim = _decimations(sample_rate, modulation, min_capture_rate)
+    channel_decim, audio_decim = decimations(sample_rate, modulation, min_capture_rate)
     channel_rate = sample_rate * audio_decim
 
     stages = [
