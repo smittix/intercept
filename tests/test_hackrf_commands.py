@@ -95,6 +95,13 @@ class TestBuildAdsbCommand:
         cmd = HackRFCommandBuilder().build_adsb_command(_make_device("N/A"))
         assert "--device" not in cmd and "--gain" not in cmd
 
+    @pytest.mark.parametrize("backend", ["native", "soapy_only"])
+    def test_serves_sbs_on_30003(self, backend, request):
+        # readsb 3.16 defaults --net-sbs-port to 0; INTERCEPT reads SBS on 30003
+        request.getfixturevalue(backend)
+        cmd = HackRFCommandBuilder().build_adsb_command(_make_device())
+        assert cmd[cmd.index("--net-sbs-port") + 1] == "30003"
+
     def test_soapy_fallback_uses_soapysdr_device_type(self, soapy_only):
         cmd = HackRFCommandBuilder().build_adsb_command(_make_device(serial="deadbeef"), gain=40)
         # wiedehopf readsb rejects "soapy": "SDR type 'soapy' not recognized"

@@ -226,7 +226,7 @@ class HackRFCommandBuilder(CommandBuilder):
         and VGA control); falls back to SoapySDR for builds without it.
         """
         if _readsb_has_native_hackrf():
-            cmd = ["readsb", "--net", "--device-type", "hackrf", "--quiet"]
+            cmd = ["readsb", "--net", "--net-sbs-port", "30003", "--device-type", "hackrf", "--quiet"]
             if device.serial and device.serial != "N/A":
                 cmd.extend(["--device", device.serial])
             if gain is not None:
@@ -236,7 +236,7 @@ class HackRFCommandBuilder(CommandBuilder):
         else:
             # wiedehopf readsb names this type "soapysdr"; it rejects "soapy"
             device_str = self._build_device_string(device)
-            cmd = ["readsb", "--net", "--device-type", "soapysdr", "--device", device_str, "--quiet"]
+            cmd = ["readsb", "--net", "--net-sbs-port", "30003", "--device-type", "soapysdr", "--device", device_str, "--quiet"]
             if gain is not None:
                 cmd.extend(["--gain", str(int(gain))])
 
