@@ -44,6 +44,9 @@ FLEX_TO_OOK_FIELDS = {
 _PACKAGE_RE = re.compile(r"^Detected (\w+) package\s+@([\d.]+)s", re.MULTILINE)
 _DIST_ENTRY_RE = re.compile(r"^\s*\[\s*\d+\]\s+count:\s+(\d+),\s+width:\s+(\d+) us")
 _ROW_RE = re.compile(r"^\[(\d+)\]\s+\{(\d+)\}\s+([0-9a-f ]*?)\s*:\s*([01 ]*)$")
+# Newer rtl_433 (25.12) prints the sliced rows as one line: "codes : {28}4c70ad3, {28}4c70ad3"
+_CODES_RE = re.compile(r"^codes\s*:\s*(.*)$")
+_CODE_RE = re.compile(r"\{(\d+)\}([0-9a-f]+)")
 _SIGNAL_RE = re.compile(r"RSSI:\s*(-?[\d.]+) dB SNR:\s*(-?[\d.]+) dB")
 _FLEX_RE = re.compile(r"-X '([^']+)'")
 _GUESS_RE = re.compile(r"^Guessing modulation:\s*(.+)$", re.MULTILINE)
@@ -52,6 +55,7 @@ _DIST_HEADINGS = {
     "Pulse width distribution:": "pulse_widths",
     "Gap width distribution:": "gap_widths",
     "Pulse period distribution:": "periods",
+    "Pulse+gap period distribution:": "periods",  # newer rtl_433 (25.12)
 }
 
 
@@ -128,6 +132,12 @@ def ook_settings(flex: dict[str, str]) -> dict | None:
     return settings
 
 
+def _code_row(bits: int, nibbles: str) -> dict:
+    """A row from rtl_433's "{bits}hex" code notation (hex is MSB-first, zero-padded)."""
+    binary = "".join(f"{int(n, 16):04b}" for n in nibbles)[:bits]
+    return {"bits": bits, "hex": nibbles, "binary": binary}
+
+
 def parse_pulse_analyzer(text: str) -> list[dict]:
     """Parse rtl_433 -A output into one dict per detected package."""
     starts = list(_PACKAGE_RE.finditer(text))
@@ -169,6 +179,12 @@ def parse_pulse_analyzer(text: str) -> list[dict]:
                         "binary": row.group(4).replace(" ", ""),
                     }
                 )
+                continue
+            codes = _CODES_RE.match(stripped)
+            if codes:
+                package["rows"].extend(
+                    _code_row(int(bits), nibbles) for bits, nibbles in _CODE_RE.findall(codes.group(1))
+                )
 
         signal = _SIGNAL_RE.search(block)
         if signal:
@@ -193,10 +209,13 @@ def run_pulse_analyzer(iq: np.ndarray, sample_rate: int, rtl_433_path: str) -> s
         write_cs8(iq, tmp_path)
         result = subprocess.run(
             [rtl_433_path, "-r", f"cs8:{tmp_path}", "-s", str(sample_rate), "-A", "-R", "0"],
-            capture_output=True,
+            # One stream, in order: the analyzer report goes to stderr, but newer
+            # rtl_433 prints the sliced rows ("codes") to stdout after each package
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             timeout=ANALYZER_TIMEOUT_SECONDS,
         )
-        return (result.stdout + result.stderr).decode("utf-8", errors="replace")
+        return result.stdout.decode("utf-8", errors="replace")
     finally:
         with contextlib.suppress(OSError):
             os.unlink(tmp_path)
