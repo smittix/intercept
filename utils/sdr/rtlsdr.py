@@ -7,6 +7,7 @@ with existing RTL-SDR installations. No SoapySDR dependency required.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import re
@@ -111,6 +112,28 @@ def disable_bias_t_via_rtl_biast(device_index: int = 0) -> bool:
     except Exception as e:
         logger.warning(f"Failed to disable bias-t via rtl_biast: {e}")
         return False
+
+
+def rtl_startup_error(tool: str, process: subprocess.Popen, device: SDRDevice) -> str | None:
+    """Why an rtl_* tool died right after launch, or None if it is still running.
+
+    Call after PROCESS_START_WAIT, before any thread starts reading stderr.
+    """
+    if process.poll() is None:
+        return None
+    stderr = ""
+    with contextlib.suppress(Exception):
+        stderr = (process.stderr.read() or b"").decode("utf-8", errors="replace").strip()
+    message = f"{tool} exited during startup (code {process.returncode})"
+    if stderr:
+        message += f": {stderr[-500:].rstrip('.')}"
+    if device.is_network:
+        message += (
+            f". The installed {tool} may not support rtl_tcp:host:port devices "
+            "(stock osmocom rtl-sdr has no rtl_tcp client); remote SDRs work "
+            "with the rtl_433-based modes (433 Sensors, OOK)."
+        )
+    return message
 
 
 def _get_dump1090_bias_t_flag(dump1090_path: str) -> str | None:
