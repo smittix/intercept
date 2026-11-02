@@ -31,8 +31,11 @@ HEADER_LEN = 12  # b"RTL0" + tuner type + gain count
 TUNER_R828D = 6  # RTL-SDR Blog V4: HF through its upconverter, not direct sampling
 
 CONNECT_TIMEOUT_S = 5.0
-# rtl_tcp accepts one client; a second one connects but never gets a header
-HEADER_TIMEOUT_S = 5.0
+# rtl_tcp accepts one client; a second one connects but never gets a header.
+# Right after a client disconnects, rtl_tcp accepts the next connection at once
+# but only sends the header once it has torn the old one down: 4.5 s measured
+# on a Pi 5 (tovan-2). Allow well over that, so a quick mode switch works.
+HEADER_TIMEOUT_S = 12.0
 STREAM_TIMEOUT_S = 10.0
 
 
