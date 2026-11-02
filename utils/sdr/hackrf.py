@@ -1,19 +1,53 @@
 """
 HackRF command builder implementation.
 
-Uses SoapySDR-based tools for FM demodulation and signal capture.
-HackRF supports 1 MHz to 6 GHz frequency range.
+Uses SoapySDR-based tools (rx_sdr, plus csdr for FM demodulation) and
+native HackRF backends where available. HackRF supports 1 MHz to 6 GHz.
 """
 
 from __future__ import annotations
 
+import functools
 import logging
+import math
+import shlex
+import subprocess
 
 from utils.dependencies import get_tool_path
 
 from .base import CommandBuilder, SDRCapabilities, SDRDevice, SDRType
 
 logger = logging.getLogger("intercept.sdr.hackrf")
+
+# HackRF's lowest supported sample rate
+HACKRF_MIN_SAMPLE_RATE = 2_000_000
+
+# Minimum rate the channel is decimated to before FM demodulation.
+# Narrowband FM (pager, APRS, voice) fits easily in 40 kHz; broadcast FM
+# needs ~200 kHz for its +/-75 kHz deviation.
+_NFM_MIN_CHANNEL_RATE = 40_000
+_WFM_MIN_CHANNEL_RATE = 200_000
+
+# Modulations demodulated by the rx_sdr | csdr pipeline. Anything else
+# (am, usb, lsb, ...) is still handed to rx_fm.
+_CSDR_FM_MODULATIONS = {"fm", "nfm", "wfm"}
+
+
+@functools.lru_cache(maxsize=1)
+def _readsb_has_native_hackrf() -> bool:
+    """Whether the installed readsb was built with its native HackRF backend.
+
+    wiedehopf readsb only prints its "--device-type hackrf" help section when
+    compiled with HACKRF=yes (the Docker image builds it with SoapySDR only).
+    """
+    readsb = get_tool_path("readsb")
+    if not readsb:
+        return False
+    try:
+        result = subprocess.run([readsb, "--help"], capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return "--device-type hackrf" in result.stdout + result.stderr
 
 
 class HackRFCommandBuilder(CommandBuilder):
@@ -68,10 +102,22 @@ class HackRFCommandBuilder(CommandBuilder):
         bias_t: bool = False,
     ) -> list[str]:
         """
-        Build SoapySDR rx_fm command for FM demodulation.
+        Build an FM demodulation command that writes s16le mono audio at
+        ``sample_rate`` to stdout.
 
-        For pager decoding with HackRF.
+        rx_fm's SoapySDR streaming is broken with HackRF, so FM (fm/nfm/wfm)
+        uses rx_sdr for raw I/Q capture piped through csdr when both tools are
+        installed. AM/SSB, or installs without rx_sdr/csdr, still use rx_fm.
         """
+        rx_sdr_path = get_tool_path("rx_sdr")
+        csdr_path = get_tool_path("csdr")
+        if modulation in _CSDR_FM_MODULATIONS:
+            if rx_sdr_path and csdr_path:
+                return self._build_csdr_fm_command(
+                    device, frequency_mhz, sample_rate, gain, modulation, squelch, bias_t, rx_sdr_path, csdr_path
+                )
+            logger.warning("rx_sdr or csdr not found; falling back to rx_fm for HackRF FM, which may not stream")
+
         device_str = self._build_device_string(device)
 
         rx_fm_path = get_tool_path("rx_fm") or "rx_fm"
@@ -102,6 +148,73 @@ class HackRFCommandBuilder(CommandBuilder):
 
         return cmd
 
+    def _build_csdr_fm_command(
+        self,
+        device: SDRDevice,
+        frequency_mhz: float,
+        sample_rate: int,
+        gain: float | None,
+        modulation: str,
+        squelch: int | None,
+        bias_t: bool,
+        rx_sdr_path: str,
+        csdr_path: str,
+    ) -> list[str]:
+        """
+        rx_sdr (CU8 I/Q) | csdr: offset-tune, channel filter, FM demod, s16 out.
+
+        The capture rate is an exact integer multiple of the output rate so
+        only integer decimation is needed: csdr's rational_resampler_ff
+        outputs silence for large ratios such as 441/40000, which a fixed
+        2 MS/s capture would need for 22050 Hz audio.
+        """
+        wide = modulation == "wfm"
+        min_channel_rate = _WFM_MIN_CHANNEL_RATE if wide else _NFM_MIN_CHANNEL_RATE
+        audio_decim = max(1, math.ceil(min_channel_rate / sample_rate))
+        channel_rate = sample_rate * audio_decim
+        channel_decim = max(1, math.ceil(HACKRF_MIN_SAMPLE_RATE / channel_rate))
+        capture_rate = channel_rate * channel_decim
+
+        # Tune capture_rate/8 above the target so HackRF's DC spike falls
+        # outside the channel; shift_addition_cc 0.125 moves the signal back.
+        tune_hz = round(frequency_mhz * 1e6) + capture_rate // 8
+
+        rx_cmd = [rx_sdr_path, "-d", self._build_device_string(device), "-f", str(tune_hz)]
+        rx_cmd += ["-s", str(capture_rate), "-F", "CU8"]
+        if gain is not None and gain > 0:
+            lna, vga = self._split_gain(gain)
+            rx_cmd += ["-g", f"LNA={lna},VGA={vga}"]
+        if bias_t:
+            rx_cmd.append("-T")
+        rx_cmd.append("-")
+
+        stages = [
+            "convert_u8_f",
+            "shift_addition_cc 0.125",
+            # Channel filter; transition band = 25% of the channel rate
+            f"fir_decimate_cc {channel_decim} {0.25 / channel_decim:.6f}",
+            # atan is exact at wide deviation, unlike quadri's sin() approximation
+            "fmdemod_atan_cf",
+        ]
+        if wide:
+            stages.append(f"deemphasis_wfm_ff {channel_rate} 75e-6")
+        if audio_decim > 1:
+            stages.append(f"rational_resampler_ff 1 {audio_decim}")
+        stages += ["limit_ff", "convert_f_s16"]
+
+        csdr = shlex.quote(csdr_path)
+        pipeline = " | ".join([shlex.join(rx_cmd)] + [f"{csdr} {stage} 2>/dev/null" for stage in stages])
+
+        if squelch:
+            logger.debug("Squelch %s ignored: the HackRF rx_sdr/csdr FM pipeline has no squelch", squelch)
+
+        # Callers stop this by signalling bash, which would orphan the
+        # pipeline. Run it in the background and, on TERM/INT/HUP, kill its
+        # last stage: the SIGPIPE cascade then stops each stage back to
+        # rx_sdr, which handles SIGPIPE and releases the HackRF cleanly.
+        script = f"trap 'kill $! 2>/dev/null; wait' TERM INT HUP; {pipeline} & wait $!"
+        return [get_tool_path("bash") or "bash", "-c", script]
+
     def build_adsb_command(
         self,
         device: SDRDevice,
@@ -110,19 +223,29 @@ class HackRFCommandBuilder(CommandBuilder):
         ppm: int | None = None,
     ) -> list[str]:
         """
-        Build dump1090/readsb command with SoapySDR support for ADS-B decoding.
+        Build readsb command for ADS-B decoding.
 
-        Uses readsb which has better SoapySDR support.
+        Prefers readsb's native HackRF backend (no SoapySDR layer, direct LNA
+        and VGA control); falls back to SoapySDR for builds without it.
         """
-        device_str = self._build_device_string(device)
-
-        cmd = ["readsb", "--net", "--device-type", "soapy", "--device", device_str, "--quiet"]
-
-        if gain is not None:
-            cmd.extend(["--gain", str(int(gain))])
+        if _readsb_has_native_hackrf():
+            cmd = ["readsb", "--net", "--device-type", "hackrf", "--quiet"]
+            if device.serial and device.serial != "N/A":
+                cmd.extend(["--device", device.serial])
+            if gain is not None:
+                # In hackrf mode readsb's --gain is the LNA gain
+                lna, vga = self._split_gain(gain)
+                cmd.extend(["--gain", str(lna), "--hackrf-vgagain", str(vga - vga % 2)])
+        else:
+            # wiedehopf readsb names this type "soapysdr"; it rejects "soapy"
+            device_str = self._build_device_string(device)
+            cmd = ["readsb", "--net", "--device-type", "soapysdr", "--device", device_str, "--quiet"]
+            if gain is not None:
+                cmd.extend(["--gain", str(int(gain))])
 
         if bias_t:
-            cmd.extend(["--enable-bias-t"])
+            # readsb's option is --enable-biastee; --enable-bias-t is rejected
+            cmd.append("--enable-biastee")
 
         return cmd
 
