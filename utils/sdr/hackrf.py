@@ -79,16 +79,13 @@ class HackRFCommandBuilder(CommandBuilder):
         - LNA: 0-40 dB (RF amplifier)
         - VGA: 0-62 dB (IF amplifier)
 
-        This function distributes the requested gain across both stages.
+        This function distributes the requested gain across both stages,
+        in the hardware's step sizes (LNA 8 dB, VGA 2 dB). Both stages must
+        carry gain: with VGA at 0 the ADC sees almost no signal.
         """
-        if gain <= 40:
-            # All to LNA first
-            return int(gain), 0
-        else:
-            # Max out LNA, rest to VGA
-            lna = 40
-            vga = min(62, int(gain - 40))
-            return lna, vga
+        lna = min(40, 8 * round(gain / 16))
+        vga = min(62, int(gain - lna) // 2 * 2)
+        return lna, max(0, vga)
 
     def build_fm_demod_command(
         self,

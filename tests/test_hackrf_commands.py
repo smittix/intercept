@@ -36,17 +36,26 @@ class TestHackRFCapabilities:
 
 
 class TestSplitGain:
-    def test_low_gain_all_to_lna(self):
+    # LNA moves in 8 dB steps (0-40), VGA in 2 dB steps (0-62). Gain is shared
+    # across both: with VGA left at 0 a broadcast FM station measured 0.7 dB
+    # above the noise floor on a real HackRF, versus 8-15 dB when balanced.
+    def test_low_gain_keeps_vga_active(self):
         builder = HackRFCommandBuilder()
         lna, vga = builder._split_gain(30)
-        assert lna == 30
-        assert vga == 0
+        assert (lna, vga) == (16, 14)
 
-    def test_gain_at_lna_max(self):
+    def test_mid_gain_splits_across_stages(self):
         builder = HackRFCommandBuilder()
         lna, vga = builder._split_gain(40)
-        assert lna == 40
-        assert vga == 0
+        assert (lna, vga) == (16, 24)
+
+    def test_steps_match_hardware(self):
+        builder = HackRFCommandBuilder()
+        for gain in range(0, 103):
+            lna, vga = builder._split_gain(gain)
+            assert lna % 8 == 0 and 0 <= lna <= 40
+            assert vga % 2 == 0 and 0 <= vga <= 62
+            assert lna + vga <= gain
 
     def test_high_gain_splits_across_stages(self):
         builder = HackRFCommandBuilder()
@@ -76,10 +85,10 @@ class TestBuildAdsbCommand:
         assert cmd[cmd.index("--device") + 1] == "deadbeef"
 
     def test_native_gain_split_into_lna_and_vga(self, native):
-        # 71 dB -> LNA 40 + VGA 31, VGA rounded down to readsb's 2 dB steps
+        # 71 dB -> LNA 32 + VGA 38 (both stages carry gain, in hardware steps)
         cmd = HackRFCommandBuilder().build_adsb_command(_make_device(), gain=71)
-        assert cmd[cmd.index("--gain") + 1] == "40"
-        assert cmd[cmd.index("--hackrf-vgagain") + 1] == "30"
+        assert cmd[cmd.index("--gain") + 1] == "32"
+        assert cmd[cmd.index("--hackrf-vgagain") + 1] == "38"
         assert "--hackrf-enable-ampgain" not in cmd
 
     def test_native_without_serial_or_gain_uses_readsb_defaults(self, native):
@@ -258,13 +267,13 @@ class TestBuildHackRFTransferIQCommand:
         assert cmd[cmd.index("-d") + 1] == "abc123"
 
     def test_gain_rounded_to_hardware_steps(self):
-        # 70 dB -> LNA 40 (8 dB steps) + VGA 30 (2 dB steps)
+        # 70 dB -> LNA 32 (8 dB steps) + VGA 38 (2 dB steps)
         cmd = HackRFCommandBuilder().build_hackrf_transfer_iq_command(_make_device(), frequency_mhz=100.0, gain=70)
-        assert cmd[cmd.index("-l") + 1] == "40"
-        assert cmd[cmd.index("-g") + 1] == "30"
+        assert cmd[cmd.index("-l") + 1] == "32"
+        assert cmd[cmd.index("-g") + 1] == "38"
         cmd = HackRFCommandBuilder().build_hackrf_transfer_iq_command(_make_device(), frequency_mhz=100.0, gain=21)
-        assert cmd[cmd.index("-l") + 1] == "16"
-        assert cmd[cmd.index("-g") + 1] == "0"
+        assert cmd[cmd.index("-l") + 1] == "8"
+        assert cmd[cmd.index("-g") + 1] == "12"
 
     def test_auto_gain_and_unknown_serial_add_no_flags(self):
         cmd = HackRFCommandBuilder().build_hackrf_transfer_iq_command(_make_device("N/A"), frequency_mhz=100.0)
@@ -279,7 +288,7 @@ class TestAISCommand:
     def test_selects_the_hackrf_by_serial_with_native_gain(self):
         cmd = HackRFCommandBuilder().build_ais_command(_make_device("abc123"), gain=55, tcp_port=10110)
         assert cmd[cmd.index("-d") + 1] == "abc123"
-        assert cmd[cmd.index("-gf") + 1 : cmd.index("-gf") + 5] == ["LNA", "40", "VGA", "15"]
+        assert cmd[cmd.index("-gf") + 1 : cmd.index("-gf") + 5] == ["LNA", "24", "VGA", "30"]
 
     @pytest.mark.parametrize("serial", ["N/A", ""])
     def test_refuses_without_a_serial(self, serial):
