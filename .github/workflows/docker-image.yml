@@ -47,7 +47,7 @@ jobs:
       # Step 5: Generate tags and labels from Git metadata
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
