@@ -223,13 +223,18 @@ class TestClient:
         assert "direct sampling disabled" in capsys.readouterr().err
 
 
-def _fm_cu8(capture_rate: int, offset_hz: float, tone_hz: float = 1000.0, deviation_hz: float = 3000.0) -> bytes:
-    """One second of CU8 I/Q: a carrier at offset_hz FM-modulated by a tone."""
+def _cu8(modulation: str, capture_rate: int, offset_hz: float, tone_hz: float = 1000.0) -> bytes:
+    """One second of CU8 I/Q: a carrier at offset_hz modulated by a tone (3 kHz FM deviation or 50% AM)."""
     t = np.arange(capture_rate) / capture_rate
-    phase = 2 * np.pi * offset_hz * t + (deviation_hz / tone_hz) * np.sin(2 * np.pi * tone_hz * t)
+    phase = 2 * np.pi * offset_hz * t
+    envelope = np.ones_like(t)
+    if modulation == "fm":
+        phase += (3000.0 / tone_hz) * np.sin(2 * np.pi * tone_hz * t)
+    else:
+        envelope += 0.5 * np.sin(2 * np.pi * tone_hz * t)
     iq = np.empty(2 * capture_rate)
-    iq[0::2], iq[1::2] = np.cos(phase), np.sin(phase)
-    return np.clip(127.5 + 100 * iq, 0, 255).astype(np.uint8).tobytes()
+    iq[0::2], iq[1::2] = 60 * envelope * np.cos(phase), 60 * envelope * np.sin(phase)
+    return np.clip(127.5 + iq, 0, 255).astype(np.uint8).tobytes()
 
 
 def _children_alive(pid: int) -> list[int]:
@@ -238,14 +243,17 @@ def _children_alive(pid: int) -> list[int]:
 
 
 @pytest.mark.skipif(not HAVE_CSDR, reason="needs csdr and bash")
-def test_pipeline_demodulates_fake_rtl_tcp_to_a_1khz_tone(monkeypatch):
+@pytest.mark.parametrize("modulation", ["fm", "am"])
+def test_pipeline_demodulates_fake_rtl_tcp_to_a_1khz_tone(modulation):
     rate = 22050
     device = _remote("127.0.0.1", 0)
     capture_rate = 264600
     # The client tunes capture/8 above the target: the signal sits at -capture/8
-    server = FakeRtlTcp(iq=_fm_cu8(capture_rate, -capture_rate / 8))
+    server = FakeRtlTcp(iq=_cu8(modulation, capture_rate, -capture_rate / 8))
     device.rtl_tcp_port = server.port
-    cmd = RTLSDRCommandBuilder().build_fm_demod_command(device, 153.35, sample_rate=rate, gain=30)
+    cmd = RTLSDRCommandBuilder().build_fm_demod_command(
+        device, 153.35, sample_rate=rate, gain=30, modulation=modulation
+    )
     assert f"--rate {capture_rate}" in cmd[2]
 
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
@@ -262,7 +270,7 @@ def test_pipeline_demodulates_fake_rtl_tcp_to_a_1khz_tone(monkeypatch):
         ]
         pcm = np.frombuffer(audio[rate * 2 : 2 * rate * 2], dtype="<i2").astype(float)  # skip filter warm-up
         assert len(pcm) == rate
-        spectrum = np.abs(np.fft.rfft(pcm * np.hanning(len(pcm))))
+        spectrum = np.abs(np.fft.rfft((pcm - pcm.mean()) * np.hanning(len(pcm))))
         peak_hz = np.argmax(spectrum[1:]) + 1
         assert abs(peak_hz - 1000) <= 5, peak_hz
         assert pcm.std() > 1000
