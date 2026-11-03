@@ -1237,6 +1237,9 @@ def kill_all() -> Response:
     from utils.bluetooth import reset_bluetooth_scanner
 
     killed = []
+    # Exact process names (pkill -x), not substrings of any command line: as
+    # a root service, "pkill -f ffmpeg" would also kill unrelated programs of
+    # every user whose arguments merely mention one of these names.
     processes_to_kill = [
         "rtl_fm",
         "multimon-ng",
@@ -1245,6 +1248,9 @@ def kill_all() -> Response:
         "aireplay-ng",
         "airmon-ng",
         "dump1090",
+        "dump1090-fa",
+        "dump1090-mutabi",  # dump1090-mutability: the kernel keeps 15 characters
+        "readsb",  # ADS-B on HackRF/SoapySDR devices
         "acarsdec",
         "dumpvdl2",
         "direwolf",
@@ -1258,14 +1264,20 @@ def kill_all() -> Response:
         "ffmpeg",
         "hackrf_transfer",
         "hackrf_sweep",
-        "auto_rx",
+        "rx_sdr",  # HackRF I/Q source of the csdr demod pipeline
+        "csdr",
     ]
+    # Python helpers run as "python <script>", so match their script filename
+    scripts_to_kill = ["auto_rx.py", "rtltcp_iq.py"]
+    # Only processes owned by this service's user
+    owner = ["-U", str(os.geteuid())]
 
-    for proc in processes_to_kill:
+    targets = [["-x", name] for name in processes_to_kill] + [["-f", script] for script in scripts_to_kill]
+    for match in targets:
         try:
-            result = subprocess.run(["pkill", "-f", proc], capture_output=True)
+            result = subprocess.run(["pkill", *owner, *match], capture_output=True)
             if result.returncode == 0:
-                killed.append(proc)
+                killed.append(match[1])
         except (subprocess.SubprocessError, OSError):
             pass
 
