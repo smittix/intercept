@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% set dash_title = 'RETICULUM // INTERCEPT - See the Invisible' %}
+    {% set dash_mode_css = 'css/modes/reticulum.css' %}
+    {% set dash_layout_css = 'css/reticulum_dashboard.css' %}
+    {% set dash_needs_chart = false %}
+    {% include 'partials/dashboard_head.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+</head>
+<body data-mode="reticulum">
+    <div class="radar-bg"></div>
+    <div class="scanline"></div>
+
+    <header class="header">
+        <div class="logo">
+            RETICULUM
+            <span>// <span class="brand-i"><svg viewBox="36 14 28 68" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="20" r="6" fill="#00ff88"/><rect x="44" y="33" width="12" height="45" rx="2" fill="#00d4ff"/><rect x="38" y="33" width="24" height="4" rx="1" fill="#00d4ff"/><rect x="38" y="74" width="24" height="4" rx="1" fill="#00d4ff"/></svg></span>NTERCEPT - Reticulum LXMF Messenger</span>
+        </div>
+    </header>
+
+    {% if not embedded %}
+    {% set active_mode = 'reticulum' %}
+    {% include 'partials/nav.html' with context %}
+    {% endif %}
+
+    <main class="reticulum-dashboard">
+        <div id="reticulumVisuals" class="mesh-visuals-container">
+            {% include 'partials/modes/reticulum.html' %}
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/core/global-nav.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/modes/reticulum.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            Reticulum.init();
+        });
+    </script>
+    {% include 'partials/settings-modal.html' %}
+    <script src="{{ url_for('static', filename='js/core/settings-manager.js') }}"></script>
+</body>
+</html>

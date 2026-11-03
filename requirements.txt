@@ -34,6 +34,10 @@ meshtastic>=2.7.9
 # 2.3.16 excluded: uses 3.12-only f-string syntax despite requires-python>=3.10
 meshcore>=2.3.0,!=2.3.16
 
+# Reticulum LXMF messaging (optional - only needed for the Reticulum mode)
+rns>=1.0.0
+lxmf>=0.9.0
+
 # Deauthentication attack detection (optional - for WiFi TSCM)
 scapy>=2.4.5
 

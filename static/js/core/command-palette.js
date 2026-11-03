@@ -277,6 +277,25 @@ const CommandPalette = (function() {
                 }
             },
             {
+                title: 'View Reticulum Dashboard',
+                description: 'Open dedicated Reticulum LXMF messaging page',
+                keyword: 'reticulum rns lxmf mesh messaging dashboard',
+                run: () => {
+                    if (window.InterceptNavPerf && typeof window.InterceptNavPerf.markStart === 'function') {
+                        window.InterceptNavPerf.markStart({
+                            targetPath: '/reticulum/dashboard',
+                            trigger: 'command-palette',
+                            sourceMode: (typeof currentMode === 'string' && currentMode) ? currentMode : null,
+                            activeScans: (typeof getActiveScanSummary === 'function') ? getActiveScanSummary() : null,
+                        });
+                    }
+                    if (typeof stopActiveLocalScansForNavigation === 'function') {
+                        stopActiveLocalScansForNavigation();
+                    }
+                    window.location.href = '/reticulum/dashboard';
+                }
+            },
+            {
                 title: 'Kill All Running Processes',
                 description: 'Stop all decoders and scans',
                 keyword: 'kill stop processes emergency',

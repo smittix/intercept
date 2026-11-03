@@ -36,6 +36,7 @@ DASHBOARDS = [
     "/aprs/dashboard",
     "/meshtastic/dashboard",
     "/meshcore/dashboard",
+    "/reticulum/dashboard",
     "/adsb/instruments?icao=ABCDEF",
     "/adsb/history",
     "/messages",
