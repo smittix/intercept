@@ -45,6 +45,9 @@ def start_audio() -> Response:
         request_token_raw = data.get("request_token")
         request_token = int(request_token_raw) if request_token_raw is not None else None
         bias_t_raw = data.get("bias_t", scanner_config.get("bias_t", False))
+        # False when the client has just paused the waterfall: its capture may
+        # still be winding down and must not be picked as the audio source
+        allow_shared = data.get("allow_shared", True) is not False
         if isinstance(bias_t_raw, str):
             bias_t = bias_t_raw.strip().lower() in {"1", "true", "yes", "on"}
         else:
@@ -129,7 +132,7 @@ def start_audio() -> Response:
             )
 
             shared = get_shared_capture_status()
-            if shared.get("running") and shared.get("device") == device:
+            if allow_shared and shared.get("running") and shared.get("device") == device:
                 _stop_audio_stream()
                 ok, msg = start_shared_monitor_from_capture(
                     device=device,

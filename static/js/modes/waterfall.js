@@ -2508,6 +2508,7 @@ const Waterfall = (function () {
         device,
         biasT,
         requestToken,
+        allowShared = true,
     }) {
         const response = await fetch('/receiver/audio/start', {
             method: 'POST',
@@ -2521,6 +2522,7 @@ const Waterfall = (function () {
                 sdr_type: device.sdrType,
                 bias_t: biasT,
                 request_token: requestToken,
+                allow_shared: allowShared,
             }),
         });
 
@@ -2617,7 +2619,7 @@ const Waterfall = (function () {
             // Use live _monitorFreqMhz for retunes so that any user
             // clicks that changed the VFO during the async setup are
             // picked up rather than overridden.
-            const requestAudioStartResynced = async (deviceForRequest) => {
+            const requestAudioStartResynced = async (deviceForRequest, allowShared = true) => {
                 let startResult = await _requestAudioStart({
                     frequency: centerMhz,
                     modulation: mode,
@@ -2626,6 +2628,7 @@ const Waterfall = (function () {
                     device: deviceForRequest,
                     biasT,
                     requestToken,
+                    allowShared,
                 });
                 const startPayload = startResult?.payload || {};
                 const isStale = startPayload.superseded === true || startPayload.status === 'stale';
@@ -2640,6 +2643,7 @@ const Waterfall = (function () {
                             device: deviceForRequest,
                             biasT,
                             requestToken: currentToken + 1,
+                            allowShared,
                         });
                     }
                 }
@@ -2663,14 +2667,25 @@ const Waterfall = (function () {
                 }
                 return;
             }
-            const busy = payload?.error_type === 'DEVICE_BUSY' || (response.status === 409 && !staleStart);
-            if (busy && _running && !retuneOnly) {
+            const isBusy = (r, p) => p?.error_type === 'DEVICE_BUSY' || (r.status === 409 && !(p?.superseded === true || p?.status === 'stale'));
+            // The waterfall claims the SDR before its IQ stream is flowing, and the
+            // backend can only share that stream once it is. Give it a moment
+            // instead of pausing the waterfall straight away.
+            for (let attempt = 0; attempt < 8 && isBusy(response, payload) && _running && !retuneOnly; attempt++) {
+                await _wait(250);
+                if (nonce !== _audioConnectNonce) return;
+                ({ response, payload } = await requestAudioStartResynced(monitorDevice));
+                if (nonce !== _audioConnectNonce) return;
+            }
+            if (isBusy(response, payload) && _running && !retuneOnly) {
                 _setMonitorState('Audio device busy, pausing waterfall and retrying monitor...');
                 await stop({ keepStatus: true });
                 _resumeWaterfallAfterMonitor = true;
                 await _wait(220);
                 monitorDevice = selectedDevice;
-                ({ response, payload } = await requestAudioStartResynced(monitorDevice));
+                // The paused waterfall's capture may still be winding down: don't
+                // let the backend attach the monitor to it.
+                ({ response, payload } = await requestAudioStartResynced(monitorDevice, false));
                 if (nonce !== _audioConnectNonce) return;
                 if (payload?.superseded === true || payload?.status === 'stale') {
                     if (_monitoring) _queueMonitorRetune(90);
