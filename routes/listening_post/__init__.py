@@ -288,7 +288,10 @@ def _start_audio_stream(
             squelch=squelch_value,
             bias_t=bias_t_enabled,
         )
-        sdr_cmd[0] = rx_fm_path
+        # Only swap in the resolved rx_fm binary; HackRF FM returns a
+        # bash -c rx_sdr | csdr pipeline whose argv[0] must stay bash.
+        if os.path.basename(sdr_cmd[0]) == "rx_fm":
+            sdr_cmd[0] = rx_fm_path
 
     encoder_cmd = [
         ffmpeg_path,
