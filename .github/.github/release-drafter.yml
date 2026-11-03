@@ -1,0 +1,42 @@
+name: "Release Draft"
+tag-pattern: "v\\d+\\.\\d+\\.\\d+"
+name-template: "v$RESOLVED_VERSION"
+
+template: |
+  ## What's Changed
+  $CHANGES
+
+categories:
+  - title: "💥 Breaking Changes"
+    label: "breaking-change"
+  - title: "🚀 Features"
+    label: "enhancement"
+  - title: "🐛 Bug Fixes"
+    label: "bug"
+  - title: "🔄 Dependency Updates"
+    label: "dependencies"
+  - title: "🧰 Maintenance"
+    label: "chore"
+  - title: "📦 Others"
+
+change-template: "- $TITLE (#$NUMBER) by @$AUTHOR"
+
+exclude-labels:
+  - "skip-changelog"
+  - "internal"
+
+autolabeler:
+  - label: "enhancement"
+    branch:
+      - "feature/*"
+      - "enhancement/*"
+  - label: "bug"
+    branch:
+      - "fix/*"
+      - "bugfix/*"
+  - label: "breaking-change"
+    branch:
+      - "breaking/*"
+      - "major/*"
+  - label: "dependencies"
+    author: "dependabot[bot]"
