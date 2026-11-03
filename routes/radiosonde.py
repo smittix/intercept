@@ -696,7 +696,7 @@ def start_radiosonde():
                 "Install or repair its Python environment (missing packages such as semver). "
                 f"Checked interpreters: {checked_msg}. "
                 f"Last error: {dep_error[:500]}",
-                500,
+                503,
             )
         cmd = [selected_python, auto_rx_path, "-c", cfg_abs]
     else:

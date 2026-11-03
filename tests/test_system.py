@@ -197,15 +197,20 @@ def test_location_falls_back_to_defaults(client):
     assert data["source"] in ("config", "default")
 
 
-def test_weather_requires_location(client):
+def test_weather_requires_location(client, monkeypatch):
     """Weather endpoint returns error when no location available."""
+    import routes.system as mod
+
     _login(client)
-    # Without lat/lon params and no GPS state or config
-    resp = client.get("/system/weather")
-    assert resp.status_code == 200
-    data = resp.get_json()
-    # Either returns weather or error (depending on config)
-    assert "error" in data or "temp_c" in data
+    # Without lat/lon params, GPS or config the location would fall back to
+    # London and fetch live weather; pin it to none and keep the test offline.
+    monkeypatch.setattr(mod, "_weather_cache", {})
+    monkeypatch.setattr(mod, "_get_observer_location", lambda: {"lat": None, "lon": None, "source": "none"})
+    with patch("routes.system._requests") as mock_requests:
+        resp = client.get("/system/weather")
+    assert resp.status_code == 400
+    assert resp.get_json()["message"] == "No location available"
+    mock_requests.get.assert_not_called()
 
 
 def test_weather_with_mocked_response(client):

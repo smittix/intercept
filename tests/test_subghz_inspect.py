@@ -41,6 +41,43 @@ bitbuffer:: Number of rows: 2
 [01] {28} 4c 70 ad 30 : 01001100 01110000 10101101 0011
 """
 
+# rtl_433 25.12 reports the same package differently: the period heading is
+# "Pulse+gap period distribution:", two more distributions follow, and the
+# sliced rows are a "codes" line of {bits}nibbles instead of bitbuffer rows
+ANALYZER_REPORT_25 = """\
+rtl_433 version 25.12 (2025-12-12) inputs file rtl_tcp RTL-SDR SoapySDR with TLS
+Disabling all device decoders.
+\x1b[102;92m[\x1b[30mInput\x1b[92m]\x1b[0m Test mode active. Reading samples from file: cs8:/tmp/x.cs8
+Detected OOK package\t@0.020001s
+Analyzing pulses...
+Total count:  112,  width: 157.60 ms\t\t(157605 S)
+Pulse width distribution:
+ [ 0] count:   60,  width:  800 us [799;804]\t( 800 S)
+ [ 1] count:   52,  width:  400 us [400;402]\t( 400 S)
+Gap width distribution:
+ [ 0] count:   60,  width:  399 us [398;400]\t( 399 S)
+ [ 1] count:   48,  width:  799 us [798;801]\t( 799 S)
+ [ 2] count:    3,  width: 8799 us [8799;8800]\t(8799 S)
+Pulse+gap period distribution:
+ [ 0] count:  108,  width: 1200 us [1198;1204]\t(1200 S)
+ [ 1] count:    3,  width: 9199 us [9199;9200]\t(9199 S)
+Gap+pulse period distribution:
+ [ 0] count:   33,  width:  800 us [799;804]\t( 800 S)
+ [ 1] count:   28,  width: 1599 us [1599;1601]\t(1599 S)
+Timing distribution:
+ [ 0] count:  108,  width:  800 us [798;804]\t( 800 S)
+Level estimates [high, low]:   3412,     15
+RSSI: -6.8 dB SNR: 23.6 dB Noise: -30.4 dB
+Frequency offsets [F1, F2]:    3225,      0\t(+49.2 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with multiple packets
+view at https://triq.org/pdv/#AAB024
+Attempting demodulation... short_width: 400, long_width: 800, reset_limit: 8801, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=400,l=800,r=8801,g=802,t=160,y=0'
+\x1b[104;94m[\x1b[37mpulse_slicer_pwm\x1b[94m]\x1b[0m Analyzer Device
+codes     : {28}4c70ad3, {28}4c70ad3, {5}a8
+
+"""
+
 FRAME_BITS = "1011001110001111010100101100"
 
 
@@ -83,6 +120,17 @@ class TestParsePulseAnalyzer:
         assert package["rows"] == [
             {"bits": 28, "hex": "4c70ad30", "binary": "0100110001110000101011010011"},
             {"bits": 28, "hex": "4c70ad30", "binary": "0100110001110000101011010011"},
+        ]
+
+    def test_parses_rtl_433_25_report(self):
+        (package,) = subghz_inspect.parse_pulse_analyzer(ANALYZER_REPORT_25)
+        assert [p["width_us"] for p in package["pulse_widths"]] == [800, 400]
+        assert [p["width_us"] for p in package["periods"]] == [1200, 9199]
+        assert package["flex_spec"] == "n=name,m=OOK_PWM,s=400,l=800,r=8801,g=802,t=160,y=0"
+        assert package["rows"] == [
+            {"bits": 28, "hex": "4c70ad3", "binary": "0100110001110000101011010011"},
+            {"bits": 28, "hex": "4c70ad3", "binary": "0100110001110000101011010011"},
+            {"bits": 5, "hex": "a8", "binary": "10101"},
         ]
 
     def test_ook_settings_from_flex(self):
