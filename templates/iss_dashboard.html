@@ -4,6 +4,7 @@
     {% set dash_title = 'ISS TRACKER // INTERCEPT - See the Invisible' %}
     {% set dash_layout_css = 'css/iss_dashboard.css' %}
     {% include 'partials/dashboard_head.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
 </head>
 <body data-mode="satellite">
     <div class="radar-bg"></div>
@@ -145,6 +146,7 @@
         </div>
     </main>
 
+    {% include 'partials/settings-modal.html' %}
     <script src="{{ url_for('static', filename='js/core/settings-manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/map-utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/agents.js') }}"></script>
