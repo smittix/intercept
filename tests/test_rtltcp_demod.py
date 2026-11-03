@@ -223,7 +223,7 @@ class TestClient:
         assert "direct sampling disabled" in capsys.readouterr().err
 
 
-def _cu8(modulation: str, capture_rate: int, offset_hz: float, tone_hz: float = 1000.0) -> bytes:
+def _cu8(modulation: str, capture_rate: int, offset_hz: float, tone_hz: float = 1000.0, amplitude: float = 60) -> bytes:
     """One second of CU8 I/Q: a carrier at offset_hz modulated by a tone (3 kHz FM deviation or 50% AM)."""
     t = np.arange(capture_rate) / capture_rate
     phase = 2 * np.pi * offset_hz * t
@@ -233,7 +233,7 @@ def _cu8(modulation: str, capture_rate: int, offset_hz: float, tone_hz: float = 
     else:
         envelope += 0.5 * np.sin(2 * np.pi * tone_hz * t)
     iq = np.empty(2 * capture_rate)
-    iq[0::2], iq[1::2] = 60 * envelope * np.cos(phase), 60 * envelope * np.sin(phase)
+    iq[0::2], iq[1::2] = amplitude * envelope * np.cos(phase), amplitude * envelope * np.sin(phase)
     return np.clip(127.5 + iq, 0, 255).astype(np.uint8).tobytes()
 
 
@@ -286,3 +286,55 @@ def test_pipeline_demodulates_fake_rtl_tcp_to_a_1khz_tone(modulation):
     assert _children_alive(proc.pid) == []
     assert server.client_closed.wait(5), "the rtl_tcp connection must be closed on stop"
     assert os.path.exists(rtlsdr.RTLTCP_IQ_SCRIPT)
+
+
+def test_squelch_level_maps_slider_to_channel_power():
+    from utils.sdr.csdr_pipeline import squelch_level
+
+    assert squelch_level(0) is None  # off
+    assert squelch_level(1) == pytest.approx(10 ** (-79.3 / 10))
+    assert squelch_level(100) == pytest.approx(10 ** (-10 / 10))
+
+
+def test_squelch_adds_a_power_gate_before_demod(monkeypatch):
+    _fake_tools(monkeypatch)
+    cmd = RTLSDRCommandBuilder().build_fm_demod_command(_remote(), 153.35, sample_rate=22050, modulation="fm", squelch=40)
+    script = cmd[2]
+    assert "squelch_and_smeter_cc" in script
+    assert script.index("squelch_and_smeter_cc") < script.index("fmdemod_atan_cf")
+    assert "rm -rf" in script  # the control fifos are cleaned up
+    off = RTLSDRCommandBuilder().build_fm_demod_command(_remote(), 153.35, sample_rate=22050, modulation="fm", squelch=0)
+    assert "squelch_and_smeter_cc" not in off[2]
+
+
+@pytest.mark.skipif(not HAVE_CSDR, reason="needs csdr and bash")
+@pytest.mark.parametrize("squelch,opens", [(60, True), (80, False)])
+def test_squelch_mutes_a_weak_signal_below_its_threshold(squelch, opens):
+    # Carrier at amplitude 3/127.5: channel power about -32.6 dB.
+    # Squelch 60 -> -38 dB threshold (open); 80 -> -24 dB (closed).
+    rate, capture_rate = 22050, 264600
+    server = FakeRtlTcp(iq=_cu8("fm", capture_rate, -capture_rate / 8, amplitude=3))
+    device = _remote("127.0.0.1", server.port)
+    cmd = RTLSDRCommandBuilder().build_fm_demod_command(device, 153.35, sample_rate=rate, gain=30, modulation="fm", squelch=squelch)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
+    try:
+        audio = b""
+        deadline = time.monotonic() + 10
+        while len(audio) < 3 * rate * 2 and time.monotonic() < deadline:
+            audio += proc.stdout.read1(65536)
+        pcm = np.frombuffer(audio[2 * rate * 2 : 3 * rate * 2], dtype="<i2").astype(float)  # third second
+        assert len(pcm) == rate, "squelch must keep audio flowing (silence, not a stall)"
+        if opens:
+            spectrum = np.abs(np.fft.rfft((pcm - pcm.mean()) * np.hanning(len(pcm))))
+            assert abs(np.argmax(spectrum[1:]) + 1 - 1000) <= 5
+        else:
+            assert np.abs(pcm).max() < 50
+    finally:
+        proc.send_signal(signal.SIGTERM)
+        proc.wait(timeout=5)
+        server.close()
+    for _ in range(50):
+        if not _children_alive(proc.pid):
+            break
+        time.sleep(0.1)
+    assert _children_alive(proc.pid) == []

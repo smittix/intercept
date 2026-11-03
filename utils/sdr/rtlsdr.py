@@ -314,10 +314,7 @@ class RTLSDRCommandBuilder(CommandBuilder):
         if bias_t:
             source.append("--bias-t")
 
-        if squelch:
-            logger.debug("Squelch %s ignored: the rtl_tcp/csdr pipeline has no squelch", squelch)
-
-        script = csdr_demod_script(source, csdr_path, modulation, sample_rate, min_rate)
+        script = csdr_demod_script(source, csdr_path, modulation, sample_rate, min_rate, squelch)
         return [get_tool_path("bash") or "bash", "-c", script]
 
     def build_adsb_command(

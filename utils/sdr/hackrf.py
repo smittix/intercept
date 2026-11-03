@@ -170,10 +170,7 @@ class HackRFCommandBuilder(CommandBuilder):
             rx_cmd.append("-T")
         rx_cmd.append("-")
 
-        if squelch:
-            logger.debug("Squelch %s ignored: the HackRF rx_sdr/csdr FM pipeline has no squelch", squelch)
-
-        script = csdr_demod_script(rx_cmd, csdr_path, modulation, sample_rate, HACKRF_MIN_SAMPLE_RATE)
+        script = csdr_demod_script(rx_cmd, csdr_path, modulation, sample_rate, HACKRF_MIN_SAMPLE_RATE, squelch)
         return [get_tool_path("bash") or "bash", "-c", script]
 
     def build_adsb_command(
