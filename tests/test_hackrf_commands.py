@@ -122,7 +122,16 @@ class TestBuildAdsbCommand:
         # wiedehopf readsb rejects "soapy": "SDR type 'soapy' not recognized"
         assert cmd[cmd.index("--device-type") + 1] == "soapysdr"
         assert cmd[cmd.index("--device") + 1] == "driver=hackrf,serial=deadbeef"
-        assert cmd[cmd.index("--gain") + 1] == "40"
+
+    def test_soapy_sets_lna_vga_and_amp_explicitly(self, soapy_only):
+        # readsb's overall --gain goes through SoapyHackRF setGain, which lands
+        # on odd splits (50 -> LNA 16 + VGA 16) and rejects its max (116). On a
+        # real HackRF One, ADS-B decoded best at LNA 40 / VGA 40 with the RF
+        # amp off; VGA 62 overloaded (0 messages).
+        cmd = HackRFCommandBuilder().build_adsb_command(_make_device(serial="deadbeef"), gain=80)
+        elements = [cmd[i + 1] for i, a in enumerate(cmd) if a == "--soapy-gain-element"]
+        assert elements == ["LNA:40", "VGA:40", "AMP:0"]
+        assert "--gain" not in cmd
 
     @pytest.mark.parametrize("native_backend", [True, False])
     def test_bias_tee_uses_readsb_option_name(self, monkeypatch, native_backend):

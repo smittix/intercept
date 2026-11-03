@@ -2002,6 +2002,28 @@ ACARS: ${r.statistics.acarsMessages} messages`;
                 option.textContent = `SDR ${idx}: ${dev.name || dev.type || 'SDR'}`;
                 select.appendChild(option);
             });
+            if (select.id === 'adsbDeviceSelect') {
+                if (!select.dataset.gainSync) {
+                    select.dataset.gainSync = '1';
+                    select.addEventListener('change', syncAdsbGainRange);
+                }
+                syncAdsbGainRange();
+            }
+        }
+
+        // HackRF gain spans LNA + VGA (0-102 dB) and ADS-B needs most of it:
+        // LNA 40 / VGA 40 decoded best on a HackRF One, while the RTL-SDR scale
+        // (max 50, preset 40) leaves a HackRF nearly deaf at 1090 MHz.
+        function syncAdsbGainRange() {
+            const select = document.getElementById('adsbDeviceSelect');
+            const input = document.getElementById('adsbGainInput');
+            if (!select || !input) return;
+            const hackrf = select.selectedOptions[0]?.dataset.sdrType === 'hackrf';
+            const [max, preset, otherPreset] = hackrf ? [102, 80, 40] : [50, 40, 80];
+            input.max = max;
+            // Swap presets when the device type changes; keep a value the user typed
+            const value = Number(input.value);
+            if (!input.value || value === otherPreset || value > max) input.value = preset;
         }
 
         function showDeviceDetectionPendingState() {

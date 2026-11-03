@@ -205,7 +205,13 @@ class HackRFCommandBuilder(CommandBuilder):
             device_str = self._build_device_string(device)
             cmd = ["readsb", "--net", "--net-sbs-port", "30003", "--device-type", "soapysdr", "--device", device_str, "--quiet"]
             if gain is not None:
-                cmd.extend(["--gain", str(int(gain))])
+                # Set each stage: readsb's overall --gain goes through SoapyHackRF
+                # setGain, which picks odd splits (50 -> LNA 16 + VGA 16) and
+                # rejects the maximum. The RF amp stays off: it added nothing for
+                # ADS-B here and raises the risk of overload from strong FM.
+                lna, vga = self._split_gain(gain)
+                for element in (f"LNA:{lna}", f"VGA:{vga}", "AMP:0"):
+                    cmd.extend(["--soapy-gain-element", element])
 
         if bias_t:
             # readsb's option is --enable-biastee; --enable-bias-t is rejected
