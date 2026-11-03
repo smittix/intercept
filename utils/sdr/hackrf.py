@@ -39,6 +39,18 @@ def _readsb_has_native_hackrf() -> bool:
     return "--device-type hackrf" in result.stdout + result.stderr
 
 
+def _readsb_has_soapysdr() -> bool:
+    """Whether the installed readsb was built with SoapySDR (ENABLE_SOAPYSDR)."""
+    readsb = get_tool_path("readsb")
+    if not readsb:
+        return False
+    try:
+        result = subprocess.run([readsb, "--help"], capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return "SoapySDR options" in result.stdout + result.stderr
+
+
 class HackRFCommandBuilder(CommandBuilder):
     """HackRF command builder using SoapySDR tools."""
 
@@ -174,10 +186,13 @@ class HackRFCommandBuilder(CommandBuilder):
         """
         Build readsb command for ADS-B decoding.
 
-        Prefers readsb's native HackRF backend (no SoapySDR layer, direct LNA
-        and VGA control); falls back to SoapySDR for builds without it.
+        Prefers readsb's SoapySDR backend. The native HackRF backend expects
+        128 KiB transfers; libhackrf 2026.01 delivers 256 KiB and readsb drops
+        the excess, so native mode loses half of all samples (measured on a
+        HackRF One: samples_dropped == samples_processed; SoapySDR: 0 dropped).
+        Native is used only by readsb builds without SoapySDR.
         """
-        if _readsb_has_native_hackrf():
+        if _readsb_has_native_hackrf() and not _readsb_has_soapysdr():
             cmd = ["readsb", "--net", "--net-sbs-port", "30003", "--device-type", "hackrf", "--quiet"]
             if device.serial and device.serial != "N/A":
                 cmd.extend(["--device", device.serial])

@@ -73,11 +73,26 @@ class TestSplitGain:
 class TestBuildAdsbCommand:
     @pytest.fixture
     def native(self, monkeypatch):
+        """readsb built with only the native HackRF backend."""
         monkeypatch.setattr(hackrf, "_readsb_has_native_hackrf", lambda: True)
+        monkeypatch.setattr(hackrf, "_readsb_has_soapysdr", lambda: False)
 
     @pytest.fixture
     def soapy_only(self, monkeypatch):
         monkeypatch.setattr(hackrf, "_readsb_has_native_hackrf", lambda: False)
+        monkeypatch.setattr(hackrf, "_readsb_has_soapysdr", lambda: True)
+
+    @pytest.fixture
+    def both(self, monkeypatch):
+        monkeypatch.setattr(hackrf, "_readsb_has_native_hackrf", lambda: True)
+        monkeypatch.setattr(hackrf, "_readsb_has_soapysdr", lambda: True)
+
+    def test_prefers_soapysdr_when_both_backends_exist(self, both):
+        # readsb's native callback expects 128 KiB blocks; libhackrf 2026.01
+        # delivers 256 KiB and readsb discards the excess: half of all samples
+        # (samples_dropped == samples_processed on a real HackRF One).
+        cmd = HackRFCommandBuilder().build_adsb_command(_make_device(serial="deadbeef"), gain=40)
+        assert cmd[cmd.index("--device-type") + 1] == "soapysdr"
 
     def test_native_hackrf_device_type_with_serial(self, native):
         cmd = HackRFCommandBuilder().build_adsb_command(_make_device(serial="deadbeef"), gain=40)
