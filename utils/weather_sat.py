@@ -13,6 +13,7 @@ and historical metadata, but they are no longer active operational targets.
 from __future__ import annotations
 
 import contextlib
+import functools
 import os
 import pty
 import re
@@ -115,6 +116,20 @@ SATDUMP_SOURCES = {
     "airspyhf": "airspyhf",
     "sdrplay": "sdrplay",
 }
+
+
+
+@functools.cache
+def satdump_prefix() -> tuple[str, ...]:
+    """The start of a SatDump command line: SatDump 2.x takes the 1.x-style
+    commands used here only after its "legacy" subcommand."""
+    try:
+        out = subprocess.run(["satdump", "--help"], capture_output=True, text=True, timeout=20)
+    except Exception:  # not runnable here: the plain command, which reports why
+        return ("satdump",)
+    if out.returncode != 0 and "error while loading shared libraries" in out.stderr:
+        logger.warning(f"SatDump can't start: {out.stderr.strip()[:300]}")
+    return ("satdump", "legacy") if "legacy" in out.stdout else ("satdump",)
 
 
 @dataclass
@@ -539,7 +554,7 @@ class WeatherSatDecoder:
         if rtl_tcp_host:
             # Remote SDR via rtl_tcp
             cmd = [
-                "satdump",
+                *satdump_prefix(),
                 "live",
                 sat_info["pipeline"],
                 str(self._capture_output_dir),
@@ -564,7 +579,7 @@ class WeatherSatDecoder:
                 source_id = self._resolve_device_id(device_index)
 
             cmd = [
-                "satdump",
+                *satdump_prefix(),
                 "live",
                 sat_info["pipeline"],
                 str(self._capture_output_dir),
@@ -675,7 +690,7 @@ class WeatherSatDecoder:
             input_level = "baseband"
 
         cmd = [
-            "satdump",
+            *satdump_prefix(),
             sat_info["pipeline"],
             input_level,
             str(input_file),
