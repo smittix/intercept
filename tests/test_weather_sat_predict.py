@@ -704,3 +704,32 @@ class TestTimestampFormatting:
         dt = datetime(2024, 1, 1, 12, 0, 0)
         value = _format_utc_iso(dt)
         assert value == "2024-01-01T12:00:00Z"
+
+
+def test_a_real_pass_is_found():
+    """Unmocked: Meteor-M2-3 passed 64 degrees over Cincinnati at 02:32 UTC on 2026-11-06.
+    find_discrete sampled every half day before, and found no pass at all."""
+    from unittest.mock import patch
+
+    from skyfield.api import load
+
+    from utils import weather_sat_predict
+
+    tle = ('METEOR-M2 3', '1 57166U 23091A   26308.55232156 -.00000024  00000+0  83279-5 0  9998', '2 57166  98.5914   0.5312 0004972 116.3913 243.7777 14.24055491174497')
+    ts = load.timescale(builtin=True)
+    start = ts.utc(2026, 11, 6, 1, 30)
+
+    class FixedClock:
+        @staticmethod
+        def timescale(builtin=True):
+            ts.now = lambda: start
+            return ts
+
+    with patch.object(weather_sat_predict, "load", FixedClock), patch.object(
+        weather_sat_predict, "_get_tle_source", return_value={"METEOR-M2-3": tle, "METEOR-M2-4": None}
+    ):
+        passes = weather_sat_predict.predict_passes(39.2287, -84.3541, hours=3, min_elevation=40)
+    meteor = [p for p in passes if p["satellite"] == "METEOR-M2-3"]
+    assert len(meteor) == 1
+    assert meteor[0]["startTimeISO"].startswith("2026-11-06T02:")
+    assert meteor[0]["maxEl"] > 60

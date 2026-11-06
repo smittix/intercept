@@ -93,7 +93,10 @@ def predict_passes(
                 alt, _, _ = _diff.at(t).altaz()
                 return alt.degrees > _el
 
-            above_horizon.rough_period = 0.5  # Approximate orbital period in days
+            # find_discrete samples every step_days: a pass is minutes above the
+            # elevation limit, so sample each minute (rough_period isn't read here,
+            # and its coarse default missed most passes)
+            above_horizon.step_days = 1 / 1440
 
             times, is_rising = find_discrete(t0, t1, above_horizon)
 
