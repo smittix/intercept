@@ -32,6 +32,9 @@ from utils.process import register_process, safe_terminate
 
 logger = get_logger("intercept.weather_sat")
 
+# Where captures go unless the decoder is given a folder (tests point it elsewhere)
+DEFAULT_OUTPUT_DIR = Path("data/weather_sat")
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ALLOWED_OFFLINE_INPUT_DIRS = (
     PROJECT_ROOT / "data",
@@ -206,7 +209,7 @@ class WeatherSatDecoder:
         self._images_lock = threading.Lock()
         self._stop_event = threading.Event()
         self._callback: Callable[[CaptureProgress], None] | None = None
-        self._output_dir = Path(output_dir) if output_dir else Path("data/weather_sat")
+        self._output_dir = Path(output_dir) if output_dir else DEFAULT_OUTPUT_DIR
         self._images: list[WeatherSatImage] = []
         self._reader_thread: threading.Thread | None = None
         self._watcher_thread: threading.Thread | None = None

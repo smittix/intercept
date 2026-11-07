@@ -838,3 +838,24 @@ class TestSchedulerIntegration:
 
         assert scheduler.enabled is False
         assert len(scheduler._passes) == 0
+
+
+def test_the_schedule_survives_a_restart(monkeypatch):
+    """Enabled settings are saved; a fresh scheduler (after a reboot) switches back on with them."""
+    import utils.database as database
+
+    store = {}
+    monkeypatch.setattr(database, "set_setting", lambda k, v: store.__setitem__(k, v))
+    monkeypatch.setattr(database, "get_setting", lambda k, default=None: store.get(k, default))
+    monkeypatch.setattr(WeatherSatScheduler, "_refresh_passes", lambda self: None)
+
+    first = WeatherSatScheduler()
+    first.enable(lat=39.2, lon=-84.3, min_elevation=40, gain=46)
+
+    after_reboot = WeatherSatScheduler()
+    assert after_reboot.restore() is True
+    assert after_reboot.enabled
+    assert (after_reboot._lat, after_reboot._min_elevation, after_reboot._gain) == (39.2, 40, 46)
+
+    after_reboot.disable()
+    assert WeatherSatScheduler().restore() is False  # switched off stays off
