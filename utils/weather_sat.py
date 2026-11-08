@@ -122,12 +122,18 @@ SATDUMP_SOURCES = {
 
 
 
+def satdump_env() -> dict[str, str]:
+    """The environment SatDump runs in: SatDump 2.x aborts at startup without
+    HOME, which a system service such as the root intercept unit doesn't set."""
+    return {**os.environ, "HOME": os.environ.get("HOME") or os.path.expanduser("~")}
+
+
 @functools.cache
 def satdump_prefix() -> tuple[str, ...]:
     """The start of a SatDump command line: SatDump 2.x takes the 1.x-style
     commands used here only after its "legacy" subcommand."""
     try:
-        out = subprocess.run(["satdump", "--help"], capture_output=True, text=True, timeout=20)
+        out = subprocess.run(["satdump", "--help"], capture_output=True, text=True, timeout=20, env=satdump_env())
     except Exception:  # not runnable here: the plain command, which reports why
         return ("satdump",)
     if out.returncode != 0 and "error while loading shared libraries" in out.stderr:
@@ -619,6 +625,7 @@ class WeatherSatDecoder:
             stderr=slave_fd,
             stdin=subprocess.DEVNULL,
             close_fds=True,
+            env=satdump_env(),
         )
         register_process(self._process)
         try:
@@ -715,6 +722,7 @@ class WeatherSatDecoder:
             stderr=slave_fd,
             stdin=subprocess.DEVNULL,
             close_fds=True,
+            env=satdump_env(),
         )
         register_process(self._process)
         try:

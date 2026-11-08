@@ -786,3 +786,12 @@ def test_satdump_2_runs_the_1x_commands_after_legacy(monkeypatch):
         monkeypatch.setattr(weather_sat.subprocess, "run", fake_run(help_text))
         assert weather_sat.satdump_prefix() == prefix
     weather_sat.satdump_prefix.cache_clear()
+
+def test_satdump_gets_a_home_even_from_a_system_service(monkeypatch):
+    """SatDump 2.x aborts at startup ("basic_string: construction from null") without HOME."""
+    from utils import weather_sat
+
+    monkeypatch.delenv("HOME", raising=False)
+    assert weather_sat.satdump_env()["HOME"]
+    monkeypatch.setenv("HOME", "/srv/somewhere")
+    assert weather_sat.satdump_env()["HOME"] == "/srv/somewhere"
