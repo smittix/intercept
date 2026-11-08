@@ -89,9 +89,11 @@ def predict_passes(
             satellite = EarthSatellite(tle_data[1], tle_data[2], tle_data[0], ts)
             diff = satellite - observer
 
-            def above_horizon(t, _diff=diff, _el=min_elevation):
+            # Rise and set at the horizon, so a capture covers the whole pass;
+            # min_elevation only picks which passes (by their peak), below
+            def above_horizon(t, _diff=diff):
                 alt, _, _ = _diff.at(t).altaz()
-                return alt.degrees > _el
+                return alt.degrees > 0
 
             # find_discrete samples every step_days: a pass is minutes above the
             # elevation limit, so sample each minute (rough_period isn't read here,

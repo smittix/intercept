@@ -733,3 +733,6 @@ def test_a_real_pass_is_found():
     assert len(meteor) == 1
     assert meteor[0]["startTimeISO"].startswith("2026-11-06T02:")
     assert meteor[0]["maxEl"] > 60
+    # Horizon to horizon, not just the minutes above min_elevation: a 3-minute window
+    # stopped the 2026-11-08 capture as the satellite came overhead
+    assert meteor[0]["duration"] > 12 * 60
