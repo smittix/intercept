@@ -264,7 +264,9 @@ class WeatherSatScheduler:
             for p in self._passes:
                 if p._timer:
                     p._timer.cancel()
-                if p._stop_timer:
+                # A capture under way keeps its stop: this runs every half hour,
+                # and a cancelled stop left a recording running for hours
+                if p._stop_timer and p.status != "capturing":
                     p._stop_timer.cancel()
 
             # Keep completed/skipped for history, replace scheduled

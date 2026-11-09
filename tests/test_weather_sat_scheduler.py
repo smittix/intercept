@@ -859,3 +859,40 @@ def test_the_schedule_survives_a_restart(monkeypatch):
 
     after_reboot.disable()
     assert WeatherSatScheduler().restore() is False  # switched off stays off
+
+
+def test_a_refresh_during_a_capture_keeps_its_stop(monkeypatch):
+    """The half-hourly refresh cancelled every stop timer, so the 2026-11-09 04:22
+    capture ran on for three hours and would have blocked the next pass."""
+    monkeypatch.setattr("utils.weather_sat_predict.predict_passes", lambda **kw: [])
+    now = datetime.now(timezone.utc)
+    sp = ScheduledPass(
+        {
+            "id": "METEOR-M2-4_now",
+            "satellite": "METEOR-M2-4",
+            "name": "Meteor-M2-4",
+            "frequency": 137.9,
+            "mode": "LRPT",
+            "startTimeISO": (now - timedelta(minutes=5)).isoformat(),
+            "endTimeISO": (now + timedelta(minutes=10)).isoformat(),
+            "maxEl": 44.0,
+            "duration": 900.0,
+            "quality": "good",
+        }
+    )
+    sp.status = "capturing"
+    sp._stop_timer = MagicMock()
+    waiting = ScheduledPass({**sp.to_dict(), "id": "later", "startTimeISO": (now + timedelta(hours=3)).isoformat(),
+                             "endTimeISO": (now + timedelta(hours=3, minutes=15)).isoformat()})
+    waiting._timer = MagicMock()
+
+    scheduler = WeatherSatScheduler()
+    scheduler._enabled = True
+    scheduler._passes = [sp, waiting]
+    with patch("threading.Timer"):
+        scheduler._refresh_passes()
+
+    sp._stop_timer.cancel.assert_not_called()
+    waiting._timer.cancel.assert_called_once()
+    assert sp in scheduler._passes
+
