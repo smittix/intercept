@@ -141,6 +141,7 @@
     }
 
     function applyOpenSections(mode) {
+        markIntro(mode);  // so the description section is not taken for the first useful one
         const sections = ownSections(mode);
         if (!sections.length) return;
         const open = readOpen(mode);

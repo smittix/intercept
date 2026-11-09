@@ -24,13 +24,14 @@ from utils.sstv import (
     get_sstv_decoder,
     is_sstv_available,
 )
-from utils.validation import validate_frequency
+from utils.validation import validate_frequency, validate_gain, validate_ppm
 
 logger = get_logger("intercept.sstv")
 
 sstv_bp = Blueprint("sstv", __name__, url_prefix="/sstv")
 
 ISS_SSTV_MODULATION = "fm"
+SSTV_MODULATIONS = ("fm", "usb", "lsb")
 
 # Queue for SSE progress streaming
 _sstv_queue: queue.Queue = queue.Queue(maxsize=100)
@@ -86,7 +87,8 @@ def get_status():
         "decoder": decoder.decoder_available,
         "running": decoder.is_running,
         "iss_frequency": ISS_SSTV_FREQ,
-        "modulation": ISS_SSTV_MODULATION,
+        "modulation": decoder.modulation if decoder.is_running else ISS_SSTV_MODULATION,
+        "frequency": decoder.frequency,
         "image_count": len(decoder.get_images()),
         "doppler_enabled": decoder.doppler_enabled,
     }
@@ -107,8 +109,10 @@ def start_decoder():
     JSON body (optional):
         {
             "frequency": 145.800,  // Frequency in MHz (default: ISS 145.800)
-            "modulation": "fm",    // ISS mode is FM-only
+            "modulation": "fm",    // fm (default), usb or lsb
             "device": 0,           // RTL-SDR device index
+            "gain": 40,            // Tuner gain in dB (omit or null for auto)
+            "ppm": 0,              // Frequency correction in PPM
             "latitude": 40.7128,   // Observer latitude for Doppler correction
             "longitude": -74.0060  // Observer longitude for Doppler correction
         }
@@ -135,7 +139,7 @@ def start_decoder():
             {
                 "status": "already_running",
                 "frequency": decoder.frequency,
-                "modulation": ISS_SSTV_MODULATION,
+                "modulation": decoder.modulation,
                 "doppler_enabled": decoder.doppler_enabled,
             }
         )
@@ -164,16 +168,17 @@ def start_decoder():
     device_index = data.get("device", 0)
     latitude = data.get("latitude")
     longitude = data.get("longitude")
+    gain = data.get("gain")
+    ppm = data.get("ppm")
 
-    # Validate modulation (ISS mode is FM-only)
-    if modulation != ISS_SSTV_MODULATION:
-        return jsonify(
-            {"status": "error", "message": f"Modulation must be {ISS_SSTV_MODULATION} for ISS SSTV mode"}
-        ), 400
+    if modulation not in SSTV_MODULATIONS:
+        return jsonify({"status": "error", "message": "Modulation must be fm, usb, or lsb"}), 400
 
     # Validate frequency (default 145.800, but events sometimes use other downlinks)
     try:
         frequency = validate_frequency(frequency)
+        gain = validate_gain(gain) if gain not in (None, "") else None
+        ppm = validate_ppm(ppm) if ppm not in (None, "") else None
     except ValueError as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
@@ -206,7 +211,9 @@ def start_decoder():
         device_index=device_index,
         latitude=latitude,
         longitude=longitude,
-        modulation=ISS_SSTV_MODULATION,
+        modulation=modulation,
+        gain=gain,
+        ppm=ppm,
     )
 
     if success:
@@ -216,7 +223,7 @@ def start_decoder():
         result = {
             "status": "started",
             "frequency": frequency,
-            "modulation": ISS_SSTV_MODULATION,
+            "modulation": modulation,
             "device": device_index,
             "doppler_enabled": decoder.doppler_enabled,
         }

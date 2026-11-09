@@ -865,6 +865,31 @@ class TestSSTVDecoder:
         assert decoder.doppler_enabled is False
         assert decoder.last_doppler_info is None
 
+    def test_start_passes_modulation_gain_and_ppm_to_rtl_fm(self):
+        """rtl_fm should get the chosen modulation, gain and PPM correction."""
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        with (
+            patch("utils.sstv.sstv_decoder.subprocess.Popen") as mock_popen,
+            patch.object(decoder, "_decode_audio_stream"),
+        ):
+            assert decoder.start(frequency=145.8, modulation="usb", gain=38.6, ppm=-12)
+            decoder._running = False
+
+        cmd = mock_popen.call_args.args[0]
+        assert cmd[cmd.index("-f") + 1] == "145800000"
+        assert cmd[cmd.index("-M") + 1] == "usb"
+        assert cmd[cmd.index("-g") + 1] == "38.6"
+        assert cmd[cmd.index("-p") + 1] == "-12"
+        assert cmd[-1] == "-"
+        assert decoder.modulation == "usb"
+
+    def test_rtl_fm_defaults_to_auto_gain_and_no_ppm(self):
+        """Without gain/PPM, rtl_fm should run on auto gain with no correction."""
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        cmd = decoder._build_rtl_cmd(145_800_000)
+        assert "-g" not in cmd
+        assert "-p" not in cmd
+
     def test_stop_when_not_running(self):
         """Stop should be safe to call when not running."""
         decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
