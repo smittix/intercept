@@ -19,6 +19,7 @@ from utils.sse import sse_stream_fanout
 from utils.sstv import (
     get_general_sstv_decoder,
 )
+from utils.validation import validate_gain, validate_ppm
 
 logger = get_logger("intercept.sstv_general")
 
@@ -157,6 +158,8 @@ def get_status():
             "available": decoder.decoder_available is not None,
             "decoder": decoder.decoder_available,
             "running": decoder.is_running,
+            "frequency": decoder.frequency,
+            "modulation": decoder.modulation,
             "image_count": len(decoder.get_images()),
         }
     )
@@ -171,7 +174,9 @@ def start_decoder():
         {
             "frequency": 14.230,     // Frequency in MHz (required)
             "modulation": "usb",     // fm, usb, or lsb (auto-detected from frequency table if omitted)
-            "device": 0              // RTL-SDR device index
+            "device": 0,             // RTL-SDR device index
+            "gain": 40,              // Tuner gain in dB (omit or null for auto)
+            "ppm": 0                 // Frequency correction in PPM
         }
     """
     decoder = get_general_sstv_decoder()
@@ -183,6 +188,8 @@ def start_decoder():
         return jsonify(
             {
                 "status": "already_running",
+                "frequency": decoder.frequency,
+                "modulation": decoder.modulation,
             }
         )
 
@@ -225,6 +232,14 @@ def start_decoder():
     if modulation not in ("fm", "usb", "lsb"):
         return api_error("Modulation must be fm, usb, or lsb", 400)
 
+    gain = data.get("gain")
+    ppm = data.get("ppm")
+    try:
+        gain = validate_gain(gain) if gain not in (None, "") else None
+        ppm = validate_ppm(ppm) if ppm not in (None, "") else None
+    except ValueError as e:
+        return api_error(str(e), 400)
+
     # Claim SDR device
     global _sstv_general_active_device, _sstv_general_active_sdr_type
     device_int = int(device_index)
@@ -238,6 +253,8 @@ def start_decoder():
         frequency=frequency,
         device_index=device_index,
         modulation=modulation,
+        gain=gain,
+        ppm=ppm,
     )
 
     if success:

@@ -153,6 +153,8 @@ class SSTVDecoder:
         self._doppler_thread = None
         self._frequency = ISS_SSTV_FREQ
         self._modulation = "fm"
+        self._gain: float | None = None
+        self._ppm: int | None = None
         self._current_tuned_freq_hz: int = 0
         self._device_index = 0
 
@@ -174,6 +176,11 @@ class SSTVDecoder:
         return self._frequency
 
     @property
+    def modulation(self) -> str:
+        """Demodulation mode passed to rtl_fm (fm, usb, lsb)."""
+        return self._modulation
+
+    @property
     def decoder_available(self) -> str:
         """Return name of available decoder. Always available with pure Python."""
         return "python-sstv"
@@ -189,6 +196,8 @@ class SSTVDecoder:
         latitude: float | None = None,
         longitude: float | None = None,
         modulation: str = "fm",
+        gain: float | None = None,
+        ppm: int | None = None,
     ) -> bool:
         """Start SSTV decoder listening on specified frequency.
 
@@ -198,6 +207,8 @@ class SSTVDecoder:
             latitude: Observer latitude for Doppler correction.
             longitude: Observer longitude for Doppler correction.
             modulation: Demodulation mode for rtl_fm (fm, usb, lsb).
+            gain: Tuner gain in dB; None leaves rtl_fm on auto gain.
+            ppm: Frequency correction in PPM; None or 0 applies none.
 
         Returns:
             True if started successfully.
@@ -209,6 +220,8 @@ class SSTVDecoder:
             self._frequency = frequency
             self._device_index = device_index
             self._modulation = modulation
+            self._gain = gain
+            self._ppm = ppm
 
             # Configure Doppler tracking if location provided
             self._doppler_enabled = False
@@ -268,8 +281,8 @@ class SSTVDecoder:
 
         return nominal_freq_hz
 
-    def _start_pipeline(self, freq_hz: int) -> None:
-        """Start the rtl_fm -> Python decode pipeline."""
+    def _build_rtl_cmd(self, freq_hz: int) -> list[str]:
+        """Build the rtl_fm command for the current settings at freq_hz."""
         rtl_cmd = [
             "rtl_fm",
             "-d",
@@ -284,8 +297,17 @@ class SSTVDecoder:
             str(SAMPLE_RATE),
             "-l",
             "0",  # No squelch
-            "-",
         ]
+        if self._gain is not None:
+            rtl_cmd += ["-g", str(self._gain)]
+        if self._ppm:
+            rtl_cmd += ["-p", str(self._ppm)]
+        rtl_cmd.append("-")
+        return rtl_cmd
+
+    def _start_pipeline(self, freq_hz: int) -> None:
+        """Start the rtl_fm -> Python decode pipeline."""
+        rtl_cmd = self._build_rtl_cmd(freq_hz)
 
         logger.info(f"Starting rtl_fm: {' '.join(rtl_cmd)}")
 
@@ -596,22 +618,7 @@ class SSTVDecoder:
                     old_proc.kill()
 
         # Build and start new process outside lock
-        rtl_cmd = [
-            "rtl_fm",
-            "-d",
-            str(self._device_index),
-            "-f",
-            str(new_freq_hz),
-            "-M",
-            self._modulation,
-            "-s",
-            str(SAMPLE_RATE),
-            "-r",
-            str(SAMPLE_RATE),
-            "-l",
-            "0",
-            "-",
-        ]
+        rtl_cmd = self._build_rtl_cmd(new_freq_hz)
 
         logger.debug(f"Restarting rtl_fm: {' '.join(rtl_cmd)}")
 

@@ -7,10 +7,20 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.79"
+VERSION = "2.33.80"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.80",
+        "date": "November 2026",
+        "highlights": [
+            "Decoded-message store with search, watchlists and push alerts (ntfy, Telegram, webhook).",
+            "CoT export to ATAK, WinTAK and TAK Server, and user accounts with a users directory.",
+            "SSTV: FM, USB or LSB, gain and PPM settings, and ISS Doppler correction that now actually runs.",
+            "Docker keeps instance/ on the host; copy it out of a running container before your first rebuild.",
+        ],
+    },
     {
         "version": "2.33.79",
         "date": "October 2026",
