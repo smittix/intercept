@@ -93,13 +93,23 @@ class SDRPlayCommandBuilder(CommandBuilder):
         """
         device_str = self._build_device_string(device)
 
-        cmd = ["readsb", "--net", "--device-type", "soapy", "--device", device_str, "--quiet"]
+        cmd = [
+            "readsb",
+            "--net",
+            "--net-sbs-port",
+            "30003",
+            "--device-type",
+            "soapysdr",
+            "--soapy-device",
+            device_str,
+            "--quiet",
+        ]
 
         if gain is not None:
             cmd.extend(["--gain", str(int(gain))])
 
         if bias_t:
-            cmd.extend(["--enable-bias-t"])
+            cmd.append("--enable-biastee")
 
         return cmd
 

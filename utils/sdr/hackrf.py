@@ -201,9 +201,20 @@ class HackRFCommandBuilder(CommandBuilder):
                 lna, vga = self._split_gain(gain)
                 cmd.extend(["--gain", str(lna), "--hackrf-vgagain", str(vga - vga % 2)])
         else:
-            # wiedehopf readsb names this type "soapysdr"; it rejects "soapy"
+            # wiedehopf readsb names this type "soapysdr"; it rejects "soapy". A
+            # SoapySDR-only build has no --device option, only --soapy-device
             device_str = self._build_device_string(device)
-            cmd = ["readsb", "--net", "--net-sbs-port", "30003", "--device-type", "soapysdr", "--device", device_str, "--quiet"]
+            cmd = [
+                "readsb",
+                "--net",
+                "--net-sbs-port",
+                "30003",
+                "--device-type",
+                "soapysdr",
+                "--soapy-device",
+                device_str,
+                "--quiet",
+            ]
             if gain is not None:
                 # Set each stage: readsb's overall --gain goes through SoapyHackRF
                 # setGain, which picks odd splits (50 -> LNA 16 + VGA 16) and
