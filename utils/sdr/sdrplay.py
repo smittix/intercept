@@ -109,7 +109,7 @@ class SDRPlayCommandBuilder(CommandBuilder):
             cmd.extend(["--gain", str(int(gain))])
 
         if bias_t:
-            cmd.extend(["--enable-bias-t"])
+            cmd.append("--enable-biastee")
 
         return cmd
 
