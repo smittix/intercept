@@ -20,7 +20,7 @@ scipy>=1.10.0
 numpy>=1.24.0
 
 # SSTV image output (optional - needed for SSTV image decoding)
-Pillow>=9.0.0
+Pillow>=12.3.0
 
 # GPS dongle support (optional - only needed for USB GPS receivers)
 pyserial>=3.5
