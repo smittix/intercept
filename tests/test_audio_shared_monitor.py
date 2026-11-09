@@ -3,9 +3,9 @@
 import pytest
 
 import app as app_module
+import routes.listening_post as _state
 import routes.listening_post.audio as audio
 import routes.waterfall_websocket as wf_ws
-import routes.listening_post as _state
 
 
 @pytest.fixture
