@@ -17,6 +17,7 @@ Decoders are faked at the subprocess boundary with real OS pipes
 from __future__ import annotations
 
 import errno
+import os
 import queue
 import threading
 import time
@@ -146,6 +147,22 @@ def _missing(cmd, *args, **kwargs):
     raise FileNotFoundError(errno.ENOENT, "No such file or directory", exe)
 
 
+_real_access = os.access
+
+
+def _not_executable(path, mode, *args, **kwargs):
+    """Hide the host's binaries from absolute-path fallbacks too, not just PATH.
+
+    Tool lookups fall back to fixed locations (/usr/local/bin, /usr/sbin, ...)
+    checked with os.access(X_OK); on hosts where /usr/sbin is /usr/bin (Arch,
+    Fedora) or tools live in /usr/local/bin, hiding shutil.which alone leaves
+    the real tools visible.
+    """
+    if mode & os.X_OK:
+        return False
+    return _real_access(path, mode, *args, **kwargs)
+
+
 @contextmanager
 def _decoders(installed: bool):
     FakeProcess.instances.clear()
@@ -156,6 +173,7 @@ def _decoders(installed: bool):
             side_effect=(lambda name, *a, **k: f"/usr/bin/{name}") if installed else None,
             return_value=None,
         ),
+        patch("os.access", _real_access if installed else _not_executable),
         patch("os.getpgid", FakeProcess.getpgid),
         patch("os.killpg", FakeProcess.killpg),
         patch("os.kill", FakeProcess.kill_pid),
