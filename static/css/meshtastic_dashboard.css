@@ -138,6 +138,7 @@
     cursor: pointer;
 }
 .mesh-node-row:hover { background: var(--surface-sunken, rgba(255,255,255,0.04)); }
+.mesh-node-row.mesh-node-flash { background: var(--accent-cyan-dim, rgba(0, 212, 255, 0.12)); transition: background 0.3s; }
 .mesh-node-row.has-pos .mesh-node-name { color: var(--text-primary); }
 .mesh-node-row-main {
     display: flex;
