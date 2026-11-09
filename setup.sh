@@ -419,6 +419,19 @@ check_optional() {
   fi
 }
 
+# Required on Linux; these tools don't exist on macOS, where INTERCEPT uses
+# the system's own WiFi and Bluetooth APIs instead
+check_linux_only() {
+  local label="$1"; shift
+  local desc="$1"; shift
+
+  if [[ "$OS" == "macos" ]] && ! have_any "$@"; then
+    info "${label} - ${desc} (Linux only, not needed on macOS)"
+  else
+    check_required "$label" "$desc" "$@"
+  fi
+}
+
 check_tools() {
   info "Checking required tools..."
   missing_required=()
@@ -453,17 +466,17 @@ check_tools() {
 
   echo
   info "WiFi:"
-  check_required "airmon-ng"     "Monitor mode helper" airmon-ng
+  check_linux_only "airmon-ng"   "Monitor mode helper" airmon-ng
   check_required "airodump-ng"   "WiFi scanner" airodump-ng
   check_required "aireplay-ng"   "Injection/deauth" aireplay-ng
-  check_required "hcxdumptool"   "PMKID capture" hcxdumptool
+  check_linux_only "hcxdumptool" "PMKID capture" hcxdumptool
   check_required "hcxpcapngtool" "PMKID/pcapng conversion" hcxpcapngtool
 
   echo
   info "Bluetooth:"
-  check_required "bluetoothctl" "Bluetooth controller CLI" bluetoothctl
-  check_required "hcitool"      "Bluetooth scan utility" hcitool
-  check_required "hciconfig"    "Bluetooth adapter config" hciconfig
+  check_linux_only "bluetoothctl" "Bluetooth controller CLI" bluetoothctl
+  check_linux_only "hcitool"      "Bluetooth scan utility" hcitool
+  check_linux_only "hciconfig"    "Bluetooth adapter config" hciconfig
 
   echo
   info "SoapySDR:"
@@ -927,7 +940,10 @@ install_dumpvdl2_from_source_macos() {
 
     info "Compiling libacars..."
     build_log="$tmp_dir/libacars-build.log"
+    # libxml2 only pretty-prints XML inside messages. On macOS it links against
+    # a libxml2 that no longer exports initGenericErrorDefaultFunc (#418)
     if cmake .. \
+         -DLIBXML2=FALSE \
          -DCMAKE_C_FLAGS="-I${HOMEBREW_PREFIX}/include" \
          -DCMAKE_EXE_LINKER_FLAGS="-L${HOMEBREW_PREFIX}/lib" \
          >"$build_log" 2>&1 \
@@ -2910,10 +2926,6 @@ do_wizard() {
     fail "Missing REQUIRED tools:"
     for t in "${missing_required[@]}"; do echo "  - $t"; done
     echo
-    if [[ "$OS" == "macos" ]]; then
-      warn "macOS note: bluetoothctl/hcitool/hciconfig are Linux (BlueZ) tools and unavailable on macOS."
-      warn "Bluetooth functionality will be limited. Other features should work."
-    fi
   fi
 
   if [[ "${#missing_recommended[@]}" -gt 0 ]]; then
