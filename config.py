@@ -7,10 +7,20 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.80"
+VERSION = "2.33.81"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.81",
+        "date": "November 2026",
+        "highlights": [
+            "ADS-B starts again on HackRF and other SoapySDR devices with current readsb.",
+            "HackRF FM listening works, and HackRF gain is split sensibly between LNA and VGA.",
+            "macOS setup: no false 'missing tools' for Linux-only tools, and dumpvdl2 builds.",
+            "Meshtastic map no longer jumps, and node buttons respond reliably.",
+        ],
+    },
     {
         "version": "2.33.80",
         "date": "November 2026",

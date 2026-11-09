@@ -2,6 +2,26 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.81] - 2026-11-09
+
+### Fixed
+
+- **ADS-B could not start on SoapySDR devices with current readsb.** On HackRF, Airspy, bladeRF, HydraSDR, LimeSDR, SDRplay and USRP, readsb was started with options it no longer accepts (`--device-type soapy`, `--device` on a SoapySDR-only build, `--enable-bias-t`) and without the SBS port INTERCEPT reads, so ADS-B failed with DEVICE_BUSY. (#387, #409, #423)
+- **HackRF FM and ADS-B reception.** FM listening on a HackRF now works (via `rx_sdr` and csdr), gain is shared between the LNA and VGA instead of leaving the VGA at 0, and ADS-B uses readsb's SoapySDR backend, which doesn't drop half the samples, with a gain range that suits the HackRF. Thanks @adromero. (#409)
+- **macOS setup said Linux-only tools were missing.** `airmon-ng`, `hcxdumptool` and the BlueZ Bluetooth tools don't exist on macOS, where INTERCEPT uses the system's own WiFi and Bluetooth; setup no longer lists them as missing required tools. (#419)
+- **dumpvdl2 failed to build on macOS** because libacars wouldn't link against the system's libxml2. libacars is now built without its optional XML pretty-printing on macOS. (#418)
+- **Meshtastic: the map jumped and node buttons ignored clicks.** The map refit to all nodes after every node refresh, pulling the view away from the node you were looking at, and the node list was rebuilt every few seconds even when nothing had changed, which swallowed clicks on its buttons. A node you favourite now stays in view as it moves to the top. (#270, #422)
+- **Kill All reached beyond INTERCEPT.** It matched decoder names anywhere in any user's command line, so it could kill unrelated programs; it now matches exact process names owned by INTERCEPT's user, and also stops readsb, rx_sdr and csdr. Thanks @adromero. (#416)
+- **Settings button did nothing on the APRS, Meshtastic, MeshCore and ISS dashboards.** Thanks @adromero. (#417)
+- **Sub-GHz Inspect found nothing with rtl_433 25.12,** whose pulse analyzer output changed. Thanks @adromero. (#411)
+- **Monitor had no audio when started just after the waterfall.** Thanks @adromero. (#413)
+- **Running the test suite could log you out of your desktop:** a failed AIS start kept a dead process, and a later stop signalled every process you own. Thanks @adromero. (#408)
+
+### Changed
+
+- **SSTV decoding is faster:** VIS detection's tone detector runs about 3x faster. Thanks @dexhunter. (#405)
+- Dependency minimums raised (Werkzeug 3.1.9, Pillow 12.3, gevent 26.9, scapy 2.8, flask-compress 1.26 and others) and CI actions updated. (#390–#402, #414, #415)
+
 ## [2.33.80] - 2026-11-09
 
 ### Upgrading with Docker
