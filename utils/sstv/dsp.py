@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
+from scipy.signal import lfilter
 
 from .constants import (
     FREQ_PIXEL_HIGH,
@@ -46,6 +47,15 @@ def goertzel(samples: np.ndarray, target_freq: float, sample_rate: int = SAMPLE_
     s0 = 0.0
     s1 = 0.0
     s2 = 0.0
+
+    if isinstance(samples, np.ndarray) and samples.dtype == np.float64 and samples.ndim == 1:
+        # Run the same recurrence in C: s[k] = x[k] + coeff*s[k-1] - s[k-2]
+        # is an IIR filter with denominator (1, -coeff, 1).
+        s = lfilter((1.0,), (1.0, -coeff, 1.0), samples)
+        s1 = s[-1]
+        if n > 1:
+            s2 = s[-2]
+        return s1 * s1 + s2 * s2 - coeff * s1 * s2
 
     for sample in samples:
         s0 = sample + coeff * s1 - s2
