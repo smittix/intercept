@@ -2,6 +2,39 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.80] - 2026-11-09
+
+### Upgrading with Docker
+
+- **Copy your database out before rebuilding.** The `instance/` folder (users, settings, alert rules, baselines and the new message store) is now kept on the host as `./instance`. The first rebuild starts with an empty `./instance`, so to keep what a running container has, run `docker cp intercept:/app/instance ./instance` before `docker compose --profile basic up -d --build`. (#385)
+
+### Added
+
+- **Decoded-message store, watchlists and push alerts.** `/messages` keeps one searchable store of everything the decoders hear, filterable by mode, time, identity and position, with CSV/JSON export and configurable retention. Watchlists match aircraft, ships, callsigns, MACs, frequencies or keywords across modes, and matches can be pushed to ntfy, Telegram or a webhook, with a per-station cooldown, an hourly cap and quiet hours. (#384)
+- **CoT export for ATAK, WinTAK and TAK Server.** ADS-B, AIS and APRS positions, and Meshtastic node positions, can be sent as Cursor-on-Target over UDP multicast or TCP. It is off unless configured. Thanks @Poid-ZA. (#247, closes #179)
+- **User accounts.** Signed-in users can change their display name and password, and a Users & Roles directory lists accounts with search and paging, in light and dark mode. Thanks @JonanOribe. (#383, #388)
+- **SSTV modulation, gain and PPM.** ISS SSTV can decode FM, USB or LSB instead of FM only, and both SSTV modes take a gain (blank for auto) and a PPM correction. Settings are remembered between visits and locked while decoding, and ISS SSTV has presets for 145.800 and 437.800 MHz.
+- **ADS-B dashboard: ACARS and VDL2 on a different source.** The ACARS and VDL2 panels each have a Source picker, so they can run on a local SDR while ADS-B runs on an agent, or the other way round. (#378, fixes #264)
+- **SAST timezone option.** The default stays local time. Thanks @Poid-ZA. (#379)
+- **Themed confirmation dialogs** replace the browser's own, so they follow light and dark mode. Thanks @JonanOribe. (#373)
+
+### Fixed
+
+- **ISS SSTV never used Doppler correction.** The page didn't send your location when starting, so the decoder stayed on a fixed frequency and the ISS's ±3.5 kHz shift went uncorrected. It now sends the location from the sidebar and retunes as the ISS passes.
+- **SSTV showed 145.800 MHz whatever you tuned.** The ISS SSTV strip and idle message now show the frequency and modulation in use, and the General SSTV strip no longer says FM when the decoder is set to USB.
+- **Sidebar sections all started collapsed on a mode's first visit.** The mode's description was taken for its first useful section; the first section with controls now opens.
+- **The APRS dashboard lost track of a running decoder.** Reopening the dashboard now picks up a decoder that is still running, with its counts, controls and live feed. (#380)
+- **Saving a ground station profile failed with an error.** (#381)
+- **Docker rebuilds started with an empty database,** losing users, settings and alert history. See *Upgrading with Docker* above. (#385)
+- **PostgreSQL setup failed when run as root,** reporting a password error for the `intercept` user. (#386, fixes #382)
+- **Map and GPS clocks stayed on UTC** when the timezone was set to local. Thanks @Poid-ZA. (#379)
+- **Installs could break on meshcore 2.3.16,** which fails to import on Python 3.11; that version is excluded. (#381)
+
+### Changed
+
+- **Python 3.10 or later is now required** (was 3.9), since meshcore needs it. Thanks @JonanOribe. (#407)
+- Dependabot, SBOM generation and release drafts in CI, plus dependency updates (flask-compress, pre-commit, docker/metadata-action). Thanks @JonanOribe. (#389, #393, #403, #404)
+
 ## [2.33.79] - 2026-10-04
 
 ### Fixed
