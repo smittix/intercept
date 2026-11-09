@@ -64,6 +64,8 @@ optionals = [
     "Pillow>=9.0.0",
     "meshtastic>=2.7.9",
     "meshcore>=2.3.0,!=2.3.16",
+    "rns>=1.0.0",
+    "lxmf>=0.9.0",
     "paho-mqtt>=1.6.0",
     "psycopg2-binary>=2.9.9",
     "scapy>=2.4.5",

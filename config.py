@@ -1023,6 +1023,17 @@ RADIOSONDE_FREQ_MAX = _get_env_float("RADIOSONDE_FREQ_MAX", 406.0)
 RADIOSONDE_DEFAULT_GAIN = _get_env_float("RADIOSONDE_GAIN", 40.0)
 RADIOSONDE_UDP_PORT = _get_env_int("RADIOSONDE_UDP_PORT", 55673)
 
+# Reticulum (RNS/LXMF) mesh messaging. MODE is "shared" (attach to a local
+# rnsd shared instance) or "tcp" (TCP client to a remote rnsd TCPServerInterface).
+# DATA_DIR defaults to instance/reticulum; ~/.reticulum is never used.
+RETICULUM_MODE = _get_env("RETICULUM_MODE", "shared")
+RETICULUM_TCP_HOST = _get_env("RETICULUM_TCP_HOST", "")
+RETICULUM_TCP_PORT = _get_env_int("RETICULUM_TCP_PORT", 4242)
+RETICULUM_DISPLAY_NAME = _get_env("RETICULUM_DISPLAY_NAME", "INTERCEPT")
+RETICULUM_INSTANCE_NAME = _get_env("RETICULUM_INSTANCE_NAME", "default")
+RETICULUM_RPC_KEY = _get_env("RETICULUM_RPC_KEY", "")
+RETICULUM_DATA_DIR = _get_env("RETICULUM_DATA_DIR", "")
+
 # Update checking
 GITHUB_REPO = _get_env("GITHUB_REPO", "smittix/intercept")
 UPDATE_CHECK_ENABLED = _get_env_bool("UPDATE_CHECK_ENABLED", True)
