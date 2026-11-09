@@ -1,6 +1,7 @@
 """Pytest configuration and fixtures."""
 
 import contextlib
+import operator
 import os
 import sqlite3
 import sys
@@ -32,8 +33,29 @@ _database.DB_DIR = type(_database.DB_DIR)(_SESSION_DB_DIR)
 _database.DB_PATH = _database.DB_DIR / "intercept.db"
 atexit.register(shutil.rmtree, _SESSION_DB_DIR, ignore_errors=True)
 
-from app import app as flask_app
-from routes import register_blueprints
+# Never let a test signal processes outside its own children. A MagicMock pid
+# coerces to 1, and os.killpg(1, sig) is kill(-1, sig): SIGTERM to every
+# process the developer owns (desktop session, ssh, editor). pid/pgid 0 is the
+# test runner's own group. Refuse them all, loudly.
+_real_kill, _real_killpg = os.kill, os.killpg
+
+
+def _guarded_kill(pid, sig):
+    if operator.index(pid) in (0, 1, -1):
+        raise AssertionError(f"test tried os.kill({pid!r}, {sig!r}): would signal far outside the test")
+    return _real_kill(pid, sig)
+
+
+def _guarded_killpg(pgid, sig):
+    if operator.index(pgid) in (0, 1):
+        raise AssertionError(f"test tried os.killpg({pgid!r}, {sig!r}): kill(-1)/own group, refusing")
+    return _real_killpg(pgid, sig)
+
+
+os.kill, os.killpg = _guarded_kill, _guarded_killpg
+
+from app import app as flask_app  # noqa: E402
+from routes import register_blueprints  # noqa: E402
 
 
 def pytest_ignore_collect(collection_path, config):

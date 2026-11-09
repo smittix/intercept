@@ -491,6 +491,9 @@ def start_ais():
                     stderr_output = app_module.ais_process.stderr.read().decode("utf-8", errors="ignore").strip()
             if stderr_output:
                 logger.error(f"AIS-catcher stderr:\n{stderr_output}")
+            # Don't keep the dead process: the next start/stop would signal its
+            # (possibly reused) pid's whole process group
+            app_module.ais_process = None
             error_msg = "AIS-catcher failed to start. Check SDR device connection."
             if stderr_output:
                 error_msg += f" Error: {stderr_output[:500]}"
