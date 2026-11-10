@@ -17,7 +17,7 @@ skyfield>=1.45
 
 # DSC decoding and SSTV decoding (DSP pipeline)
 scipy>=1.10.0
-numpy>=1.24.0
+numpy>=2.2.6
 
 # SSTV image output (optional - needed for SSTV image decoding)
 Pillow>=12.3.0
