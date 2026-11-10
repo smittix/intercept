@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.82"
+VERSION = "2.33.83"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.83",
+        "date": "November 2026",
+        "highlights": [
+            "Each GitHub release now includes an SBOM (sbom.json) listing INTERCEPT's dependencies.",
+        ],
+    },
     {
         "version": "2.33.82",
         "date": "November 2026",
