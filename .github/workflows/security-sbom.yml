@@ -29,6 +29,8 @@ jobs:
     name: Generate & Attach SBOM
     needs: security-scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # attach sbom.json to the release
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
