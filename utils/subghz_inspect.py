@@ -63,11 +63,23 @@ def read_iq_window(path: Path, sample_rate: int, start_seconds: float, duration_
     """Read part of a cs8 capture as complex samples."""
     start = max(0, int(start_seconds * sample_rate))
     count = max(0, int(duration_seconds * sample_rate))
-    with open(path, "rb") as f:
+    with open(path, "rb", buffering=0) as f:
+        available = max(0, os.fstat(f.fileno()).st_size - start * 2)
+        iq = np.empty(min(count, available // 2), dtype=np.complex64)
         f.seek(start * 2)
-        raw = np.frombuffer(f.read(count * 2), dtype=np.int8)
-    raw = raw[: raw.size - (raw.size % 2)].astype(np.float32)
-    return raw[0::2] + 1j * raw[1::2]
+        # Fill the result in place through a float32 view of its interleaved I/Q,
+        # a small block at a time and without a read buffer, so the window is
+        # never held twice
+        interleaved = iq.view(np.float32)
+        block = np.empty(min(interleaved.size, 1 << 14), dtype=np.int8)
+        filled = 0
+        while filled < interleaved.size:
+            n = f.readinto(block[: interleaved.size - filled])
+            if not n:
+                break
+            interleaved[filled : filled + n] = block[:n]
+            filled += n
+    return iq
 
 
 def decimate(iq: np.ndarray, sample_rate: int, target: int = TARGET_SAMPLE_RATE) -> tuple[np.ndarray, int]:
