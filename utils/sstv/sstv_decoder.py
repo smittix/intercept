@@ -90,6 +90,7 @@ class DecodeProgress:
     sstv_tone: str | None = None  # 'leader', 'sync', 'noise', None
     vis_state: str | None = None  # VIS detector state name
     partial_image: str | None = None  # base64 data URL of partial decode
+    doppler: dict | None = None  # DopplerInfo.to_dict() on Doppler updates
 
     def to_dict(self) -> dict:
         result: dict = {
@@ -111,6 +112,8 @@ class DecodeProgress:
             result["vis_state"] = self.vis_state
         if self.partial_image:
             result["partial_image"] = self.partial_image
+        if self.doppler:
+            result["doppler"] = self.doppler
         return result
 
 
@@ -592,6 +595,7 @@ class SSTVDecoder:
                     DecodeProgress(
                         status="detecting",
                         message=f"Doppler: {doppler_info.shift_hz:+.0f} Hz, elevation: {doppler_info.elevation:.1f}\u00b0",
+                        doppler=doppler_info.to_dict(),
                     )
                 )
 

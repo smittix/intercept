@@ -919,6 +919,39 @@ class TestSSTVDecoder:
             finally:
                 decoder.stop()
 
+    def test_doppler_update_carries_doppler_data(self):
+        """Doppler updates carry their own data so the UI can show them alongside 'Listening...'."""
+        from datetime import datetime, timezone
+
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        decoder._frequency = 145.8
+        decoder._current_tuned_freq_hz = 145_800_100
+        decoder._running = True
+        decoder._doppler_enabled = True
+        info = DopplerInfo(
+            frequency_hz=145_800_120.0,
+            shift_hz=120.0,
+            range_rate_km_s=-0.247,
+            elevation=23.4,
+            azimuth=180.0,
+            timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        )
+        events = []
+
+        def capture(event):
+            events.append(event)
+            decoder._running = False
+
+        decoder.set_callback(capture)
+        with (
+            patch.object(decoder, "DOPPLER_UPDATE_INTERVAL", 0),
+            patch.object(decoder._doppler_tracker, "calculate", return_value=info),
+        ):
+            decoder._doppler_tracking_loop()
+
+        assert events[0]["doppler"]["shift_hz"] == 120.0
+        assert events[0]["doppler"]["elevation"] == 23.4
+
     def test_failed_retune_stops_decoder_and_reports_error(self):
         """If rtl_fm cannot be restarted, the decoder stops and says why."""
         decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())

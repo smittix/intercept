@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.83"
+VERSION = "2.33.84"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.84",
+        "date": "November 2026",
+        "highlights": [
+            "ISS SSTV keeps the Doppler reading on screen instead of flickering with 'Listening...'.",
+        ],
+    },
     {
         "version": "2.33.83",
         "date": "November 2026",

@@ -10,6 +10,7 @@ const SSTV = (function() {
     let images = [];
     let currentMode = null;
     let progress = 0;
+    let dopplerStatus = '';  // latest Doppler reading, shown alongside the listening status
     let issMap = null;
     let issMarker = null;
     let issTrackLine = null;
@@ -742,6 +743,7 @@ const SSTV = (function() {
 
             if (data.status === 'started' || data.status === 'already_running') {
                 isRunning = true;
+                dopplerStatus = '';
                 if (typeof reserveDevice === 'function') {
                     reserveDevice(device, 'sstv');
                 }
@@ -1051,11 +1053,19 @@ const SSTV = (function() {
             const liveContent = document.getElementById('sstvLiveContent');
             if (liveContent) liveContent.innerHTML = '';
         } else if (data.status === 'detecting') {
+            // Keep the latest Doppler reading so the frequent "Listening..."
+            // updates don't overwrite it
+            if (data.doppler) {
+                const shift = Math.round(data.doppler.shift_hz);
+                dopplerStatus = `Doppler ${shift >= 0 ? '+' : ''}${shift} Hz, el ${data.doppler.elevation.toFixed(1)}°`;
+            }
+
             // Ignore detecting events if currently decoding (e.g. Doppler updates)
             const dot = document.getElementById('sstvStripDot');
             if (dot && dot.classList.contains('decoding')) return;
 
-            updateStatusUI('listening', data.message || 'Listening...');
+            const message = data.doppler ? 'Listening...' : (data.message || 'Listening...');
+            updateStatusUI('listening', dopplerStatus ? `${message} · ${dopplerStatus}` : message);
             if (data.signal_level !== undefined) {
                 renderSignalMonitor(data);
             }
