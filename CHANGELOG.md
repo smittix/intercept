@@ -2,6 +2,13 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.83] - 2026-11-10
+
+### Fixed
+
+- **Releases had no SBOM attached.** The SBOM was generated for every tag but couldn't be attached to the GitHub release, because the workflow only had read access. Each release now includes `sbom.json` (CycloneDX). (#439)
+- **Release Drafter failed on every push to main** because its config file was missing. It now keeps a draft of the next release's notes. Config based on #406 by @JonanOribe. (#439)
+
 ## [2.33.82] - 2026-11-10
 
 ### Fixed
