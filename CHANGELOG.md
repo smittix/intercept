@@ -2,6 +2,13 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.82] - 2026-11-10
+
+### Fixed
+
+- **ISS SSTV stopped and froze during a pass when Doppler correction was on.** Each Doppler retune restarts rtl_fm, and the decoder treated the old rtl_fm closing as a crash and shut down, so the Doppler status stopped updating and the page hung on its last message. The decoder now carries on reading from the retuned rtl_fm, and stops cleanly with an error if rtl_fm can't be restarted.
+- **SSTV pages hung when the decoder stopped unexpectedly.** Both the ISS and General SSTV pages ignored the decoder's error message; they now show it and return to idle so you can start again.
+
 ## [2.33.81] - 2026-11-09
 
 ### Fixed

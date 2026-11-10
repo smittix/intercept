@@ -639,6 +639,12 @@ const SSTVGeneral = (function() {
             if (data.signal_level !== undefined) {
                 renderSignalMonitor(data);
             }
+        } else if (data.status === 'error') {
+            // The backend has stopped the decoder; reflect that instead of freezing
+            isRunning = false;
+            stopStream();
+            updateStatusUI('idle', data.message || 'Decoder stopped');
+            showStatusMessage(data.message || 'SSTV decoder stopped unexpectedly', 'error');
         }
     }
 

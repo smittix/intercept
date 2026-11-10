@@ -333,10 +333,18 @@ class SSTVDecoder:
         logger.info("Audio decode thread started")
         rtl_fm_error: str = ""
 
-        while self._running and self._rtl_process:
+        while self._running:
+            proc = self._rtl_process
+            if proc is None:
+                # Doppler retune in progress; wait for the new rtl_fm
+                time.sleep(0.05)
+                continue
             try:
-                raw_data = self._rtl_process.stdout.read(chunk_bytes)
+                raw_data = proc.stdout.read(chunk_bytes)
                 if not raw_data:
+                    if self._running and self._rtl_process is not proc:
+                        # rtl_fm was restarted by a Doppler retune; read from the new one
+                        continue
                     if self._running:
                         # Read stderr to diagnose why rtl_fm exited
                         stderr_msg = ""
@@ -622,7 +630,16 @@ class SSTVDecoder:
 
         logger.debug(f"Restarting rtl_fm: {' '.join(rtl_cmd)}")
 
-        new_proc = subprocess.Popen(rtl_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            new_proc = subprocess.Popen(rtl_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception as e:
+            logger.error(f"Failed to restart rtl_fm for Doppler retune: {e}")
+            with self._lock:
+                was_running = self._running
+                self._running = False
+            if was_running:
+                self._emit_progress(DecodeProgress(status="error", message=f"rtl_fm failed to retune: {e}"))
+            return
 
         # Re-acquire lock to install new process
         with self._lock:
