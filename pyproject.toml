@@ -68,7 +68,7 @@ optionals = [
     "psycopg2-binary>=2.9.13",
     "scapy>=2.8.0",
     "cryptography>=50.0.2",
-    "psutil>=5.9.0",
+    "psutil>=7.2.2",
     "gunicorn>=21.2.0",
     "gevent>=26.9.0",
 ]

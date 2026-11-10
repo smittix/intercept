@@ -55,7 +55,7 @@ simple-websocket>=1.1.0
 websocket-client>=1.9.2
 
 # System health monitoring (optional - graceful fallback if unavailable)
-psutil>=5.9.0
+psutil>=7.2.2
 
 # MQTT data export (optional - only needed if INTERCEPT_MQTT_BROKER is set)
 paho-mqtt>=2.2.0
