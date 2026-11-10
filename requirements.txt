@@ -58,7 +58,7 @@ websocket-client>=1.9.2
 psutil>=5.9.0
 
 # MQTT data export (optional - only needed if INTERCEPT_MQTT_BROKER is set)
-paho-mqtt>=1.6.0
+paho-mqtt>=2.2.0
 
 # Production WSGI server (optional - falls back to Flask dev server)
 gunicorn>=21.2.0
