@@ -2,6 +2,12 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.84] - 2026-11-10
+
+### Fixed
+
+- **ISS SSTV status bounced between "Listening..." and the Doppler message.** The signal monitor's half-second "Listening..." updates replaced each Doppler reading almost as soon as it appeared. The latest Doppler shift and elevation now stay in the status line, e.g. `Listening... · Doppler +120 Hz, el 23.4°`.
+
 ## [2.33.83] - 2026-11-10
 
 ### Fixed
