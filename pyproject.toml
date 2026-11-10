@@ -36,7 +36,7 @@ dependencies = [
     "pyserial>=3.5",
     "Werkzeug>=3.1.9",
     "bleak>=3.0.2",
-    "requests>=2.28.0",
+    "requests>=2.34.2",
 ]
 
 [project.urls]
