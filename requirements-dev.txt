@@ -10,7 +10,7 @@ pytest-timeout>=2.3.0
 # Code quality
 ruff>=0.1.0
 black>=26.10.1
-mypy>=1.0.0
+mypy>=2.4.1
 pre-commit>=4.6.2
 
 # Type stubs
