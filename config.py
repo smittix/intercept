@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.81"
+VERSION = "2.33.82"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.82",
+        "date": "November 2026",
+        "highlights": [
+            "ISS SSTV no longer stops and freezes when Doppler correction retunes the radio.",
+            "SSTV shows why the decoder stopped instead of hanging on the last status.",
+        ],
+    },
     {
         "version": "2.33.81",
         "date": "November 2026",

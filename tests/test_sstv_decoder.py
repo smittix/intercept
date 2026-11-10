@@ -7,7 +7,9 @@ decoding, and integration with the SSTVDecoder orchestrator.
 from __future__ import annotations
 
 import math
+import sys
 import tempfile
+import time
 import wave
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -889,6 +891,46 @@ class TestSSTVDecoder:
         cmd = decoder._build_rtl_cmd(145_800_000)
         assert "-g" not in cmd
         assert "-p" not in cmd
+
+    def test_doppler_retune_keeps_decoder_running(self):
+        """A Doppler retune restarts rtl_fm; the decode pipeline must survive it."""
+        fake_rtl_fm = [
+            sys.executable,
+            "-c",
+            "import sys, time\nwhile True:\n    sys.stdout.buffer.write(bytes(9600)); sys.stdout.flush(); time.sleep(0.05)",
+        ]
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        events = []
+        decoder.set_callback(events.append)
+        with patch.object(decoder, "_build_rtl_cmd", return_value=fake_rtl_fm):
+            assert decoder.start(frequency=145.8)
+            try:
+                time.sleep(0.3)
+                old_proc = decoder._rtl_process
+                decoder._retune_rtl_fm(145_801_000)
+                time.sleep(0.5)
+
+                assert decoder.is_running
+                assert decoder._rtl_process is not old_proc
+                assert decoder._rtl_process.poll() is None
+                assert decoder._decode_thread.is_alive()
+                assert decoder._current_tuned_freq_hz == 145_801_000
+                assert not [e for e in events if e.get("status") == "error"]
+            finally:
+                decoder.stop()
+
+    def test_failed_retune_stops_decoder_and_reports_error(self):
+        """If rtl_fm cannot be restarted, the decoder stops and says why."""
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        events = []
+        decoder.set_callback(events.append)
+        decoder._running = True
+        with patch("utils.sstv.sstv_decoder.subprocess.Popen", side_effect=OSError("usb_claim_interface error -6")):
+            decoder._retune_rtl_fm(145_801_000)
+
+        assert decoder.is_running is False
+        errors = [e for e in events if e.get("status") == "error"]
+        assert errors and "usb_claim_interface" in errors[0]["message"]
 
     def test_stop_when_not_running(self):
         """Stop should be safe to call when not running."""
