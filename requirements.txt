@@ -62,5 +62,5 @@ psutil>=7.2.2
 paho-mqtt>=2.2.0
 
 # Production WSGI server (optional - falls back to Flask dev server)
-gunicorn>=21.2.0
+gunicorn>=26.2.0
 gevent>=26.9.0

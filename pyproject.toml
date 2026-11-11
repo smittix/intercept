@@ -69,7 +69,7 @@ optionals = [
     "scapy>=2.8.0",
     "cryptography>=48.0.1",
     "psutil>=7.2.2",
-    "gunicorn>=21.2.0",
+    "gunicorn>=26.2.0",
     "gevent>=26.9.0",
 ]
 
