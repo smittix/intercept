@@ -90,6 +90,7 @@ class DecodeProgress:
     sstv_tone: str | None = None  # 'leader', 'sync', 'noise', None
     vis_state: str | None = None  # VIS detector state name
     partial_image: str | None = None  # base64 data URL of partial decode
+    doppler: dict | None = None  # DopplerInfo.to_dict() on Doppler updates
 
     def to_dict(self) -> dict:
         result: dict = {
@@ -111,6 +112,8 @@ class DecodeProgress:
             result["vis_state"] = self.vis_state
         if self.partial_image:
             result["partial_image"] = self.partial_image
+        if self.doppler:
+            result["doppler"] = self.doppler
         return result
 
 
@@ -153,6 +156,8 @@ class SSTVDecoder:
         self._doppler_thread = None
         self._frequency = ISS_SSTV_FREQ
         self._modulation = "fm"
+        self._gain: float | None = None
+        self._ppm: int | None = None
         self._current_tuned_freq_hz: int = 0
         self._device_index = 0
 
@@ -174,6 +179,11 @@ class SSTVDecoder:
         return self._frequency
 
     @property
+    def modulation(self) -> str:
+        """Demodulation mode passed to rtl_fm (fm, usb, lsb)."""
+        return self._modulation
+
+    @property
     def decoder_available(self) -> str:
         """Return name of available decoder. Always available with pure Python."""
         return "python-sstv"
@@ -189,6 +199,8 @@ class SSTVDecoder:
         latitude: float | None = None,
         longitude: float | None = None,
         modulation: str = "fm",
+        gain: float | None = None,
+        ppm: int | None = None,
     ) -> bool:
         """Start SSTV decoder listening on specified frequency.
 
@@ -198,6 +210,8 @@ class SSTVDecoder:
             latitude: Observer latitude for Doppler correction.
             longitude: Observer longitude for Doppler correction.
             modulation: Demodulation mode for rtl_fm (fm, usb, lsb).
+            gain: Tuner gain in dB; None leaves rtl_fm on auto gain.
+            ppm: Frequency correction in PPM; None or 0 applies none.
 
         Returns:
             True if started successfully.
@@ -209,6 +223,8 @@ class SSTVDecoder:
             self._frequency = frequency
             self._device_index = device_index
             self._modulation = modulation
+            self._gain = gain
+            self._ppm = ppm
 
             # Configure Doppler tracking if location provided
             self._doppler_enabled = False
@@ -268,8 +284,8 @@ class SSTVDecoder:
 
         return nominal_freq_hz
 
-    def _start_pipeline(self, freq_hz: int) -> None:
-        """Start the rtl_fm -> Python decode pipeline."""
+    def _build_rtl_cmd(self, freq_hz: int) -> list[str]:
+        """Build the rtl_fm command for the current settings at freq_hz."""
         rtl_cmd = [
             "rtl_fm",
             "-d",
@@ -284,8 +300,17 @@ class SSTVDecoder:
             str(SAMPLE_RATE),
             "-l",
             "0",  # No squelch
-            "-",
         ]
+        if self._gain is not None:
+            rtl_cmd += ["-g", str(self._gain)]
+        if self._ppm:
+            rtl_cmd += ["-p", str(self._ppm)]
+        rtl_cmd.append("-")
+        return rtl_cmd
+
+    def _start_pipeline(self, freq_hz: int) -> None:
+        """Start the rtl_fm -> Python decode pipeline."""
+        rtl_cmd = self._build_rtl_cmd(freq_hz)
 
         logger.info(f"Starting rtl_fm: {' '.join(rtl_cmd)}")
 
@@ -311,10 +336,18 @@ class SSTVDecoder:
         logger.info("Audio decode thread started")
         rtl_fm_error: str = ""
 
-        while self._running and self._rtl_process:
+        while self._running:
+            proc = self._rtl_process
+            if proc is None:
+                # Doppler retune in progress; wait for the new rtl_fm
+                time.sleep(0.05)
+                continue
             try:
-                raw_data = self._rtl_process.stdout.read(chunk_bytes)
+                raw_data = proc.stdout.read(chunk_bytes)
                 if not raw_data:
+                    if self._running and self._rtl_process is not proc:
+                        # rtl_fm was restarted by a Doppler retune; read from the new one
+                        continue
                     if self._running:
                         # Read stderr to diagnose why rtl_fm exited
                         stderr_msg = ""
@@ -562,6 +595,7 @@ class SSTVDecoder:
                     DecodeProgress(
                         status="detecting",
                         message=f"Doppler: {doppler_info.shift_hz:+.0f} Hz, elevation: {doppler_info.elevation:.1f}\u00b0",
+                        doppler=doppler_info.to_dict(),
                     )
                 )
 
@@ -596,26 +630,20 @@ class SSTVDecoder:
                     old_proc.kill()
 
         # Build and start new process outside lock
-        rtl_cmd = [
-            "rtl_fm",
-            "-d",
-            str(self._device_index),
-            "-f",
-            str(new_freq_hz),
-            "-M",
-            self._modulation,
-            "-s",
-            str(SAMPLE_RATE),
-            "-r",
-            str(SAMPLE_RATE),
-            "-l",
-            "0",
-            "-",
-        ]
+        rtl_cmd = self._build_rtl_cmd(new_freq_hz)
 
         logger.debug(f"Restarting rtl_fm: {' '.join(rtl_cmd)}")
 
-        new_proc = subprocess.Popen(rtl_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            new_proc = subprocess.Popen(rtl_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception as e:
+            logger.error(f"Failed to restart rtl_fm for Doppler retune: {e}")
+            with self._lock:
+                was_running = self._running
+                self._running = False
+            if was_running:
+                self._emit_progress(DecodeProgress(status="error", message=f"rtl_fm failed to retune: {e}"))
+            return
 
         # Re-acquire lock to install new process
         with self._lock:

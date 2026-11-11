@@ -23,6 +23,8 @@ const Meshtastic = (function() {
     // Nodes tab (searchable list of all mesh nodes, #270)
     let _allNodes = [];
     let _nodeFilter = '';
+    let _nodeListHtml = '';
+    let _mapFitted = false;
 
     // Messages tab: find-in-conversation, text-only toggle, reply target (#270)
     let _messageSearch = '';
@@ -312,6 +314,7 @@ const Meshtastic = (function() {
         try {
             await fetch('/meshtastic/stop', { method: 'POST' });
             isConnected = false;
+            _mapFitted = false;
             stopStream();
             updateConnectionUI(false);
             showNotification('Meshtastic', 'Disconnected');
@@ -703,9 +706,12 @@ const Meshtastic = (function() {
                 // Update stats to reflect loaded nodes
                 updateStats();
 
-                // Fit map to show all nodes if we have any
+                // Fit map to show all nodes once per connection; refreshes run after
+                // every node action and new packet, and refitting then moved the map
+                // away from the node being looked at
                 const nodesWithPos = data.nodes.filter(n => n.has_position);
-                if (nodesWithPos.length > 0 && meshMap) {
+                if (nodesWithPos.length > 0 && meshMap && !_mapFitted) {
+                    _mapFitted = true;
                     const bounds = nodesWithPos.map(n => [n.latitude, n.longitude]);
                     if (bounds.length === 1) {
                         meshMap.setView(bounds[0], 12);
@@ -769,11 +775,12 @@ const Meshtastic = (function() {
         nodes.sort((a, b) => rank(a) - rank(b) || new Date(b.last_heard || 0) - new Date(a.last_heard || 0));
 
         if (nodes.length === 0) {
+            _nodeListHtml = '';
             container.innerHTML = `<div class="mesh-tab-hint">${_allNodes.length ? 'No nodes match your search.' : 'Connect to a device to see its mesh nodes.'}</div>`;
             return;
         }
 
-        container.innerHTML = nodes.map(n => {
+        const html = nodes.map(n => {
             const id = _nodeIdOf(n);
             const name = _nodeEsc(_nodeDisplayName(n));
             const snr = (n.snr != null) ? `${n.snr} dB` : '--';
@@ -801,6 +808,11 @@ const Meshtastic = (function() {
                 <div class="mesh-node-row-meta"><span class="mesh-node-id">${_nodeEsc(id)}</span> · ${snr}${batt} · ${_nodeRelTime(n.last_heard)}</div>
             </div>`;
         }).join('');
+        // The list refreshes every few seconds on a busy mesh; replacing identical
+        // rows between mousedown and mouseup swallowed clicks on their buttons
+        if (html === _nodeListHtml) return;
+        _nodeListHtml = html;
+        container.innerHTML = html;
     }
 
     function filterNodes(q) {
@@ -847,7 +859,15 @@ const Meshtastic = (function() {
                 meshMarkers[id].remove();
                 delete meshMarkers[id];
             }
-            loadNodes();
+            await loadNodes();
+            // Favourites move to the top of the list: keep the node in view
+            const row = action !== 'remove'
+                && document.querySelector(`#meshNodeList .mesh-node-row[data-node="${CSS.escape(id)}"]`);
+            if (row) {
+                row.scrollIntoView({ block: 'nearest' });
+                row.classList.add('mesh-node-flash');
+                setTimeout(() => row.classList.remove('mesh-node-flash'), 1200);
+            }
         } catch (err) {
             console.error(`Failed to ${action} node:`, err);
             showStatusMessage(`Could not ${action} node`, 'error');

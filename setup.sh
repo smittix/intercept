@@ -419,6 +419,19 @@ check_optional() {
   fi
 }
 
+# Required on Linux; these tools don't exist on macOS, where INTERCEPT uses
+# the system's own WiFi and Bluetooth APIs instead
+check_linux_only() {
+  local label="$1"; shift
+  local desc="$1"; shift
+
+  if [[ "$OS" == "macos" ]] && ! have_any "$@"; then
+    info "${label} - ${desc} (Linux only, not needed on macOS)"
+  else
+    check_required "$label" "$desc" "$@"
+  fi
+}
+
 check_tools() {
   info "Checking required tools..."
   missing_required=()
@@ -453,17 +466,17 @@ check_tools() {
 
   echo
   info "WiFi:"
-  check_required "airmon-ng"     "Monitor mode helper" airmon-ng
+  check_linux_only "airmon-ng"   "Monitor mode helper" airmon-ng
   check_required "airodump-ng"   "WiFi scanner" airodump-ng
   check_required "aireplay-ng"   "Injection/deauth" aireplay-ng
-  check_required "hcxdumptool"   "PMKID capture" hcxdumptool
+  check_linux_only "hcxdumptool" "PMKID capture" hcxdumptool
   check_required "hcxpcapngtool" "PMKID/pcapng conversion" hcxpcapngtool
 
   echo
   info "Bluetooth:"
-  check_required "bluetoothctl" "Bluetooth controller CLI" bluetoothctl
-  check_required "hcitool"      "Bluetooth scan utility" hcitool
-  check_required "hciconfig"    "Bluetooth adapter config" hciconfig
+  check_linux_only "bluetoothctl" "Bluetooth controller CLI" bluetoothctl
+  check_linux_only "hcitool"      "Bluetooth scan utility" hcitool
+  check_linux_only "hciconfig"    "Bluetooth adapter config" hciconfig
 
   echo
   info "SoapySDR:"
@@ -486,20 +499,15 @@ check_python_version() {
   ver="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
   info "Python version: ${ver}"
 
-  python3 - <<'PY'
+  if ! python3 - <<'PY'
 import sys
-raise SystemExit(0 if sys.version_info >= (3,9) else 1)
-PY
-  ok "Python version OK (>= 3.9)"
-
-  # meshcore (MeshCore mesh networking) requires Python 3.10+
-  if python3 - <<'PY'
-import sys
-raise SystemExit(0 if sys.version_info < (3,10) else 1)
+raise SystemExit(0 if sys.version_info >= (3,10) else 1)
 PY
   then
-    warn "Python 3.9 detected: MeshCore support requires Python 3.10+ and will be unavailable."
+    fail "Python 3.10 or newer is required (found ${ver})."
+    exit 1
   fi
+  ok "Python version OK (>= 3.10)"
 
   # Python 3.13+ warning: some packages (gevent, numpy, scipy) may not have
   # pre-built wheels yet; prefer wheels over source builds to avoid hanging
@@ -807,7 +815,8 @@ install_dump1090_from_source_macos() {
     cd "$tmp_dir/dump1090"
     sed -i '' 's/-Werror//g' Makefile 2>/dev/null || true
     info "Compiling dump1090..."
-    if make BLADERF=no RTLSDR=yes 2>&1 | tail -5; then
+    # RTLSDR_PREFIX links librtlsdr directly; pkg-config can miss it, leaving rtlsdr_* undefined
+    if make BLADERF=no RTLSDR=yes RTLSDR_PREFIX="$(brew --prefix librtlsdr)" 2>&1 | tail -5; then
       if [[ -w /usr/local/bin ]]; then
         install -m 0755 dump1090 /usr/local/bin/dump1090
       else
@@ -927,7 +936,10 @@ install_dumpvdl2_from_source_macos() {
 
     info "Compiling libacars..."
     build_log="$tmp_dir/libacars-build.log"
+    # libxml2 only pretty-prints XML inside messages. On macOS it links against
+    # a libxml2 that no longer exports initGenericErrorDefaultFunc (#418)
     if cmake .. \
+         -DLIBXML2=FALSE \
          -DCMAKE_C_FLAGS="-I${HOMEBREW_PREFIX}/include" \
          -DCMAKE_EXE_LINKER_FLAGS="-L${HOMEBREW_PREFIX}/lib" \
          >"$build_log" 2>&1 \
@@ -1563,7 +1575,10 @@ install_tool_rtl_433() {
 install_tool_dump1090() {
   if [[ "$OS" == "macos" ]]; then
     if ! cmd_exists dump1090; then
-      (brew_install dump1090-mutability) || install_dump1090_from_source_macos || warn "dump1090 not available"
+      # The formula can be installed without dump1090 on PATH (e.g. not linked),
+      # so check for the binary before skipping the source build (#419)
+      { (brew_install dump1090-fa) && cmd_exists dump1090; } \
+        || install_dump1090_from_source_macos || warn "dump1090 not available"
     else
       ok "dump1090 already installed"
     fi
@@ -2831,7 +2846,9 @@ do_view_status() {
 # ============================================================
 do_wizard() {
   echo
-  echo -e "${BOLD}${CYAN}Welcome to INTERCEPT Setup!${NC}"
+  local version
+  version="$(sed -n 's/^VERSION = "\(.*\)"/\1/p' config.py 2>/dev/null || true)"
+  echo -e "${BOLD}${CYAN}Welcome to INTERCEPT Setup${version:+ v${version}}!${NC}"
   echo
   info "Detected OS: ${OS}"
   $IS_DRAGONOS && warn "DragonOS detected (safe mode enabled)"
@@ -2910,10 +2927,6 @@ do_wizard() {
     fail "Missing REQUIRED tools:"
     for t in "${missing_required[@]}"; do echo "  - $t"; done
     echo
-    if [[ "$OS" == "macos" ]]; then
-      warn "macOS note: bluetoothctl/hcitool/hciconfig are Linux (BlueZ) tools and unavailable on macOS."
-      warn "Bluetooth functionality will be limited. Other features should work."
-    fi
   fi
 
   if [[ "${#missing_recommended[@]}" -gt 0 ]]; then

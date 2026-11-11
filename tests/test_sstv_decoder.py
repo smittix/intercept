@@ -7,7 +7,9 @@ decoding, and integration with the SSTVDecoder orchestrator.
 from __future__ import annotations
 
 import math
+import sys
 import tempfile
+import time
 import wave
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -864,6 +866,104 @@ class TestSSTVDecoder:
         decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
         assert decoder.doppler_enabled is False
         assert decoder.last_doppler_info is None
+
+    def test_start_passes_modulation_gain_and_ppm_to_rtl_fm(self):
+        """rtl_fm should get the chosen modulation, gain and PPM correction."""
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        with (
+            patch("utils.sstv.sstv_decoder.subprocess.Popen") as mock_popen,
+            patch.object(decoder, "_decode_audio_stream"),
+        ):
+            assert decoder.start(frequency=145.8, modulation="usb", gain=38.6, ppm=-12)
+            decoder._running = False
+
+        cmd = mock_popen.call_args.args[0]
+        assert cmd[cmd.index("-f") + 1] == "145800000"
+        assert cmd[cmd.index("-M") + 1] == "usb"
+        assert cmd[cmd.index("-g") + 1] == "38.6"
+        assert cmd[cmd.index("-p") + 1] == "-12"
+        assert cmd[-1] == "-"
+        assert decoder.modulation == "usb"
+
+    def test_rtl_fm_defaults_to_auto_gain_and_no_ppm(self):
+        """Without gain/PPM, rtl_fm should run on auto gain with no correction."""
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        cmd = decoder._build_rtl_cmd(145_800_000)
+        assert "-g" not in cmd
+        assert "-p" not in cmd
+
+    def test_doppler_retune_keeps_decoder_running(self):
+        """A Doppler retune restarts rtl_fm; the decode pipeline must survive it."""
+        fake_rtl_fm = [
+            sys.executable,
+            "-c",
+            "import sys, time\nwhile True:\n    sys.stdout.buffer.write(bytes(9600)); sys.stdout.flush(); time.sleep(0.05)",
+        ]
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        events = []
+        decoder.set_callback(events.append)
+        with patch.object(decoder, "_build_rtl_cmd", return_value=fake_rtl_fm):
+            assert decoder.start(frequency=145.8)
+            try:
+                time.sleep(0.3)
+                old_proc = decoder._rtl_process
+                decoder._retune_rtl_fm(145_801_000)
+                time.sleep(0.5)
+
+                assert decoder.is_running
+                assert decoder._rtl_process is not old_proc
+                assert decoder._rtl_process.poll() is None
+                assert decoder._decode_thread.is_alive()
+                assert decoder._current_tuned_freq_hz == 145_801_000
+                assert not [e for e in events if e.get("status") == "error"]
+            finally:
+                decoder.stop()
+
+    def test_doppler_update_carries_doppler_data(self):
+        """Doppler updates carry their own data so the UI can show them alongside 'Listening...'."""
+        from datetime import datetime, timezone
+
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        decoder._frequency = 145.8
+        decoder._current_tuned_freq_hz = 145_800_100
+        decoder._running = True
+        decoder._doppler_enabled = True
+        info = DopplerInfo(
+            frequency_hz=145_800_120.0,
+            shift_hz=120.0,
+            range_rate_km_s=-0.247,
+            elevation=23.4,
+            azimuth=180.0,
+            timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        )
+        events = []
+
+        def capture(event):
+            events.append(event)
+            decoder._running = False
+
+        decoder.set_callback(capture)
+        with (
+            patch.object(decoder, "DOPPLER_UPDATE_INTERVAL", 0),
+            patch.object(decoder._doppler_tracker, "calculate", return_value=info),
+        ):
+            decoder._doppler_tracking_loop()
+
+        assert events[0]["doppler"]["shift_hz"] == 120.0
+        assert events[0]["doppler"]["elevation"] == 23.4
+
+    def test_failed_retune_stops_decoder_and_reports_error(self):
+        """If rtl_fm cannot be restarted, the decoder stops and says why."""
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        events = []
+        decoder.set_callback(events.append)
+        decoder._running = True
+        with patch("utils.sstv.sstv_decoder.subprocess.Popen", side_effect=OSError("usb_claim_interface error -6")):
+            decoder._retune_rtl_fm(145_801_000)
+
+        assert decoder.is_running is False
+        errors = [e for e in events if e.get("status") == "error"]
+        assert errors and "usb_claim_interface" in errors[0]["message"]
 
     def test_stop_when_not_running(self):
         """Stop should be safe to call when not running."""

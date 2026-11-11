@@ -7,10 +7,69 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.79"
+VERSION = "2.33.86"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.86",
+        "date": "November 2026",
+        "highlights": [
+            "macOS setup can build dump1090 from source again when Homebrew's copy isn't usable.",
+            "Lower memory use in the waterfall and Sub-GHz Inspect, and faster TSCM correlation.",
+        ],
+    },
+    {
+        "version": "2.33.85",
+        "date": "November 2026",
+        "highlights": [
+            "Setup works again on Intel Macs, and builds dump1090 when Homebrew's copy isn't usable.",
+            "Faster Morse and WEFAX decoding, and lower memory use in Sub-GHz Inspect.",
+            "Setup shows the INTERCEPT version and stops clearly on Python older than 3.10.",
+        ],
+    },
+    {
+        "version": "2.33.84",
+        "date": "November 2026",
+        "highlights": [
+            "ISS SSTV keeps the Doppler reading on screen instead of flickering with 'Listening...'.",
+        ],
+    },
+    {
+        "version": "2.33.83",
+        "date": "November 2026",
+        "highlights": [
+            "Each GitHub release now includes an SBOM (sbom.json) listing INTERCEPT's dependencies.",
+        ],
+    },
+    {
+        "version": "2.33.82",
+        "date": "November 2026",
+        "highlights": [
+            "ISS SSTV no longer stops and freezes when Doppler correction retunes the radio.",
+            "SSTV shows why the decoder stopped instead of hanging on the last status.",
+        ],
+    },
+    {
+        "version": "2.33.81",
+        "date": "November 2026",
+        "highlights": [
+            "ADS-B starts again on HackRF and other SoapySDR devices with current readsb.",
+            "HackRF FM listening works, and HackRF gain is split sensibly between LNA and VGA.",
+            "macOS setup: no false 'missing tools' for Linux-only tools, and dumpvdl2 builds.",
+            "Meshtastic map no longer jumps, and node buttons respond reliably.",
+        ],
+    },
+    {
+        "version": "2.33.80",
+        "date": "November 2026",
+        "highlights": [
+            "Decoded-message store with search, watchlists and push alerts (ntfy, Telegram, webhook).",
+            "CoT export to ATAK, WinTAK and TAK Server, and user accounts with a users directory.",
+            "SSTV: FM, USB or LSB, gain and PPM settings, and ISS Doppler correction that now actually runs.",
+            "Docker keeps instance/ on the host; copy it out of a running container before your first rebuild.",
+        ],
+    },
     {
         "version": "2.33.79",
         "date": "October 2026",

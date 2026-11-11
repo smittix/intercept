@@ -2,6 +2,104 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.86] - 2026-11-11
+
+### Fixed
+
+- **macOS setup couldn't build dump1090 from source.** The build relied on `pkg-config` to find librtlsdr; when it didn't, linking failed with "symbol(s) not found". Setup now points the build at Homebrew's librtlsdr directly. The ADS-B install hint also names `dump1090-fa` instead of the renamed `dump1090-mutability`. (#419)
+
+### Changed
+
+- **Lower memory use and faster correlation:** the waterfall's IQ conversion uses about a third of the memory (#442), Sub-GHz Inspect's envelope view 84% less on 2 s windows (#443), and TSCM correlation is about 2.9x faster (#444). Thanks @dexhunter.
+- Dependency minimums raised (scipy 1.15.3, gunicorn 26.2.0, flask 3.1.3, bleak 3.1.0, meshtastic 2.7.11, qrcode 8.2, cryptography 48.0.1, and dev tools), and CI actions updated (Docker actions v4, setup-python v7, Release Drafter v7). (#447–#461)
+
+## [2.33.85] - 2026-11-11
+
+### Fixed
+
+- **Setup failed to install cryptography on Intel Macs.** A dependency update raised the minimum to 50.0.2, but cryptography 49 and later only publish Apple Silicon wheels for macOS. The minimum is back to 41.0.0, so Intel Macs get 48.0.1 and everything else still gets the latest. cryptography is optional and only used by Bluetooth Locate. (#445)
+- **macOS setup reported dump1090 missing after installing it with Homebrew.** Setup asked for the renamed `dump1090-mutability` formula and treated "installed" as done even when no `dump1090` was on the PATH. It now installs `dump1090-fa` and builds dump1090 from source if the binary still isn't available. (#419)
+- **Setup exited silently on Python older than 3.9,** and accepted 3.9 although current dependencies need 3.10. It now requires Python 3.10 and says so.
+
+### Changed
+
+- Setup's welcome banner shows the INTERCEPT version. (#419)
+- **Faster decoding and lower memory use:** Morse decoding is about twice as fast on long recordings (#426), WEFAX tone detection about 7x faster (#427), and Sub-GHz Inspect uses half the memory when loading a capture (#425). Thanks @dexhunter.
+- Dependency minimums raised (numpy 2.2.6, requests 2.34.2, bleak 3.0.2, paho-mqtt 2.2, psutil 7.2.2, skyfield 1.55, psycopg2-binary 2.9.13, and dev tools). (#428–#437)
+
+## [2.33.84] - 2026-11-10
+
+### Fixed
+
+- **ISS SSTV status bounced between "Listening..." and the Doppler message.** The signal monitor's half-second "Listening..." updates replaced each Doppler reading almost as soon as it appeared. The latest Doppler shift and elevation now stay in the status line, e.g. `Listening... · Doppler +120 Hz, el 23.4°`.
+
+## [2.33.83] - 2026-11-10
+
+### Fixed
+
+- **Releases had no SBOM attached.** The SBOM was generated for every tag but couldn't be attached to the GitHub release, because the workflow only had read access. Each release now includes `sbom.json` (CycloneDX). (#439)
+- **Release Drafter failed on every push to main** because its config file was missing. It now keeps a draft of the next release's notes. Config based on #406 by @JonanOribe. (#439)
+
+## [2.33.82] - 2026-11-10
+
+### Fixed
+
+- **ISS SSTV stopped and froze during a pass when Doppler correction was on.** Each Doppler retune restarts rtl_fm, and the decoder treated the old rtl_fm closing as a crash and shut down, so the Doppler status stopped updating and the page hung on its last message. The decoder now carries on reading from the retuned rtl_fm, and stops cleanly with an error if rtl_fm can't be restarted.
+- **SSTV pages hung when the decoder stopped unexpectedly.** Both the ISS and General SSTV pages ignored the decoder's error message; they now show it and return to idle so you can start again.
+
+## [2.33.81] - 2026-11-09
+
+### Fixed
+
+- **ADS-B could not start on SoapySDR devices with current readsb.** On HackRF, Airspy, bladeRF, HydraSDR, LimeSDR, SDRplay and USRP, readsb was started with options it no longer accepts (`--device-type soapy`, `--device` on a SoapySDR-only build, `--enable-bias-t`) and without the SBS port INTERCEPT reads, so ADS-B failed with DEVICE_BUSY. (#387, #409, #423)
+- **HackRF FM and ADS-B reception.** FM listening on a HackRF now works (via `rx_sdr` and csdr), gain is shared between the LNA and VGA instead of leaving the VGA at 0, and ADS-B uses readsb's SoapySDR backend, which doesn't drop half the samples, with a gain range that suits the HackRF. Thanks @adromero. (#409)
+- **macOS setup said Linux-only tools were missing.** `airmon-ng`, `hcxdumptool` and the BlueZ Bluetooth tools don't exist on macOS, where INTERCEPT uses the system's own WiFi and Bluetooth; setup no longer lists them as missing required tools. (#419)
+- **dumpvdl2 failed to build on macOS** because libacars wouldn't link against the system's libxml2. libacars is now built without its optional XML pretty-printing on macOS. (#418)
+- **Meshtastic: the map jumped and node buttons ignored clicks.** The map refit to all nodes after every node refresh, pulling the view away from the node you were looking at, and the node list was rebuilt every few seconds even when nothing had changed, which swallowed clicks on its buttons. A node you favourite now stays in view as it moves to the top. (#270, #422)
+- **Kill All reached beyond INTERCEPT.** It matched decoder names anywhere in any user's command line, so it could kill unrelated programs; it now matches exact process names owned by INTERCEPT's user, and also stops readsb, rx_sdr and csdr. Thanks @adromero. (#416)
+- **Settings button did nothing on the APRS, Meshtastic, MeshCore and ISS dashboards.** Thanks @adromero. (#417)
+- **Sub-GHz Inspect found nothing with rtl_433 25.12,** whose pulse analyzer output changed. Thanks @adromero. (#411)
+- **Monitor had no audio when started just after the waterfall.** Thanks @adromero. (#413)
+- **Running the test suite could log you out of your desktop:** a failed AIS start kept a dead process, and a later stop signalled every process you own. Thanks @adromero. (#408)
+
+### Changed
+
+- **SSTV decoding is faster:** VIS detection's tone detector runs about 3x faster. Thanks @dexhunter. (#405)
+- Dependency minimums raised (Werkzeug 3.1.9, Pillow 12.3, gevent 26.9, scapy 2.8, flask-compress 1.26 and others) and CI actions updated. (#390–#402, #414, #415)
+
+## [2.33.80] - 2026-11-09
+
+### Upgrading with Docker
+
+- **Copy your database out before rebuilding.** The `instance/` folder (users, settings, alert rules, baselines and the new message store) is now kept on the host as `./instance`. The first rebuild starts with an empty `./instance`, so to keep what a running container has, run `docker cp intercept:/app/instance ./instance` before `docker compose --profile basic up -d --build`. (#385)
+
+### Added
+
+- **Decoded-message store, watchlists and push alerts.** `/messages` keeps one searchable store of everything the decoders hear, filterable by mode, time, identity and position, with CSV/JSON export and configurable retention. Watchlists match aircraft, ships, callsigns, MACs, frequencies or keywords across modes, and matches can be pushed to ntfy, Telegram or a webhook, with a per-station cooldown, an hourly cap and quiet hours. (#384)
+- **CoT export for ATAK, WinTAK and TAK Server.** ADS-B, AIS and APRS positions, and Meshtastic node positions, can be sent as Cursor-on-Target over UDP multicast or TCP. It is off unless configured. Thanks @Poid-ZA. (#247, closes #179)
+- **User accounts.** Signed-in users can change their display name and password, and a Users & Roles directory lists accounts with search and paging, in light and dark mode. Thanks @JonanOribe. (#383, #388)
+- **SSTV modulation, gain and PPM.** ISS SSTV can decode FM, USB or LSB instead of FM only, and both SSTV modes take a gain (blank for auto) and a PPM correction. Settings are remembered between visits and locked while decoding, and ISS SSTV has presets for 145.800 and 437.800 MHz.
+- **ADS-B dashboard: ACARS and VDL2 on a different source.** The ACARS and VDL2 panels each have a Source picker, so they can run on a local SDR while ADS-B runs on an agent, or the other way round. (#378, fixes #264)
+- **SAST timezone option.** The default stays local time. Thanks @Poid-ZA. (#379)
+- **Themed confirmation dialogs** replace the browser's own, so they follow light and dark mode. Thanks @JonanOribe. (#373)
+
+### Fixed
+
+- **ISS SSTV never used Doppler correction.** The page didn't send your location when starting, so the decoder stayed on a fixed frequency and the ISS's ±3.5 kHz shift went uncorrected. It now sends the location from the sidebar and retunes as the ISS passes.
+- **SSTV showed 145.800 MHz whatever you tuned.** The ISS SSTV strip and idle message now show the frequency and modulation in use, and the General SSTV strip no longer says FM when the decoder is set to USB.
+- **Sidebar sections all started collapsed on a mode's first visit.** The mode's description was taken for its first useful section; the first section with controls now opens.
+- **The APRS dashboard lost track of a running decoder.** Reopening the dashboard now picks up a decoder that is still running, with its counts, controls and live feed. (#380)
+- **Saving a ground station profile failed with an error.** (#381)
+- **Docker rebuilds started with an empty database,** losing users, settings and alert history. See *Upgrading with Docker* above. (#385)
+- **PostgreSQL setup failed when run as root,** reporting a password error for the `intercept` user. (#386, fixes #382)
+- **Map and GPS clocks stayed on UTC** when the timezone was set to local. Thanks @Poid-ZA. (#379)
+- **Installs could break on meshcore 2.3.16,** which fails to import on Python 3.11; that version is excluded. (#381)
+
+### Changed
+
+- **Python 3.10 or later is now required** (was 3.9), since meshcore needs it. Thanks @JonanOribe. (#407)
+- Dependabot, SBOM generation and release drafts in CI, plus dependency updates (flask-compress, pre-commit, docker/metadata-action). Thanks @JonanOribe. (#389, #393, #403, #404)
+
 ## [2.33.79] - 2026-10-04
 
 ### Fixed

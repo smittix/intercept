@@ -51,3 +51,13 @@ def test_no_serial_fails_clearly_before_claiming(ais_start, devices):
     assert resp.status_code == 400
     assert "serial" in resp.get_json()["message"]
     assert calls["claims"] == [] and calls["cmd"] is None
+
+
+def test_failed_start_does_not_keep_the_dead_process(ais_start):
+    # A kept process object is signalled by the next /ais/stop: in production its
+    # pid may have been reused, and here a MagicMock pid became killpg(1, ...),
+    # i.e. kill(-1, SIGTERM) against every process the user owns.
+    start, _ = ais_start
+    resp = start([_hackrf("0000000000000000a06063c8234e925f")])
+    assert resp.status_code == 500
+    assert app_module.ais_process is None

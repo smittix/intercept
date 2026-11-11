@@ -10,6 +10,7 @@ const SSTV = (function() {
     let images = [];
     let currentMode = null;
     let progress = 0;
+    let dopplerStatus = '';  // latest Doppler reading, shown alongside the listening status
     let issMap = null;
     let issMarker = null;
     let issTrackLine = null;
@@ -25,6 +26,9 @@ const SSTV = (function() {
     // ISS frequency
     const ISS_FREQ = 145.800;
     const ISS_MODULATION = 'fm';
+    const SETTINGS_KEY = 'sstvIssSettings';
+    const SETTINGS_INPUT_IDS = ['sstvPreset', 'sstvFrequency', 'sstvModulation', 'sstvGain', 'sstvPpm'];
+    let settingsListenersAttached = false;
 
     // Signal scope state
     let sstvScopeCtx = null;
@@ -44,6 +48,7 @@ const SSTV = (function() {
     function init() {
         // Load location inputs first (sync localStorage read needed for lat/lon params)
         loadLocationInputs();
+        loadDecoderSettings();
 
         // Fire all API calls in parallel — schedule is the slowest, don't let it block
         Promise.all([
@@ -122,6 +127,121 @@ const SSTV = (function() {
             }
             loadIssSchedule(); // Refresh pass predictions
         }
+    }
+
+    /**
+     * Observer location for Doppler correction, or null if none is set
+     */
+    function getObserverLocation() {
+        const lat = parseFloat(document.getElementById('sstvObsLat')?.value);
+        const lon = parseFloat(document.getElementById('sstvObsLon')?.value);
+        if (!isNaN(lat) && lat >= -90 && lat <= 90 &&
+            !isNaN(lon) && lon >= -180 && lon <= 180) {
+            return { latitude: lat, longitude: lon };
+        }
+        return null;
+    }
+
+    /**
+     * Read decoder settings from the sidebar
+     */
+    function getDecoderSettings() {
+        const freq = parseFloat(document.getElementById('sstvFrequency')?.value);
+        const gainValue = document.getElementById('sstvGain')?.value.trim();
+        const ppm = parseInt(document.getElementById('sstvPpm')?.value, 10);
+        return {
+            frequency: Number.isFinite(freq) ? freq : ISS_FREQ,
+            modulation: document.getElementById('sstvModulation')?.value || ISS_MODULATION,
+            gain: gainValue ? parseFloat(gainValue) : null,
+            ppm: Number.isFinite(ppm) ? ppm : 0,
+        };
+    }
+
+    /**
+     * Restore saved decoder settings and keep them saved on change
+     */
+    function loadDecoderSettings() {
+        let saved = null;
+        try {
+            saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
+        } catch (e) {
+            saved = null;
+        }
+        if (saved) {
+            const freqInput = document.getElementById('sstvFrequency');
+            const modSelect = document.getElementById('sstvModulation');
+            const gainInput = document.getElementById('sstvGain');
+            const ppmInput = document.getElementById('sstvPpm');
+            if (freqInput && Number.isFinite(saved.frequency)) freqInput.value = saved.frequency.toFixed(3);
+            if (modSelect && ['fm', 'usb', 'lsb'].includes(saved.modulation)) modSelect.value = saved.modulation;
+            if (gainInput) gainInput.value = Number.isFinite(saved.gain) ? saved.gain : '';
+            if (ppmInput && Number.isFinite(saved.ppm)) ppmInput.value = saved.ppm;
+        }
+        syncPresetToSettings();
+        updateFrequencyDisplay();
+
+        if (!settingsListenersAttached) {
+            ['sstvFrequency', 'sstvModulation', 'sstvGain', 'sstvPpm'].forEach(id => {
+                document.getElementById(id)?.addEventListener('change', onDecoderSettingChange);
+            });
+            settingsListenersAttached = true;
+        }
+    }
+
+    function saveDecoderSettings() {
+        try {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(getDecoderSettings()));
+        } catch (e) {
+            // Storage unavailable; settings just won't persist
+        }
+    }
+
+    function onDecoderSettingChange() {
+        syncPresetToSettings();
+        updateFrequencyDisplay();
+        saveDecoderSettings();
+    }
+
+    /**
+     * Apply a "freq|modulation" preset to the inputs
+     */
+    function selectPreset(value) {
+        if (!value) return;
+        const [freq, mod] = value.split('|');
+        const freqInput = document.getElementById('sstvFrequency');
+        const modSelect = document.getElementById('sstvModulation');
+        if (freqInput) freqInput.value = parseFloat(freq).toFixed(3);
+        if (modSelect) modSelect.value = mod;
+        updateFrequencyDisplay();
+        saveDecoderSettings();
+    }
+
+    /**
+     * Show the matching preset, or Custom when the inputs match none
+     */
+    function syncPresetToSettings() {
+        const presetSelect = document.getElementById('sstvPreset');
+        if (!presetSelect) return;
+        const { frequency, modulation } = getDecoderSettings();
+        const match = Array.from(presetSelect.options).find(o => {
+            if (!o.value) return false;
+            const [freq, mod] = o.value.split('|');
+            return parseFloat(freq) === frequency && mod === modulation;
+        });
+        presetSelect.value = match ? match.value : '';
+    }
+
+    function updateFrequencyDisplay(frequency) {
+        const stripFreq = document.getElementById('sstvStripFreq');
+        const freq = Number.isFinite(frequency) ? frequency : getDecoderSettings().frequency;
+        if (stripFreq) stripFreq.textContent = freq.toFixed(3);
+    }
+
+    function setDecoderSettingsLocked(locked) {
+        SETTINGS_INPUT_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = locked;
+        });
     }
 
     /**
@@ -576,7 +696,11 @@ const SSTV = (function() {
 
             if (data.running) {
                 isRunning = true;
-                updateStatusUI('listening', 'Listening...');
+                const runningFrequency = Number(data.frequency);
+                updateFrequencyDisplay(runningFrequency);
+                updateStatusUI('listening', Number.isFinite(runningFrequency)
+                    ? `${runningFrequency.toFixed(3)} MHz ${String(data.modulation || ISS_MODULATION).toUpperCase()}`
+                    : 'Listening...');
                 startStream();
             } else {
                 updateStatusUI('idle', 'Idle');
@@ -593,12 +717,13 @@ const SSTV = (function() {
      * Start SSTV decoder
      */
     async function start() {
-        const freqInput = document.getElementById('sstvFrequency');
         // Use the global SDR device selector
         const deviceSelect = document.getElementById('deviceSelect');
 
-        const frequency = parseFloat(freqInput?.value || ISS_FREQ);
+        const settings = getDecoderSettings();
+        const { frequency } = settings;
         const device = parseInt(deviceSelect?.value || '0', 10);
+        const location = getObserverLocation();
 
         // Check if device is available
         if (typeof checkDeviceAvailability === 'function' && !checkDeviceAvailability('sstv')) {
@@ -611,21 +736,24 @@ const SSTV = (function() {
             const response = await fetch('/sstv/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ frequency, modulation: ISS_MODULATION, device })
+                body: JSON.stringify({ ...settings, device, ...(location || {}) })
             });
 
             const data = await response.json();
 
             if (data.status === 'started' || data.status === 'already_running') {
                 isRunning = true;
+                dopplerStatus = '';
                 if (typeof reserveDevice === 'function') {
                     reserveDevice(device, 'sstv');
                 }
                 const tunedFrequency = Number(data.frequency || frequency);
-                const modulationText = String(data.modulation || ISS_MODULATION).toUpperCase();
+                const modulationText = String(data.modulation || settings.modulation).toUpperCase();
+                const dopplerText = data.doppler_enabled ? ' with Doppler correction' : '';
+                updateFrequencyDisplay(tunedFrequency);
                 updateStatusUI('listening', `${tunedFrequency.toFixed(3)} MHz ${modulationText}`);
                 startStream();
-                showNotification('SSTV', `Listening on ${tunedFrequency.toFixed(3)} MHz ${modulationText}`);
+                showNotification('SSTV', `Listening on ${tunedFrequency.toFixed(3)} MHz ${modulationText}${dopplerText}`);
             } else {
                 updateStatusUI('idle', 'Start failed');
                 showStatusMessage(data.message || 'Failed to start decoder', 'error');
@@ -682,6 +810,8 @@ const SSTV = (function() {
             statusText.textContent = text || status;
         }
 
+        setDecoderSettingsLocked(['connecting', 'listening', 'detecting', 'decoding'].includes(status));
+
         if (startBtn && stopBtn) {
             if (status === 'listening' || status === 'decoding') {
                 startBtn.style.display = 'none';
@@ -705,6 +835,7 @@ const SSTV = (function() {
      * Render idle state HTML
      */
     function renderIdleState() {
+        const { frequency, modulation } = getDecoderSettings();
         return `
             <div class="sstv-idle-state">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -713,7 +844,7 @@ const SSTV = (function() {
                     <path d="M3 9h2M19 9h2M3 15h2M19 15h2"/>
                 </svg>
                 <h4>ISS SSTV Decoder</h4>
-                <p>Click Start to listen for SSTV transmissions on 145.800 MHz</p>
+                <p>Click Start to listen for SSTV transmissions on ${frequency.toFixed(3)} MHz ${modulation.toUpperCase()}</p>
             </div>
         `;
     }
@@ -922,14 +1053,31 @@ const SSTV = (function() {
             const liveContent = document.getElementById('sstvLiveContent');
             if (liveContent) liveContent.innerHTML = '';
         } else if (data.status === 'detecting') {
+            // Keep the latest Doppler reading so the frequent "Listening..."
+            // updates don't overwrite it
+            if (data.doppler) {
+                const shift = Math.round(data.doppler.shift_hz);
+                dopplerStatus = `Doppler ${shift >= 0 ? '+' : ''}${shift} Hz, el ${data.doppler.elevation.toFixed(1)}°`;
+            }
+
             // Ignore detecting events if currently decoding (e.g. Doppler updates)
             const dot = document.getElementById('sstvStripDot');
             if (dot && dot.classList.contains('decoding')) return;
 
-            updateStatusUI('listening', data.message || 'Listening...');
+            const message = data.doppler ? 'Listening...' : (data.message || 'Listening...');
+            updateStatusUI('listening', dopplerStatus ? `${message} · ${dopplerStatus}` : message);
             if (data.signal_level !== undefined) {
                 renderSignalMonitor(data);
             }
+        } else if (data.status === 'error') {
+            // The backend has stopped the decoder; reflect that instead of freezing
+            isRunning = false;
+            if (typeof releaseDevice === 'function') {
+                releaseDevice('sstv');
+            }
+            stopStream();
+            updateStatusUI('idle', data.message || 'Decoder stopped');
+            showStatusMessage(data.message || 'SSTV decoder stopped unexpectedly', 'error');
         }
     }
 
@@ -1427,6 +1575,7 @@ const SSTV = (function() {
         stopIssTracking,
         stopCountdown,
         invalidateMap,
+        selectPreset,
         destroy
     };
 

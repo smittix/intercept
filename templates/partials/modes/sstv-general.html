@@ -63,6 +63,14 @@
                 <option value="lsb">LSB (Lower Sideband)</option>
             </select>
         </div>
+        <div class="form-group">
+            <label>Gain (dB, blank = auto)</label>
+            <input type="number" id="sstvGeneralGain" placeholder="auto" step="0.1" min="0" max="50">
+        </div>
+        <div class="form-group">
+            <label>PPM Correction</label>
+            <input type="number" id="sstvGeneralPpm" value="0" step="1" min="-1000" max="1000">
+        </div>
     </div>
 
     <div class="section">

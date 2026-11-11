@@ -16,7 +16,6 @@ import math
 import os
 import queue
 import select
-import struct
 import threading
 import time
 import wave
@@ -116,8 +115,11 @@ class GoertzelFilter:
         s1 = 0.0
         s2 = 0.0
         coeff = self.coeff
-        for sample in samples:
-            s0 = float(sample) + coeff * s1 - s2
+        if isinstance(samples, np.ndarray):
+            # Iterating Python floats is much cheaper than numpy scalars.
+            samples = samples.tolist()
+        for sample in map(float, samples):
+            s0 = sample + coeff * s1 - s2
             s2 = s1
             s1 = s0
         power = s1 * s1 + s2 * s2 - coeff * s1 * s2
@@ -464,24 +466,27 @@ class MorseDecoder:
         if n_samples <= 0:
             return events
 
-        samples = struct.unpack(f"<{n_samples}h", pcm_bytes[: n_samples * 2])
-        self._pending_buffer.extend(samples)
+        pending = np.concatenate(
+            (
+                np.asarray(self._pending_buffer, dtype=np.int64),
+                np.frombuffer(pcm_bytes, dtype="<i2", count=n_samples),
+            )
+        )
+        n_blocks = len(pending) // self._block_size
+        n_used = n_blocks * self._block_size
+        self._pending_buffer = pending[n_used:].tolist()
+        blocks = pending[:n_used].reshape(n_blocks, self._block_size) / 32768.0
+        block_rms = np.sqrt(np.mean(np.square(blocks), axis=1)).tolist()
 
         amplitudes: list[float] = []
 
-        while len(self._pending_buffer) >= self._block_size:
-            block = np.array(self._pending_buffer[: self._block_size], dtype=np.float64)
-            del self._pending_buffer[: self._block_size]
-
-            normalized = block / 32768.0
-
+        for block, rms in zip(blocks, block_rms):
             # AGC
-            rms = float(np.sqrt(np.mean(np.square(normalized))))
             if rms > 1e-7:
                 desired_gain = self._agc_target / rms
                 self._agc_gain += self._agc_alpha * (desired_gain - self._agc_gain)
                 self._agc_gain = _clamp(self._agc_gain, 0.2, 450.0)
-            normalized *= self._agc_gain
+            normalized = block * self._agc_gain
 
             self._blocks_processed += 1
 

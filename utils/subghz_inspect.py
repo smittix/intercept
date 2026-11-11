@@ -44,6 +44,9 @@ FLEX_TO_OOK_FIELDS = {
 _PACKAGE_RE = re.compile(r"^Detected (\w+) package\s+@([\d.]+)s", re.MULTILINE)
 _DIST_ENTRY_RE = re.compile(r"^\s*\[\s*\d+\]\s+count:\s+(\d+),\s+width:\s+(\d+) us")
 _ROW_RE = re.compile(r"^\[(\d+)\]\s+\{(\d+)\}\s+([0-9a-f ]*?)\s*:\s*([01 ]*)$")
+# Newer rtl_433 (25.12) prints the sliced rows as one line: "codes : {28}4c70ad3, {28}4c70ad3"
+_CODES_RE = re.compile(r"^codes\s*:\s*(.*)$")
+_CODE_RE = re.compile(r"\{(\d+)\}([0-9a-f]+)")
 _SIGNAL_RE = re.compile(r"RSSI:\s*(-?[\d.]+) dB SNR:\s*(-?[\d.]+) dB")
 _FLEX_RE = re.compile(r"-X '([^']+)'")
 _GUESS_RE = re.compile(r"^Guessing modulation:\s*(.+)$", re.MULTILINE)
@@ -52,6 +55,7 @@ _DIST_HEADINGS = {
     "Pulse width distribution:": "pulse_widths",
     "Gap width distribution:": "gap_widths",
     "Pulse period distribution:": "periods",
+    "Pulse+gap period distribution:": "periods",  # newer rtl_433 (25.12)
 }
 
 
@@ -59,11 +63,23 @@ def read_iq_window(path: Path, sample_rate: int, start_seconds: float, duration_
     """Read part of a cs8 capture as complex samples."""
     start = max(0, int(start_seconds * sample_rate))
     count = max(0, int(duration_seconds * sample_rate))
-    with open(path, "rb") as f:
+    with open(path, "rb", buffering=0) as f:
+        available = max(0, os.fstat(f.fileno()).st_size - start * 2)
+        iq = np.empty(min(count, available // 2), dtype=np.complex64)
         f.seek(start * 2)
-        raw = np.frombuffer(f.read(count * 2), dtype=np.int8)
-    raw = raw[: raw.size - (raw.size % 2)].astype(np.float32)
-    return raw[0::2] + 1j * raw[1::2]
+        # Fill the result in place through a float32 view of its interleaved I/Q,
+        # a small block at a time and without a read buffer, so the window is
+        # never held twice
+        interleaved = iq.view(np.float32)
+        block = np.empty(min(interleaved.size, 1 << 14), dtype=np.int8)
+        filled = 0
+        while filled < interleaved.size:
+            n = f.readinto(block[: interleaved.size - filled])
+            if not n:
+                break
+            interleaved[filled : filled + n] = block[:n]
+            filled += n
+    return iq
 
 
 def decimate(iq: np.ndarray, sample_rate: int, target: int = TARGET_SAMPLE_RATE) -> tuple[np.ndarray, int]:
@@ -87,10 +103,14 @@ def envelope_columns(iq: np.ndarray, max_columns: int = MAX_ENVELOPE_COLUMNS) ->
     """
     if iq.size == 0:
         return [], 1
-    amp = np.abs(iq)
-    per_column = max(1, -(-amp.size // max_columns))
-    usable = amp.size - (amp.size % per_column)
-    peaks = amp[:usable].reshape(-1, per_column).max(axis=1)
+    per_column = max(1, -(-iq.size // max_columns))
+    usable = iq.size - (iq.size % per_column)
+    # Take amplitudes a block of whole columns at a time so only one block is live
+    block = max(1, (1 << 16) // per_column) * per_column
+    peaks = np.empty(usable // per_column, dtype=np.abs(iq[:1]).dtype)
+    for start in range(0, usable, block):
+        stop = min(start + block, usable)
+        np.abs(iq[start:stop]).reshape(-1, per_column).max(axis=1, out=peaks[start // per_column : stop // per_column])
     top = float(peaks.max()) or 1.0
     return [round(float(v) / top, 2) for v in peaks], per_column
 
@@ -126,6 +146,12 @@ def ook_settings(flex: dict[str, str]) -> dict | None:
         if value > 0:
             settings[field_name] = value
     return settings
+
+
+def _code_row(bits: int, nibbles: str) -> dict:
+    """A row from rtl_433's "{bits}hex" code notation (hex is MSB-first, zero-padded)."""
+    binary = "".join(f"{int(n, 16):04b}" for n in nibbles)[:bits]
+    return {"bits": bits, "hex": nibbles, "binary": binary}
 
 
 def parse_pulse_analyzer(text: str) -> list[dict]:
@@ -169,6 +195,12 @@ def parse_pulse_analyzer(text: str) -> list[dict]:
                         "binary": row.group(4).replace(" ", ""),
                     }
                 )
+                continue
+            codes = _CODES_RE.match(stripped)
+            if codes:
+                package["rows"].extend(
+                    _code_row(int(bits), nibbles) for bits, nibbles in _CODE_RE.findall(codes.group(1))
+                )
 
         signal = _SIGNAL_RE.search(block)
         if signal:
@@ -193,10 +225,13 @@ def run_pulse_analyzer(iq: np.ndarray, sample_rate: int, rtl_433_path: str) -> s
         write_cs8(iq, tmp_path)
         result = subprocess.run(
             [rtl_433_path, "-r", f"cs8:{tmp_path}", "-s", str(sample_rate), "-A", "-R", "0"],
-            capture_output=True,
+            # One stream, in order: the analyzer report goes to stderr, but newer
+            # rtl_433 prints the sliced rows ("codes") to stdout after each package
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             timeout=ANALYZER_TIMEOUT_SECONDS,
         )
-        return (result.stdout + result.stderr).decode("utf-8", errors="replace")
+        return result.stdout.decode("utf-8", errors="replace")
     finally:
         with contextlib.suppress(OSError):
             os.unlink(tmp_path)

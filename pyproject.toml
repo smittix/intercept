@@ -1,6 +1,6 @@
 [project]
 name = "intercept"
-version = "2.32.0"
+version = "2.33.86"
 description = "Signal Intelligence Platform - Pager/433MHz/ADS-B/Satellite/WiFi/Bluetooth"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -25,18 +25,18 @@ classifiers = [
     "Topic :: System :: Networking :: Monitoring",
 ]
 dependencies = [
-    "flask>=3.0.0",
-    "flask-wtf>=1.2.0",
-    "flask-compress>=1.25",
+    "flask>=3.1.3",
+    "flask-wtf>=1.3.0",
+    "flask-compress>=1.26",
     "flask-limiter>=2.5.4",
     "flask-sock",
-    "simple-websocket>=0.5.1",
-    "websocket-client>=1.6.0",
-    "skyfield>=1.45",
+    "simple-websocket>=1.1.0",
+    "websocket-client>=1.9.2",
+    "skyfield>=1.55",
     "pyserial>=3.5",
-    "Werkzeug>=3.1.5",
-    "bleak>=0.21.0",
-    "requests>=2.28.0",
+    "Werkzeug>=3.1.9",
+    "bleak>=3.1.0",
+    "requests>=2.34.2",
 ]
 
 [project.urls]
@@ -47,37 +47,37 @@ Issues = "https://github.com/smittix/intercept/issues"
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "pytest-mock>=3.15.1",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.17.0",
     "pytest-timeout>=2.3.0",
-    "ruff>=0.1.0",
-    "black>=23.0.0",
-    "mypy>=1.0.0",
-    "types-flask>=1.1.0",
+    "ruff>=0.17.4",
+    "black>=26.10.1",
+    "mypy>=2.4.1",
+    "types-flask>=1.1.6",
     "pre-commit>=4.6.2",
 ]
 
 optionals = [
-    "scipy>=1.10.0",
-    "qrcode[pil]>=7.4",
-    "numpy>=1.24.0",
-    "Pillow>=9.0.0",
-    "meshtastic>=2.7.9",
+    "scipy>=1.15.3",
+    "qrcode[pil]>=8.2",
+    "numpy>=2.2.6",
+    "Pillow>=12.3.0",
+    "meshtastic>=2.7.11",
     "meshcore>=2.3.0,!=2.3.16",
-    "paho-mqtt>=1.6.0",
-    "psycopg2-binary>=2.9.9",
-    "scapy>=2.4.5",
-    "cryptography>=41.0.0",
-    "psutil>=5.9.0",
-    "gunicorn>=21.2.0",
-    "gevent>=23.9.0",
+    "paho-mqtt>=2.2.0",
+    "psycopg2-binary>=2.9.13",
+    "scapy>=2.8.0",
+    "cryptography>=48.0.1",
+    "psutil>=7.2.2",
+    "gunicorn>=26.2.0",
+    "gevent>=26.9.0",
 ]
 
 [project.scripts]
 intercept = "intercept:main"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=84.2.1"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]

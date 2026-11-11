@@ -121,7 +121,9 @@ class TestBuildAdsbCommand:
         cmd = HackRFCommandBuilder().build_adsb_command(_make_device(serial="deadbeef"), gain=40)
         # wiedehopf readsb rejects "soapy": "SDR type 'soapy' not recognized"
         assert cmd[cmd.index("--device-type") + 1] == "soapysdr"
-        assert cmd[cmd.index("--device") + 1] == "driver=hackrf,serial=deadbeef"
+        # A SoapySDR-only readsb build has no --device option (#387)
+        assert "--device" not in cmd
+        assert cmd[cmd.index("--soapy-device") + 1] == "driver=hackrf,serial=deadbeef"
 
     def test_soapy_sets_lna_vga_and_amp_explicitly(self, soapy_only):
         # readsb's overall --gain goes through SoapyHackRF setGain, which lands

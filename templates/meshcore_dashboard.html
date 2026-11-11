@@ -6,6 +6,7 @@
     {% set dash_layout_css = 'css/meshcore_dashboard.css' %}
     {% set dash_needs_chart = true %}
     {% include 'partials/dashboard_head.html' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
 </head>
 <body data-mode="meshcore">
     <div class="radar-bg"></div>
@@ -29,6 +30,7 @@
         </div>
     </main>
 
+    {% include 'partials/settings-modal.html' %}
     <script src="{{ url_for('static', filename='js/core/settings-manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/map-utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/core/global-nav.js') }}"></script>

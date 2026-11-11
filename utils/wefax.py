@@ -33,6 +33,7 @@ import numpy as np
 from utils.dependencies import get_tool_path
 from utils.logging import get_logger
 from utils.sdr import SDRFactory, SDRType
+from utils.sstv.dsp import goertzel_mag
 
 logger = get_logger("intercept.wefax")
 
@@ -140,19 +141,7 @@ class WeFaxProgress:
 
 def _goertzel_mag(samples: np.ndarray, target_freq: float, sample_rate: int) -> float:
     """Compute Goertzel magnitude at a single frequency."""
-    n = len(samples)
-    if n == 0:
-        return 0.0
-    w = 2.0 * math.pi * target_freq / sample_rate
-    coeff = 2.0 * math.cos(w)
-    s1 = 0.0
-    s2 = 0.0
-    for sample in samples:
-        s0 = float(sample) + coeff * s1 - s2
-        s2 = s1
-        s1 = s0
-    energy = s1 * s1 + s2 * s2 - coeff * s1 * s2
-    return math.sqrt(max(0.0, energy))
+    return goertzel_mag(samples, target_freq, sample_rate)
 
 
 def _freq_to_pixel(frequency: float) -> int:
