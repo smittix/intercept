@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.85"
+VERSION = "2.33.86"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.86",
+        "date": "November 2026",
+        "highlights": [
+            "macOS setup can build dump1090 from source again when Homebrew's copy isn't usable.",
+            "Lower memory use in the waterfall and Sub-GHz Inspect, and faster TSCM correlation.",
+        ],
+    },
     {
         "version": "2.33.85",
         "date": "November 2026",
