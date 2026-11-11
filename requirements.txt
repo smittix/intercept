@@ -10,7 +10,7 @@ Werkzeug>=3.1.9
 psycopg2-binary>=2.9.13
 
 # BLE scanning with manufacturer data detection (optional - for TSCM)
-bleak>=3.0.2
+bleak>=3.1.0
 
 # Satellite tracking (optional - only needed for satellite features)
 skyfield>=1.55
