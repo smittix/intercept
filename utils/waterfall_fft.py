@@ -23,10 +23,16 @@ def cu8_to_complex(raw: bytes) -> np.ndarray:
     Returns:
         Complex64 array of length len(raw) // 2.
     """
-    iq = np.frombuffer(raw, dtype=np.uint8).astype(np.float32)
-    # Normalize: 0 -> -1.0, 128 -> ~0.0, 255 -> +1.0
-    iq = (iq - 127.5) / 127.5
-    return iq[0::2] + 1j * iq[1::2]
+    u8 = np.frombuffer(raw, dtype=np.uint8)
+    i, q = np.broadcast_arrays(u8[0::2], u8[1::2])
+    out = np.empty(i.shape, dtype=np.complex64)
+    out.real = i
+    out.imag = q
+    iq = out.view(np.float32)
+    # Normalize in place: 0 -> -1.0, 128 -> ~0.0, 255 -> +1.0
+    iq -= 127.5
+    iq /= 127.5
+    return out
 
 
 def cs8_to_complex(raw: bytes) -> np.ndarray:
