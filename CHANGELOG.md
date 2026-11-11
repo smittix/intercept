@@ -2,6 +2,17 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.86] - 2026-11-11
+
+### Fixed
+
+- **macOS setup couldn't build dump1090 from source.** The build relied on `pkg-config` to find librtlsdr; when it didn't, linking failed with "symbol(s) not found". Setup now points the build at Homebrew's librtlsdr directly. The ADS-B install hint also names `dump1090-fa` instead of the renamed `dump1090-mutability`. (#419)
+
+### Changed
+
+- **Lower memory use and faster correlation:** the waterfall's IQ conversion uses about a third of the memory (#442), Sub-GHz Inspect's envelope view 84% less on 2 s windows (#443), and TSCM correlation is about 2.9x faster (#444). Thanks @dexhunter.
+- Dependency minimums raised (scipy 1.15.3, gunicorn 26.2.0, flask 3.1.3, bleak 3.1.0, meshtastic 2.7.11, qrcode 8.2, cryptography 48.0.1, and dev tools), and CI actions updated (Docker actions v4, setup-python v7, Release Drafter v7). (#447–#461)
+
 ## [2.33.85] - 2026-11-11
 
 ### Fixed

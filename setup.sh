@@ -815,7 +815,8 @@ install_dump1090_from_source_macos() {
     cd "$tmp_dir/dump1090"
     sed -i '' 's/-Werror//g' Makefile 2>/dev/null || true
     info "Compiling dump1090..."
-    if make BLADERF=no RTLSDR=yes 2>&1 | tail -5; then
+    # RTLSDR_PREFIX links librtlsdr directly; pkg-config can miss it, leaving rtlsdr_* undefined
+    if make BLADERF=no RTLSDR=yes RTLSDR_PREFIX="$(brew --prefix librtlsdr)" 2>&1 | tail -5; then
       if [[ -w /usr/local/bin ]]; then
         install -m 0755 dump1090 /usr/local/bin/dump1090
       else
