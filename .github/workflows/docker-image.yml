@@ -30,7 +30,7 @@ jobs:
 
       # Step 2: Set up QEMU for multi-arch builds
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       # Step 3: Set up Docker Buildx for advanced features
       - name: Set up Docker Buildx
