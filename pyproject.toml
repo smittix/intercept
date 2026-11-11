@@ -35,7 +35,7 @@ dependencies = [
     "skyfield>=1.55",
     "pyserial>=3.5",
     "Werkzeug>=3.1.9",
-    "bleak>=3.0.2",
+    "bleak>=3.1.0",
     "requests>=2.34.2",
 ]
 
