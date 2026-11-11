@@ -18,7 +18,7 @@ from utils.database import get_correlations as db_get_correlations
 logger = logging.getLogger("intercept.correlation")
 
 
-@dataclass
+@dataclass(slots=True)
 class DeviceObservation:
     """A single observation of a device."""
 
@@ -65,17 +65,22 @@ class DeviceCorrelator:
             List of correlation results with confidence scores
         """
         correlations = []
+        bt_observations = None
 
         for wifi_mac, wifi_data in wifi_devices.items():
             wifi_obs = self._to_observation(wifi_mac, wifi_data, "wifi")
             if not wifi_obs:
                 continue
 
-            for bt_mac, bt_data in bt_devices.items():
-                bt_obs = self._to_observation(bt_mac, bt_data, "bluetooth")
-                if not bt_obs:
-                    continue
+            # Parse Bluetooth devices once, on first valid WiFi device
+            if bt_observations is None:
+                bt_observations = [
+                    (bt_mac, bt_obs)
+                    for bt_mac, bt_data in bt_devices.items()
+                    if (bt_obs := self._to_observation(bt_mac, bt_data, "bluetooth"))
+                ]
 
+            for bt_mac, bt_obs in bt_observations:
                 confidence = self._calculate_confidence(wifi_obs, bt_obs)
 
                 if confidence >= self.min_confidence:
@@ -163,9 +168,10 @@ class DeviceCorrelator:
 
         # Timing correlation (most important)
         time_diff = abs((wifi.first_seen - bt.first_seen).total_seconds())
-        if time_diff <= self.time_window.total_seconds():
+        window_seconds = self.time_window.total_seconds()
+        if time_diff <= window_seconds:
             # Linear decay from 0.5 to 0.0 as time difference increases
-            timing_score = 0.5 * (1 - time_diff / self.time_window.total_seconds())
+            timing_score = 0.5 * (1 - time_diff / window_seconds)
             confidence += timing_score
         else:
             # Check if observation windows overlap at all
@@ -186,9 +192,7 @@ class DeviceCorrelator:
                 confidence += 0.1
 
         # OUI match (first 3 octets of MAC)
-        wifi_oui = wifi.mac[:8].upper()
-        bt_oui = bt.mac[:8].upper()
-        if wifi_oui == bt_oui:
+        if wifi.mac[:8].upper() == bt.mac[:8].upper():
             confidence += 0.15
 
         # RSSI similarity
