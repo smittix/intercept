@@ -499,20 +499,15 @@ check_python_version() {
   ver="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
   info "Python version: ${ver}"
 
-  python3 - <<'PY'
+  if ! python3 - <<'PY'
 import sys
-raise SystemExit(0 if sys.version_info >= (3,9) else 1)
-PY
-  ok "Python version OK (>= 3.9)"
-
-  # meshcore (MeshCore mesh networking) requires Python 3.10+
-  if python3 - <<'PY'
-import sys
-raise SystemExit(0 if sys.version_info < (3,10) else 1)
+raise SystemExit(0 if sys.version_info >= (3,10) else 1)
 PY
   then
-    warn "Python 3.9 detected: MeshCore support requires Python 3.10+ and will be unavailable."
+    fail "Python 3.10 or newer is required (found ${ver})."
+    exit 1
   fi
+  ok "Python version OK (>= 3.10)"
 
   # Python 3.13+ warning: some packages (gevent, numpy, scipy) may not have
   # pre-built wheels yet; prefer wheels over source builds to avoid hanging
@@ -1579,7 +1574,10 @@ install_tool_rtl_433() {
 install_tool_dump1090() {
   if [[ "$OS" == "macos" ]]; then
     if ! cmd_exists dump1090; then
-      (brew_install dump1090-mutability) || install_dump1090_from_source_macos || warn "dump1090 not available"
+      # The formula can be installed without dump1090 on PATH (e.g. not linked),
+      # so check for the binary before skipping the source build (#419)
+      { (brew_install dump1090-fa) && cmd_exists dump1090; } \
+        || install_dump1090_from_source_macos || warn "dump1090 not available"
     else
       ok "dump1090 already installed"
     fi
@@ -2847,7 +2845,9 @@ do_view_status() {
 # ============================================================
 do_wizard() {
   echo
-  echo -e "${BOLD}${CYAN}Welcome to INTERCEPT Setup!${NC}"
+  local version
+  version="$(sed -n 's/^VERSION = "\(.*\)"/\1/p' config.py 2>/dev/null || true)"
+  echo -e "${BOLD}${CYAN}Welcome to INTERCEPT Setup${version:+ v${version}}!${NC}"
   echo
   info "Detected OS: ${OS}"
   $IS_DRAGONOS && warn "DragonOS detected (safe mode enabled)"

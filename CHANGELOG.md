@@ -2,6 +2,20 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.85] - 2026-11-11
+
+### Fixed
+
+- **Setup failed to install cryptography on Intel Macs.** A dependency update raised the minimum to 50.0.2, but cryptography 49 and later only publish Apple Silicon wheels for macOS. The minimum is back to 41.0.0, so Intel Macs get 48.0.1 and everything else still gets the latest. cryptography is optional and only used by Bluetooth Locate. (#445)
+- **macOS setup reported dump1090 missing after installing it with Homebrew.** Setup asked for the renamed `dump1090-mutability` formula and treated "installed" as done even when no `dump1090` was on the PATH. It now installs `dump1090-fa` and builds dump1090 from source if the binary still isn't available. (#419)
+- **Setup exited silently on Python older than 3.9,** and accepted 3.9 although current dependencies need 3.10. It now requires Python 3.10 and says so.
+
+### Changed
+
+- Setup's welcome banner shows the INTERCEPT version. (#419)
+- **Faster decoding and lower memory use:** Morse decoding is about twice as fast on long recordings (#426), WEFAX tone detection about 7x faster (#427), and Sub-GHz Inspect uses half the memory when loading a capture (#425). Thanks @dexhunter.
+- Dependency minimums raised (numpy 2.2.6, requests 2.34.2, bleak 3.0.2, paho-mqtt 2.2, psutil 7.2.2, skyfield 1.55, psycopg2-binary 2.9.13, and dev tools). (#428–#437)
+
 ## [2.33.84] - 2026-11-10
 
 ### Fixed

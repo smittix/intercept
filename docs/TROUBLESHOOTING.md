@@ -77,7 +77,7 @@ pip install --break-system-packages flask
 
 ### "TypeError: 'type' object is not subscriptable"
 
-This error occurs on Python 3.7 or 3.8. **INTERCEPT requires Python 3.9 or later.**
+This error occurs on Python 3.7 or 3.8. **INTERCEPT requires Python 3.10 or later.**
 
 ```bash
 # Check your Python version

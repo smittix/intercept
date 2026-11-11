@@ -7,10 +7,19 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.84"
+VERSION = "2.33.85"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.85",
+        "date": "November 2026",
+        "highlights": [
+            "Setup works again on Intel Macs, and builds dump1090 when Homebrew's copy isn't usable.",
+            "Faster Morse and WEFAX decoding, and lower memory use in Sub-GHz Inspect.",
+            "Setup shows the INTERCEPT version and stops clearly on Python older than 3.10.",
+        ],
+    },
     {
         "version": "2.33.84",
         "date": "November 2026",

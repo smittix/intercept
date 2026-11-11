@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    ignore:
+      # 49+ has no Intel Mac wheels, so raising the minimum breaks setup there (#445)
+      - dependency-name: "cryptography"
+        versions: [">=49"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
