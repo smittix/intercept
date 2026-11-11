@@ -34,7 +34,7 @@ jobs:
 
       # Step 3: Set up Docker Buildx for advanced features
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # Step 4: Log in to GitHub Container Registry
       - name: Log in to GHCR
