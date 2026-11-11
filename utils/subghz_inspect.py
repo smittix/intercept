@@ -103,10 +103,14 @@ def envelope_columns(iq: np.ndarray, max_columns: int = MAX_ENVELOPE_COLUMNS) ->
     """
     if iq.size == 0:
         return [], 1
-    amp = np.abs(iq)
-    per_column = max(1, -(-amp.size // max_columns))
-    usable = amp.size - (amp.size % per_column)
-    peaks = amp[:usable].reshape(-1, per_column).max(axis=1)
+    per_column = max(1, -(-iq.size // max_columns))
+    usable = iq.size - (iq.size % per_column)
+    # Take amplitudes a block of whole columns at a time so only one block is live
+    block = max(1, (1 << 16) // per_column) * per_column
+    peaks = np.empty(usable // per_column, dtype=np.abs(iq[:1]).dtype)
+    for start in range(0, usable, block):
+        stop = min(start + block, usable)
+        np.abs(iq[start:stop]).reshape(-1, per_column).max(axis=1, out=peaks[start // per_column : stop // per_column])
     top = float(peaks.max()) or 1.0
     return [round(float(v) / top, 2) for v in peaks], per_column
 
