@@ -16,7 +16,7 @@ bleak>=3.1.0
 skyfield>=1.55
 
 # DSC decoding and SSTV decoding (DSP pipeline)
-scipy>=1.10.0
+scipy>=1.15.3
 numpy>=2.2.6
 
 # SSTV image output (optional - needed for SSTV image decoding)
