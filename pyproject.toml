@@ -58,7 +58,7 @@ dev = [
 ]
 
 optionals = [
-    "scipy>=1.10.0",
+    "scipy>=1.15.3",
     "qrcode[pil]>=8.2",
     "numpy>=2.2.6",
     "Pillow>=12.3.0",
