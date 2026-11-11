@@ -8,7 +8,7 @@ pytest-mock>=3.17.0
 pytest-timeout>=2.3.0
 
 # Code quality
-ruff>=0.1.0
+ruff>=0.17.4
 black>=26.10.1
 mypy>=2.4.1
 pre-commit>=4.6.2
