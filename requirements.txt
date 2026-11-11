@@ -41,7 +41,8 @@ scapy>=2.8.0
 qrcode[pil]>=7.4
 
 # BLE RPA resolution for BT Locate (optional - for SAR device tracking)
-cryptography>=50.0.2
+# Keep the minimum at or below 48.x: 49+ has no Intel Mac wheels (#445)
+cryptography>=41.0.0
 
 # Development dependencies (install with: pip install -r requirements-dev.txt)
 # pytest>=7.0.0
