@@ -38,7 +38,7 @@ meshcore>=2.3.0,!=2.3.16
 scapy>=2.8.0
 
 # QR code generation for Meshtastic channels (optional)
-qrcode[pil]>=7.4
+qrcode[pil]>=8.2
 
 # BLE RPA resolution for BT Locate (optional - for SAR device tracking)
 # Keep the minimum at or below 48.x: 49+ has no Intel Mac wheels (#445)
