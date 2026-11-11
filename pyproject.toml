@@ -62,7 +62,7 @@ optionals = [
     "qrcode[pil]>=7.4",
     "numpy>=2.2.6",
     "Pillow>=12.3.0",
-    "meshtastic>=2.7.9",
+    "meshtastic>=2.7.11",
     "meshcore>=2.3.0,!=2.3.16",
     "paho-mqtt>=2.2.0",
     "psycopg2-binary>=2.9.13",
