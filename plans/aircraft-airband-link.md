@@ -1,6 +1,9 @@
 # Link an ADS-B aircraft to airband ATC audio (issue #271, part 2)
 
-Status: **proposed, awaiting approval.** No code written yet.
+Status: **Done.** Shipped in v2.33.39 as "Tune ATC" on the ADS-B aircraft details
+panel, using the server endpoint `GET /adsb/nearest-airband` (TWR/APP/ATIS, 60 nm
+default radius) and the bundled OurAirports dataset `static/data/atc_frequencies.json`
+(built by `scripts/build_atc_frequencies.py`). Issue #271 closed.
 
 ## Context
 

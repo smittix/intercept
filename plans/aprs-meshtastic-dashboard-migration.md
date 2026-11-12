@@ -1,8 +1,8 @@
 # APRS & Meshtastic → dedicated dashboards (migration plan)
 
-Status: **Round A (APRS) done** in v2.33.33 — `/aprs/dashboard` shipped and APRS
-removed from the SPA. Round B (Meshtastic/Meshcore) remains proposed and awaiting
-its own plan.
+Status: **Done.** Round A (APRS) shipped in v2.33.33: `/aprs/dashboard` added and
+APRS removed from the SPA. Round B (Meshtastic/Meshcore) got its own plan,
+[[meshtastic-dashboard-migration]], and shipped in v2.33.34 and v2.33.35.
 
 ## Why
 
