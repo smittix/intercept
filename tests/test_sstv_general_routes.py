@@ -88,3 +88,32 @@ class TestSSTVGeneralRoutes:
 
         assert response.status_code == 400
         mock_decoder.start.assert_not_called()
+
+    @pytest.mark.parametrize("ppm", [None, ""])
+    def test_start_uses_saved_device_ppm_when_blank(self, client, ppm):
+        """A blank PPM falls back to the device's saved calibration (#238)."""
+        _login_session(client)
+        mock_decoder = MagicMock()
+        mock_decoder.decoder_available = "python-sstv"
+        mock_decoder.is_running = False
+        mock_decoder.start.return_value = True
+
+        with patch("utils.sdr.device_config.config_for_index", return_value={"ppm": 68}):
+            response = _post_start(client, mock_decoder, {"frequency": 14.230, "modulation": "usb", "ppm": ppm})
+
+        assert response.status_code == 200
+        assert mock_decoder.start.call_args.kwargs["ppm"] == 68
+
+    def test_start_explicit_ppm_overrides_saved_device_ppm(self, client):
+        """An explicit PPM in the request wins over the device's saved value."""
+        _login_session(client)
+        mock_decoder = MagicMock()
+        mock_decoder.decoder_available = "python-sstv"
+        mock_decoder.is_running = False
+        mock_decoder.start.return_value = True
+
+        with patch("utils.sdr.device_config.config_for_index", return_value={"ppm": 68}):
+            response = _post_start(client, mock_decoder, {"frequency": 14.230, "modulation": "usb", "ppm": -4})
+
+        assert response.status_code == 200
+        assert mock_decoder.start.call_args.kwargs["ppm"] == -4

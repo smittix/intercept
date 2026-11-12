@@ -222,3 +222,26 @@ class TestSSTVRoutes:
         assert data["status"] == "error"
         assert "Invalid frequency" in data["message"]
         mock_decoder.start.assert_not_called()
+
+    @pytest.mark.parametrize("ppm", [None, ""])
+    def test_start_uses_saved_device_ppm_when_blank(self, client, ppm):
+        """A blank PPM falls back to the device's saved calibration (#238)."""
+        _login_session(client)
+        mock_decoder = MagicMock()
+        mock_decoder.is_running = False
+        mock_decoder.start.return_value = True
+        mock_decoder.doppler_enabled = False
+        mock_decoder.last_doppler_info = None
+
+        with (
+            patch("routes.sstv.is_sstv_available", return_value=True),
+            patch("routes.sstv.get_sstv_decoder", return_value=mock_decoder),
+            patch("routes.sstv.app_module.claim_sdr_device", return_value=None),
+            patch("utils.sdr.device_config.config_for_index", return_value={"ppm": 68}),
+        ):
+            response = client.post(
+                "/sstv/start", data=json.dumps({"device": 0, "ppm": ppm}), content_type="application/json"
+            )
+
+        assert response.status_code == 200
+        assert mock_decoder.start.call_args.kwargs["ppm"] == 68
