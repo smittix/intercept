@@ -167,7 +167,10 @@ function updateLocationFromGps(position) {
     observerLocation.lon = lon;
 
     // Keep live GPS separate from the configured shared observer location.
-    updateAprsUserLocation({ latitude: lat, longitude: lon });
+    // updateAprsUserLocation lives on the APRS dashboard, not the main page.
+    if (typeof updateAprsUserLocation === 'function') {
+        updateAprsUserLocation({ latitude: lat, longitude: lon });
+    }
 }
 
 function showGpsIndicator(show) {
