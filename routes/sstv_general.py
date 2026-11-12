@@ -15,6 +15,7 @@ from flask import Blueprint, Response, jsonify, request, send_file
 import app as app_module
 from utils.logging import get_logger
 from utils.responses import api_error, start_failure
+from utils.sdr.device_config import apply_device_defaults
 from utils.sse import sse_stream_fanout
 from utils.sstv import (
     get_general_sstv_decoder,
@@ -201,6 +202,7 @@ def start_decoder():
             break
 
     data = request.get_json(silent=True) or {}
+    data = apply_device_defaults(data, fields=("ppm",))
     sdr_type_str = data.get("sdr_type", "rtlsdr")
 
     if sdr_type_str != "rtlsdr":

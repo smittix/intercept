@@ -153,7 +153,7 @@ const SSTV = (function() {
             frequency: Number.isFinite(freq) ? freq : ISS_FREQ,
             modulation: document.getElementById('sstvModulation')?.value || ISS_MODULATION,
             gain: gainValue ? parseFloat(gainValue) : null,
-            ppm: Number.isFinite(ppm) ? ppm : 0,
+            ppm: Number.isFinite(ppm) ? ppm : null,  // blank: the device's saved PPM
         };
     }
 
@@ -175,7 +175,9 @@ const SSTV = (function() {
             if (freqInput && Number.isFinite(saved.frequency)) freqInput.value = saved.frequency.toFixed(3);
             if (modSelect && ['fm', 'usb', 'lsb'].includes(saved.modulation)) modSelect.value = saved.modulation;
             if (gainInput) gainInput.value = Number.isFinite(saved.gain) ? saved.gain : '';
-            if (ppmInput && Number.isFinite(saved.ppm)) ppmInput.value = saved.ppm;
+            // Older versions saved 0 for a blank box; restore it as blank so the
+            // device's saved PPM applies instead of being overridden by 0.
+            if (ppmInput) ppmInput.value = Number.isFinite(saved.ppm) && saved.ppm !== 0 ? saved.ppm : '';
         }
         syncPresetToSettings();
         updateFrequencyDisplay();
