@@ -1,44 +1,89 @@
 # INTERCEPT Features
 
-Quick reference for all supported modes. Click any mode for full usage instructions.
+Every mode at a glance. Click a mode for how to use it.
 
-| Mode | Description | Tools Required |
-|------|-------------|----------------|
-| [Pager Decoding](USAGE.md#pager-mode) | POCSAG 512/1200/2400 and FLEX decoding | RTL-SDR, multimon-ng |
-| [433MHz Sensors](USAGE.md#433mhz-sensor-mode) | 200+ device protocols — weather, TPMS, IoT | RTL-SDR, rtl_433 |
-| [Sub-GHz Analyzer](USAGE.md#sub-ghz-analyzer) | 300–928 MHz ISM capture, decode, replay | HackRF |
-| [Aircraft Tracking (ADS-B)](USAGE.md#aircraft-mode-ads-b) | Real-time radar map, virtual radar scope, filtering | RTL-SDR, dump1090 |
-| [ADS-B History](USAGE.md#ads-b-history-optional) | Persistent aircraft history and reporting dashboard | PostgreSQL (optional) |
-| [Vessel Tracking (AIS)](USAGE.md#ais-vessel-tracking) | Maritime map, DSC Channel 70 distress monitoring | RTL-SDR, AIS-catcher |
-| [ACARS Messaging](USAGE.md#acars-messaging) | Aircraft datalink messages | RTL-SDR, acarsdec |
-| [VDL2](USAGE.md#vdl2-aircraft-datalink) | VHF Data Link Mode 2 aircraft datalink | RTL-SDR, dumpvdl2 |
-| [Listening Post](USAGE.md#listening-post) | Wideband scanner with real-time audio streaming | RTL-SDR/HackRF, Icecast |
-| [Weather Satellites](USAGE.md#weather-satellites) | NOAA APT and Meteor LRPT image decoding | RTL-SDR, SatDump |
-| [WebSDR](USAGE.md#websdr) | Remote HF/shortwave listening via KiwiSDR network | None (web-based) |
-| [ISS SSTV](USAGE.md#iss-sstv) | Slow-scan TV image reception from the ISS | RTL-SDR, slowrx |
-| [HF SSTV](USAGE.md#hf-sstv) | Terrestrial SSTV on shortwave and VHF | RTL-SDR, slowrx |
-| [APRS](USAGE.md#aprs) | Amateur packet radio position reports and telemetry | RTL-SDR/TNC, direwolf |
-| [Satellite Tracking](USAGE.md#satellite-mode) | Pass prediction, polar plot, ground track map | RTL-SDR (optional) |
-| [Utility Meters](USAGE.md#utility-meters) | Electric, gas, and water meter reading | RTL-SDR, rtlamr |
-| [WiFi Scanning](USAGE.md#wifi-mode) | Monitor mode reconnaissance, network discovery | Monitor-mode WiFi adapter |
-| [Bluetooth Scanning](USAGE.md#bluetooth-mode) | Device discovery, tracker detection (AirTag, Tile…) | Bluetooth adapter |
-| [BT Locate](USAGE.md#bt-locate-sar-device-location) | GPS-tagged signal trail and proximity alerts | Bluetooth + GPS |
-| [WiFi Locate](USAGE.md#wifi-locate-mode) | Locate APs by BSSID with signal meter and distance | WiFi adapter |
-| [GPS](USAGE.md#gps-mode) | Real-time position, speed, altitude, satellite map | GPS receiver, gpsd |
-| [TSCM](USAGE.md#tscm-counter-surveillance) | RF baseline comparison and threat detection | RTL-SDR + BT + WiFi |
-| [Drone Intelligence](USAGE.md#drone-intelligence) | UAV detection via Remote ID, RF, and HackRF | RTL-SDR / HackRF |
-| [Spy Stations](USAGE.md#spy-stations) | Number stations and diplomatic HF network database | None (database lookup) |
-| [Meshtastic](USAGE.md#meshtastic) | LoRa mesh network integration | Meshtastic device |
-| [Space Weather](USAGE.md#space-weather) | Solar and geomagnetic data from NOAA/NASA | None (web-based) |
-| [Remote Agents](USAGE.md#remote-agents-distributed-sigint) | Distributed SIGINT with remote sensor nodes | Multiple SDR nodes |
-| [Offline Mode](USAGE.md#offline-mode) | Bundled assets for air-gapped/field deployments | Any |
+## Signals
 
-## Detailed Docs
+| Mode | What it does | Needs |
+|------|--------------|-------|
+| [Pager](USAGE.md#pager) | POCSAG 512/1200/2400 and FLEX decoding | SDR, multimon-ng |
+| [433MHz Sensors](USAGE.md#433mhz-sensors) | 200+ protocols: weather stations, TPMS, IoT | SDR, rtl_433 |
+| [Utility Meters](USAGE.md#utility-meters) | Electric, gas and water meter broadcasts | RTL-SDR, rtlamr |
+| [Sub-GHz](USAGE.md#sub-ghz) | 300-928 MHz ISM capture, decode and replay | HackRF |
+| [Waterfall](USAGE.md#waterfall) | Real-time spectrum with click-to-tune audio and bookmarks | RTL-SDR or HackRF |
+| [CW/Morse](USAGE.md#cwmorse) | Morse by tone (HF) or on-off envelope (ISM) | SDR (HF needs direct sampling or an upconverter) |
+| [OOK Decoder](USAGE.md#ook-decoder) | Raw on-off-keyed frames as bits, hex and ASCII | SDR, rtl_433 |
 
-- [Usage Guide](USAGE.md) — per-mode setup and operation
-- [Hardware Guide](HARDWARE.md) — SDR hardware, drivers, multiple dongles, Icecast
-- [Webhooks](WEBHOOKS.md) — alert rules, watchlists, and ntfy / Telegram / webhook push
-- Messages (`/messages`) — one searchable store of everything every decoder heard, with CSV/JSON export
-- [Distributed Agents](DISTRIBUTED_AGENTS.md) — remote sensor node deployment
-- [Troubleshooting](TROUBLESHOOTING.md) — common issues and solutions
-- [Security](SECURITY.md) — network security and best practices
+## Tracking
+
+| Mode | What it does | Needs |
+|------|--------------|-------|
+| [Aircraft](USAGE.md#aircraft-ads-b-dashboard) | ADS-B radar dashboard, airband audio, Tune ATC | SDR, dump1090 or readsb |
+| [ACARS](USAGE.md#acars) | Aircraft datalink messages (on the aircraft dashboard) | SDR, acarsdec |
+| [VDL2](USAGE.md#vdl2) | VHF Data Link Mode 2 (on the aircraft dashboard) | SDR, dumpvdl2 |
+| [ADS-B History](USAGE.md#ads-b-history-optional) | Long-term aircraft history and reporting | PostgreSQL |
+| [Vessels](USAGE.md#vessels-ais-dashboard) | AIS dashboard with VHF DSC distress monitoring | RTL-SDR, AIS-catcher |
+| [APRS](USAGE.md#aprs-dashboard) | Amateur packet radio positions and telemetry | SDR, direwolf |
+| [GPS](USAGE.md#gps) | Live position, speed, altitude and satellites | GPS receiver, gpsd |
+| [Radiosonde](USAGE.md#radiosonde) | Weather balloon telemetry | SDR, radiosonde_auto_rx |
+
+## Space
+
+| Mode | What it does | Needs |
+|------|--------------|-------|
+| [Satellite](USAGE.md#satellite-dashboard) | Pass prediction, polar plot, ground track, pass scheduling | None for prediction; SDR to receive |
+| [ISS SSTV](USAGE.md#iss-sstv) | Slow-scan TV from the ISS, with Doppler correction | SDR, 2m antenna |
+| [HF SSTV](USAGE.md#hf-sstv) | Amateur SSTV on HF, VHF and UHF | SDR (HF needs direct sampling or an upconverter) |
+| [Weather Satellites](USAGE.md#weather-satellites) | NOAA APT and Meteor LRPT imagery, auto-scheduler | SDR, SatDump |
+| [WeFax](USAGE.md#wefax) | HF weather fax charts | SDR with HF |
+| [Meteor Scatter](USAGE.md#meteor-scatter) | VHF beacon reflections from meteor trails | SDR, VHF antenna |
+| [Space Weather](USAGE.md#space-weather) | Solar and geomagnetic data from NOAA and NASA | Internet only |
+
+## Wireless
+
+| Mode | What it does | Needs |
+|------|--------------|-------|
+| [WiFi](USAGE.md#wifi) | Network and client discovery, handshake capture | Monitor-mode WiFi adapter |
+| [Bluetooth](USAGE.md#bluetooth) | Device discovery and tracker detection (AirTag, Tile, SmartTag) | Bluetooth adapter |
+| [WiFi Locate](USAGE.md#wifi-locate) | Find an access point by signal strength | Monitor-mode WiFi adapter |
+| [BT Locate](USAGE.md#bt-locate) | Find a Bluetooth device, with a GPS trail | Bluetooth adapter, optional GPS |
+
+## LoRa
+
+| Mode | What it does | Needs |
+|------|--------------|-------|
+| [Meshtastic](USAGE.md#meshtastic-dashboard) | Messages, node search, map, stored history, Store & Forward | Meshtastic node (USB or TCP) |
+| [Meshcore](USAGE.md#meshcore-dashboard) | Messages, contacts, node search, traceroute | Meshcore node (USB, TCP or BLE) |
+
+## Intel
+
+| Mode | What it does | Needs |
+|------|--------------|-------|
+| [TSCM](USAGE.md#tscm) | Counter-surveillance sweeps against an RF baseline | WiFi, Bluetooth and SDR |
+| [TSCM Survey](USAGE.md#tscm-survey) | Survey workspace: baseline, findings, threats, client report | TSCM sweeps |
+| [Activity](USAGE.md#activity) | One feed of sightings from every mode | Any running mode |
+| [Drone Intelligence](USAGE.md#drone-intelligence) | Remote ID plus RF detection of drones | WiFi adapter, RTL-SDR, optional HackRF |
+| [Spy Stations](USAGE.md#spy-stations) | Number station and diplomatic HF database | None |
+| [WebSDR](USAGE.md#websdr) | Listen through remote KiwiSDR receivers | Internet only |
+
+## Platform
+
+| Feature | What it does |
+|---------|--------------|
+| [SDR devices](USAGE.md#sdr-devices-and-calibration) | Name each SDR and save its PPM correction, gain and bias-T |
+| [Remote SDR](USAGE.md#remote-sdr-rtl_tcp) | Use an RTL-SDR on another machine over rtl_tcp |
+| [Message store](USAGE.md#message-store) | Everything decoded, searchable, with CSV/JSON export |
+| [Watchlists and alerts](USAGE.md#watchlists-and-alerts) | Push matches to ntfy, Telegram or webhooks |
+| [CoT export](USAGE.md#cot-export-atak) | Positions to ATAK, WinTAK or TAK Server |
+| [Accounts](USAGE.md#accounts) | Per-user sign-in and a users directory |
+| [Remote agents](USAGE.md#remote-agents) | Control sensor nodes on other machines |
+| [Offline mode](USAGE.md#offline-mode) | Bundled assets for air-gapped use |
+
+## More Documentation
+
+- [Usage Guide](USAGE.md): how to use each mode
+- [Hardware Guide](HARDWARE.md): SDR hardware, drivers, multiple dongles
+- [Webhooks and Alerts](WEBHOOKS.md): watchlists, alert rules and push notifications
+- [Distributed Agents](DISTRIBUTED_AGENTS.md): remote sensor node deployment
+- [Troubleshooting](TROUBLESHOOTING.md): common issues and solutions
+- [Security](SECURITY.md): authentication and network exposure

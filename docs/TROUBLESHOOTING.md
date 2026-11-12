@@ -195,90 +195,54 @@ dpkg-buildpackage -b --no-sign
 sudo dpkg -i ../readsb_*.deb
 ```
 
-### Using HackRF/Airspy with Listening Post
+### Waterfall Audio with HackRF, Airspy and Other SoapySDR Devices
 
-The Listening Post requires `rx_fm` from SoapySDR utilities for non-RTL-SDR devices.
+RTL-SDRs use `rtl_fm` for audio. Other devices need `rx_fm` from [rx_tools](https://github.com/rxseger/rx_tools), which is built on SoapySDR. HackRF FM uses `rx_sdr` with `csdr` instead when both are installed.
 
 ```bash
-# Install SoapySDR utilities (includes rx_fm)
-sudo apt install soapysdr-tools
+# SoapySDR development files, then build rx_tools
+sudo apt install libsoapysdr-dev cmake build-essential
+git clone https://github.com/rxseger/rx_tools.git
+cd rx_tools && mkdir build && cd build && cmake .. && make && sudo make install
 
-# Verify rx_fm is available
-which rx_fm
+# Verify
+which rx_fm rx_sdr
 ```
 
-If `rx_fm` is installed, select your device from the SDR dropdown in the Listening Post - HackRF, Airspy, LimeSDR, and SDRPlay are all supported.
+HackRF, Airspy, LimeSDR and SDRplay then appear in the Waterfall's device dropdown.
 
-### Listening Post — No Audio / Icecast Errors
+### Waterfall Audio: No Sound
 
-For Icecast install and configuration, see [HARDWARE.md — Listening Post Setup](HARDWARE.md#listening-post--icecast-setup).
+Audio streams straight from INTERCEPT to the browser; no separate audio server is needed. If nothing plays:
 
-### Audio Streaming Issues
+**1. Check the decoder's own errors**
 
-If the Listening Post shows "Icecast mount not active" errors or audio doesn't play:
+Open `/receiver/audio/debug` in the browser while audio is running. It shows the frequency, device and gain in use, whether the audio process is alive, and the last error output from `rtl_fm` (or `rx_fm`) and `ffmpeg`.
 
-**1. Check the console output for errors**
-
-Intercept now logs detailed error output. Look for lines starting with `[AUDIO]`:
-```
-[AUDIO] SDR errors: ...     # Problems with rtl_fm/rx_fm (SDR not connected, device busy)
-[AUDIO] FFmpeg errors: ...  # Problems with ffmpeg (wrong password, codec issues)
-```
-
-**2. Verify SDR is connected and working**
+**2. Verify the SDR works**
 ```bash
-# For RTL-SDR
-rtl_test -t
-
-# You should see: "Found 1 device(s)"
-# If not, check USB connection and drivers
+rtl_test -t        # should report "Found 1 device(s)"
 ```
 
-**3. Check Icecast password (macOS Homebrew)**
-
-On macOS with Homebrew, the Icecast config is at `/opt/homebrew/etc/icecast.xml`. Check the source password:
+**3. Check ffmpeg is installed**
 ```bash
-grep source-password /opt/homebrew/etc/icecast.xml
+which ffmpeg       # macOS: brew install ffmpeg  /  Linux: sudo apt install ffmpeg
 ```
 
-If it's different from `hackme`, update it in the Listening Post Icecast config panel, or change the Icecast config and restart:
+**4. Test the demodulator by hand**
 ```bash
-brew services restart icecast
-```
-
-**4. Verify ffmpeg has required codecs**
-```bash
-# Check MP3 encoder is available
-ffmpeg -encoders 2>/dev/null | grep mp3
-
-# Should show: libmp3lame
-# If not, reinstall ffmpeg with all codecs:
-# macOS: brew reinstall ffmpeg
-# Linux: sudo apt install ffmpeg
-```
-
-**5. Test the pipeline manually**
-
-Try running the audio pipeline directly to see errors:
-```bash
-# Test rtl_fm (should produce raw audio data)
+# Should print raw audio bytes
 rtl_fm -M am -f 118000000 -s 24000 -r 24000 -g 40 2>&1 | head -c 1000 | xxd | head
-
-# Test ffmpeg to Icecast (replace PASSWORD with your source password)
-rtl_fm -M am -f 118000000 -s 24000 -r 24000 -g 40 2>/dev/null | \
-  ffmpeg -f s16le -ar 24000 -ac 1 -i pipe:0 -c:a libmp3lame -b:a 64k \
-  -f mp3 -content_type audio/mpeg icecast://source:PASSWORD@127.0.0.1:8000/listen.mp3
 ```
 
-**6. Common error messages and solutions**
+**5. Common errors**
 
 | Error | Cause | Solution |
 |-------|-------|----------|
-| `No supported devices found` | SDR not connected | Plug in SDR, check USB |
-| `Device or resource busy` | Another process using SDR | Click "Stop all running processes" (⊗ in the toolbar) |
-| `401 Unauthorized` | Wrong Icecast password | Check password in Icecast config |
-| `Connection refused` | Icecast not running | Start Icecast service |
-| `Encoder libmp3lame not found` | ffmpeg missing codec | Reinstall ffmpeg with codecs |
+| `No supported devices found` | SDR not connected | Plug in the SDR and check USB |
+| `Device or resource busy` | Another mode or process is using the SDR | Stop the other mode, or use **Kill All** in the navigation bar |
+| `ffmpeg not found` | ffmpeg missing | Install ffmpeg |
+| Audio plays but is silent | Squelch too high | Lower the squelch |
 
 ## WiFi Issues
 

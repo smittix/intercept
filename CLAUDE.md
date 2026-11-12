@@ -97,7 +97,7 @@ Each signal type has its own Flask blueprint:
 - `wifi.py`, `wifi_v2.py` - WiFi scanning (legacy and unified APIs)
 - `bluetooth.py`, `bluetooth_v2.py` - Bluetooth scanning (legacy and unified APIs)
 - `satellite.py` - Pass prediction using TLE data
-- `sstv.py` - ISS SSTV image decoding via slowrx
+- `sstv.py` - ISS SSTV image decoding (built-in Python decoder, `utils/sstv/`)
 - `weather_sat.py` - NOAA APT & Meteor LRPT via SatDump
 - `ais.py` - AIS vessel tracking and VHF DSC distress monitoring
 - `aprs.py` - Amateur packet radio via direwolf
@@ -132,8 +132,8 @@ Each signal type has its own Flask blueprint:
 - Subprocess management with stdout parsing, image watcher via rglob
 - Pass prediction using skyfield TLE data
 
-**SSTV Decoder** (`utils/sstv.py`):
-- ISS SSTV reception via slowrx with Doppler tracking
+**SSTV Decoder** (`utils/sstv/`):
+- ISS SSTV reception via a pure-Python decoder (Robot36/72, Martin, Scottie, PD120/180) with Doppler tracking
 - Singleton pattern, image gallery with timestamped filenames
 
 ### Key Patterns
@@ -157,7 +157,6 @@ Each signal type has its own Flask blueprint:
 | acarsdec | ACARS messages | Output parsing |
 | airmon-ng/airodump-ng | WiFi scanning | Monitor mode, CSV parsing |
 | bluetoothctl/hcitool | Bluetooth | Fallback when DBus unavailable |
-| slowrx | SSTV decoding | Subprocess with audio pipe |
 | SatDump | Weather satellites | CLI live mode, NOAA APT + Meteor LRPT |
 | AIS-catcher | AIS vessel tracking | JSON output parsing |
 | direwolf | APRS | TNC modem for packet radio |
