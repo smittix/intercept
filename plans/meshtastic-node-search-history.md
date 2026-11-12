@@ -1,7 +1,12 @@
 # Meshtastic/Meshcore: node search + stored message history (issue #270)
 
-Status: **proposed, awaiting approval.** No code written yet. Follows the
-regression fix shipped in v2.33.41 (mesh dashboards were missing core scripts).
+Status: **Done.** Part 1 shipped as the Meshtastic Nodes tab in v2.33.42 (message a
+node from it in v2.33.43) and Meshcore node search in v2.33.73. Part 2 shipped as
+stored message history with Store & Forward replay in v2.33.72. Follow-ups from the
+reporter's testing landed in v2.33.75 (real message times), v2.33.78 (favourite,
+ignore and remove nodes, find in conversation, replies) and v2.33.81 (stable node
+list). Followed the regression fix shipped in v2.33.41 (mesh dashboards were missing
+core scripts).
 
 ## Context
 
