@@ -2,6 +2,19 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.87] - 2026-11-12
+
+### Added
+
+- **Remote rtl_tcp support for Pager, DSC, APRS and Morse.** Stock `rtl_fm` can't connect to rtl_tcp, so these modes couldn't use a networked RTL-SDR. Remote devices now stream IQ through a small built-in rtl_tcp client into the csdr demodulator (FM, AM and SSB). Direct sampling is never enabled on an R828D (RTL-SDR Blog V4). (#410)
+
+### Fixed
+
+- **No squelch on HackRF or remote rtl_tcp audio.** The csdr pipeline ignored the squelch setting, so the listening post hissed between transmissions. The channel is now gated on its power (squelch 0-100 maps to -80 to -10 dB). (#410)
+- **Quick mode switches on a remote rtl_tcp server failed with "busy with another client".** rtl_tcp can take several seconds to release the previous client; the client now waits long enough. (#410)
+- **Pager and DSC reported "started" when rtl_fm exited immediately.** They now return rtl_fm's error, with a hint when the device is a remote rtl_tcp server. (#410)
+- **Meters ignored the remote rtl_tcp server setting** and always used local device 0. A remote server is now passed straight to rtlamr, and the local rtl_tcp that rtlamr uses listens on 127.0.0.1 only instead of every interface. (#410)
+
 ## [2.33.86] - 2026-11-11
 
 ### Fixed
