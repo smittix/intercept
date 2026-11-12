@@ -796,6 +796,16 @@ install_multimon_ng_from_source_macos() {
   )
 }
 
+# --- dump1090 (macOS, Homebrew formula installed but not linked) ---
+link_brew_dump1090_macos() {
+  local bin
+  bin="$(brew --prefix dump1090-fa 2>/dev/null)/bin/dump1090"
+  [[ -x "$bin" ]] || return 1
+  ln -sf "$bin" "$(brew --prefix)/bin/dump1090" 2>/dev/null || return 1
+  cmd_exists dump1090 || return 1
+  ok "dump1090: linked Homebrew's dump1090-fa binary"
+}
+
 # --- dump1090 (macOS from source) ---
 install_dump1090_from_source_macos() {
   info "dump1090 not available via Homebrew. Building from source..."
@@ -1577,7 +1587,7 @@ install_tool_dump1090() {
     if ! cmd_exists dump1090; then
       # The formula can be installed without dump1090 on PATH (e.g. not linked),
       # so check for the binary before skipping the source build (#419)
-      { (brew_install dump1090-fa) && cmd_exists dump1090; } \
+      { (brew_install dump1090-fa) && { cmd_exists dump1090 || link_brew_dump1090_macos; }; } \
         || install_dump1090_from_source_macos || warn "dump1090 not available"
     else
       ok "dump1090 already installed"
