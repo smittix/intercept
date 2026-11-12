@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.86"
+VERSION = "2.33.87"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.87",
+        "date": "November 2026",
+        "highlights": [
+            "Pager, DSC, APRS and Morse can now decode from a remote rtl_tcp server.",
+            "Squelch now works on the HackRF and remote rtl_tcp listening post.",
+        ],
+    },
     {
         "version": "2.33.86",
         "date": "November 2026",
