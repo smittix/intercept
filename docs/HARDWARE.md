@@ -2,11 +2,16 @@
 
 ## Supported SDR Hardware
 
-| Hardware | Frequency Range | Price | Notes |
-|----------|-----------------|-------|-------|
-| **RTL-SDR** | 24 - 1766 MHz | ~$25-35 | Recommended for beginners |
-| **LimeSDR** | 0.1 - 3800 MHz | ~$300 | Wide range, requires SoapySDR |
-| **HackRF** | 1 - 6000 MHz | ~$300 | Ultra-wide range, requires SoapySDR |
+| Hardware | Frequency Range | Notes |
+|----------|-----------------|-------|
+| **RTL-SDR** | 24 - 1766 MHz | Recommended for beginners; supports every mode |
+| **HackRF** | 1 - 6000 MHz | Needed for Sub-GHz transmit/replay; requires SoapySDR |
+| **LimeSDR** | 0.1 - 3800 MHz | Requires SoapySDR |
+| **Airspy** | 24 - 1800 MHz | Requires SoapySDR |
+| **SDRplay** | 0.001 - 2000 MHz | Requires SoapySDR and the SDRplay API |
+| **USRP** | Model dependent | Requires SoapySDR (UHD) |
+| **bladeRF** | 47 - 6000 MHz | Requires SoapySDR |
+| **HydraSDR** | 24 - 1800 MHz | Requires SoapySDR |
 
 INTERCEPT automatically detects connected devices.
 
@@ -238,12 +243,12 @@ SoapySDRUtil --find
 
 | Tool | Package (Debian) | Package (macOS) | Required For |
 |------|------------------|-----------------|--------------|
-| `rtl_fm` | rtl-sdr | librtlsdr | Pager, Listening Post |
+| `rtl_fm` | rtl-sdr | librtlsdr | Pager, Waterfall audio, FM-based decoders |
 | `rtl_test` | rtl-sdr | librtlsdr | SDR detection |
 | `multimon-ng` | multimon-ng | multimon-ng | Pager decoding |
 | `rtl_433` | rtl-433 | rtl_433 | 433MHz sensors |
 | `dump1090` | dump1090-mutability | dump1090-mutability | ADS-B tracking |
-| `ffmpeg` | ffmpeg | ffmpeg | Listening Post audio |
+| `ffmpeg` | ffmpeg | ffmpeg | Waterfall and airband audio |
 | `airmon-ng` | aircrack-ng | aircrack-ng | WiFi monitor mode |
 | `airodump-ng` | aircrack-ng | aircrack-ng | WiFi scanning |
 | `aireplay-ng` | aircrack-ng | aircrack-ng | WiFi deauth (optional) |
@@ -332,54 +337,11 @@ brew install librtlsdr
 
 ---
 
-## Listening Post — Icecast Setup
+## Waterfall Audio
 
-The Listening Post streams audio via Icecast (2-10 second latency). INTERCEPT starts Icecast automatically when you begin listening, but you must install and configure it first.
+The Waterfall streams demodulated audio straight to the browser. It needs `ffmpeg` and, for SDRs other than RTL-SDR, the SoapySDR tools (`rx_fm`, plus `rx_sdr` and `csdr` for HackRF FM). No separate streaming server is required.
 
-### Install
-
-```bash
-# Ubuntu/Debian
-sudo apt install icecast2
-
-# macOS
-brew install icecast
-```
-
-### Configure
-
-On Debian/Ubuntu you'll be prompted during install. Otherwise edit `/etc/icecast2/icecast.xml`:
-
-```xml
-<icecast>
-    <authentication>
-        <source-password>hackme</source-password>
-        <admin-password>your-admin-password</admin-password>
-    </authentication>
-    <hostname>localhost</hostname>
-    <listen-socket>
-        <port>8000</port>
-    </listen-socket>
-</icecast>
-```
-
-### Start
-
-```bash
-# Ubuntu/Debian
-sudo systemctl enable icecast2 && sudo systemctl start icecast2
-
-# macOS
-brew services start icecast
-```
-
-Verify it's running at http://localhost:8000.
-
-### INTERCEPT defaults
-
-INTERCEPT expects Icecast on `127.0.0.1:8000` with source password `hackme` and mount `/listen.mp3`. To change these, update the defaults in `routes/listening_post.py` or adjust via the Listening Post config panel in the UI.
-
-For audio troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md#audio-streaming-issues).
+For audio troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md#waterfall-audio-no-sound).
 
 ---
 

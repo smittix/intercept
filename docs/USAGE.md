@@ -1,529 +1,406 @@
 # INTERCEPT Usage Guide
 
-Detailed instructions for each mode.
+How to use each mode. Sections follow the navigation bar: Signals, Tracking, Space, Wireless, LoRa and Intel, then the platform features that work across modes.
 
-## Pager Mode
+Text and scan modes run in the main app at `/`. Map-heavy modes (Aircraft, Vessels, APRS, Satellite, Meshtastic and Meshcore) open as full-screen dashboards; the navigation bar takes you between the two.
 
-1. **Select Hardware** - Choose your SDR type (RTL-SDR, LimeSDR, or HackRF)
-2. **Select Device** - Choose your SDR device from the dropdown
-3. **Set Frequency** - Enter a frequency in MHz or use a preset
-4. **Choose Protocols** - Select which protocols to decode (POCSAG/FLEX)
-5. **Adjust Settings** - Set gain, squelch, and PPM correction as needed
-6. **Start Decoding** - Click the green "Start Decoding" button
+Every mode has a short in-app reference: open **More → Mode cheat sheet**, or click **?** in the navigation bar for the full help.
 
-### Frequency Presets
+## Before You Start
 
-- Click a preset button to quickly set a frequency
-- Add custom presets using the input field and "Add" button
-- Right-click a preset to remove it
-- Click "Reset to Defaults" to restore default frequencies
+### SDR Devices and Calibration
 
-## 433MHz Sensor Mode
+Open **Settings → SDR** to configure each attached SDR once:
 
-1. **Select Hardware** - Choose your SDR type
-2. **Select Device** - Choose your SDR device
-3. **Start Decoding** - Click "Start Decoding"
-4. **View Sensors** - Decoded sensor data appears in real-time
+- **Name**: shown in every device picker, so you can tell dongles apart
+- **PPM correction**: the dongle's frequency error. Cheap RTL-SDRs are often tens of PPM out, which can stop AIS, ADS-B or pager decoding entirely
+- **Default gain** and **bias-T**
 
-Supports 200+ protocols including weather stations, TPMS, doorbells, and IoT devices.
+Settings follow the dongle by serial number where it has a unique one, otherwise by USB position. Any mode whose gain or PPM box is left blank uses these saved values; a value typed into a mode overrides them for that run.
 
-## WiFi Mode
+### Remote SDR (rtl_tcp)
 
-1. **Select Interface** - Choose a WiFi adapter capable of monitor mode
-2. **Enable Monitor Mode** - Click "Enable Monitor" (uncheck "Kill processes" to preserve other connections)
-3. **Start Scanning** - Click "Start Scanning" to begin
-4. **View Networks** - Networks appear in the output panel with signal strength
-5. **Track Devices** - Click the chart icon on any network to track its signal over time
-6. **Capture Handshakes** - Click "Capture" on a network to start handshake capture
+Tick **Use Remote SDR (rtl_tcp)** in a mode's SDR section and enter the host and port of an `rtl_tcp` server to use an RTL-SDR on another machine. Pager, 433MHz, Meters, Morse, APRS and DSC support it. ADS-B and AIS do not; for those, run a [remote agent](#remote-agents) on the other machine.
 
-### Tips
+### Observer Location
 
-- Run with `sudo` for monitor mode to work
-- Check your adapter supports monitor mode: `iw list | grep monitor`
-- Use "Kill processes" option if NetworkManager interferes
+Set your location once in **Settings → Location**, or use **Use GPS** with a gpsd receiver. It is shared by the maps, satellite pass prediction, ISS Doppler correction and range calculations. To keep a separate location per mode, set `INTERCEPT_SHARED_OBSERVER_LOCATION=false`.
 
-## Bluetooth Mode
+## Signals
 
-1. **Select Interface** - Choose your Bluetooth adapter
-2. **Choose Mode** - Select scan mode (hcitool, bluetoothctl)
-3. **Start Scanning** - Click "Start Scanning"
-4. **View Devices** - Devices appear with name, address, and classification
+### Pager
 
-### Tracker Detection
+1. **Select device**: choose your SDR (RTL-SDR, HackRF or a SoapySDR device)
+2. **Set frequency**: enter a frequency in MHz or click a preset
+3. **Choose protocols**: POCSAG 512/1200/2400 and FLEX
+4. **Adjust settings**: gain, squelch and PPM (blank uses the device default)
+5. **Start decoding**
 
-INTERCEPT automatically detects known trackers:
-- Apple AirTag
-- Tile
-- Samsung SmartTag
-- Chipolo
+Click a preset to tune it, add your own with the input field, right-click a preset to remove it, or reset to the defaults.
 
-## Sub-GHz Analyzer
+### 433MHz Sensors
 
-1. **Connect HackRF** - Plug in your HackRF One device
-2. **Set Frequency** - Enter a frequency in the 300-928 MHz ISM range or use a preset
-3. **Start Capture** - Click "Start Capture" to begin signal analysis
-4. **View Spectrum** - Real-time spectrum visualization of the selected band
-5. **Protocol Decoding** - Identified protocols are displayed with decoded data
+1. **Select device** and **start decoding**
+2. Decoded sensors appear in real time
 
-### Supported Protocols
+Supports 200+ protocols via rtl_433, including weather stations, TPMS, doorbells and IoT devices. Leave gain on auto, and use the protocol filter to cut false positives.
 
-Common ISM band protocols including garage doors, key fobs, weather stations, and IoT devices in the 300-928 MHz range.
+### Utility Meters
 
-## VDL2 (Aircraft Datalink)
+1. **Start** to receive meter broadcasts via rtlamr
+2. Meters appear with ID, type and consumption
+3. **Filter** by meter type (electric, gas, water) or meter ID
 
-1. **Select Hardware** - Choose your SDR type
-2. **Select Device** - Choose your SDR device
-3. **Set Frequencies** - Default VDL2 frequencies are pre-configured (136.975, 136.725, 136.775 MHz etc.)
-4. **Start Decoding** - Click "Start" to begin VDL2 reception via dumpvdl2
-5. **View Messages** - AVLC frames appear with source/destination, signal levels, and decoded content
-6. **Inspect Details** - Click a message to view full AVLC frame details and raw JSON
-7. **Export** - Use CSV or JSON export buttons to save captured messages
+Most meters broadcast around 915 MHz. Message types 5, 7, 13 and 21 are the most common.
 
-### Tips
+### Sub-GHz
 
-- VDL2 is most active near airports and along flight corridors
-- Multiple frequencies can be monitored simultaneously for better coverage
-- VDL2 data is also accessible from the ADS-B dashboard
+1. **Connect a HackRF One**
+2. **Set a frequency** in the 300-928 MHz ISM range, or use a preset
+3. **Start capture** for live spectrum and protocol decoding
+4. **Replay** a capture, on frequencies you are licensed to transmit on
 
-## Listening Post
+Common targets: garage doors, key fobs and sensors on 315, 433, 868 and 915 MHz.
 
-1. **Select Hardware** - Choose your SDR type
-2. **Set Frequency Range** - Define start and end frequencies for scanning
-3. **Start Scanning** - Click "Start Scan" for wideband sweep
-4. **View Signals** - Discovered signals are listed with frequency and SNR
-5. **Tune In** - Click a signal to tune the audio demodulator
-6. **Listen** - Real-time audio plays in your browser
+### Waterfall
 
-### Demodulation Modes
+A real-time spectrum waterfall with audio.
 
-- **FM** - Narrowband and wideband FM
-- **SSB** - Upper and lower sideband for amateur radio and shortwave
+1. **Select device**: RTL-SDR or HackRF
+2. **Set the center frequency and span**, or pick a band (FM broadcast, airband, marine, 2m)
+3. **Start Waterfall**
+4. **Click a signal** to tune it, and choose the demodulator (Auto, WFM, NFM, AM, USB, LSB)
+5. **Save bookmarks** for frequencies you return to, or use the quick-tune list (121.5 guard, marine CH16 and others)
+6. **Handoff** sends the tuned frequency to a decoder mode
 
-## Aircraft Mode (ADS-B)
+Hover over the waterfall to read a frequency. Peak hold shows maximum power.
 
-1. **Select Hardware** - Choose your SDR type (RTL-SDR uses dump1090, others use readsb)
-2. **Check Tools** - Ensure dump1090 or readsb is installed
-3. **Set Location** - Choose location source:
-   - **Manual Entry** - Type coordinates directly
-   - **Browser GPS** - Use browser's built-in geolocation (requires HTTPS)
-   - **USB GPS Dongle** - Connect a USB GPS receiver for continuous updates
-   - **Shared Location** - By default, the observer location is shared across modules
-     (disable with `INTERCEPT_SHARED_OBSERVER_LOCATION=false`)
-4. **Start Tracking** - Click "Start Tracking" to begin ADS-B reception
-5. **View Map** - Aircraft appear on the interactive Leaflet map
-6. **Click Aircraft** - Click markers for detailed information
-7. **Display Options** - Toggle callsigns, altitude, trails, range rings, clustering
-8. **Filter Aircraft** - Use dropdown to show all, military, civil, or emergency only
-9. **Full Dashboard** - Click "Full Screen Dashboard" for dedicated radar view
+### CW/Morse
 
-> Note: ADS-B auto-start is disabled by default. To enable auto-start on dashboard load,
-> set `INTERCEPT_ADSB_AUTO_START=true`.
+1. **Choose a detection mode**: **CW tone** for HF amateur Morse, or **OOK envelope** for keyed ISM/UHF signals
+2. **Set the frequency**, or use a band preset (80m-10m, or 315/433/868/915 MHz)
+3. **Adjust the tone frequency and bandwidth** to match the signal
+4. **Start**: decoded characters appear with a WPM estimate and signal level
 
-### Emergency Squawks
+HF frequencies need an HF-capable SDR or an upconverter. Try 7.030 or 14.060 MHz.
 
-The system highlights aircraft transmitting emergency squawks:
-- **7500** - Hijack
-- **7600** - Radio failure
-- **7700** - General emergency
+### OOK Decoder
 
-## ACARS Messaging
+Decodes raw on-off-keyed frames via rtl_433's flex decoder and shows them as bits, hex and ASCII. Use it to reverse-engineer protocols rtl_433 does not already know.
 
-1. **Select Hardware** - Choose your SDR type
-2. **Select Device** - Choose your SDR device
-3. **Select Region** - Choose North America, Europe, or Asia-Pacific to auto-populate frequencies
-4. **Select Frequencies** - Check one or more ACARS frequencies (131.550 MHz primary worldwide, 130.025 MHz secondary USA/Canada, etc.)
-5. **Adjust Gain** - Set gain (0 for auto, or 0-50 dB)
-6. **Start Decoding** - Click "Start" to begin ACARS reception via acarsdec
-7. **View Messages** - Aircraft messages appear in real-time with flight ID, registration, and content
+1. **Set the frequency** (315, 433.92, 868 or 915 MHz)
+2. **Choose the modulation**: PWM (most ISM remotes and sensors), PPM or Manchester
+3. **Set pulse timing**: short and long pulse widths, gap/reset and tolerance, or use a quick preset
+4. **Start Decoder**
 
-### Tips
+To find the timing, run `rtl_433 -f 433.92M -A` in a terminal: it prints the pulse and gap widths. Garbled output usually means the timings are off by a factor of two.
 
-- A vertical polarization antenna works best for ACARS
-- Quarter-wave dipole: 57 cm per element at 130 MHz
-- Stock SDR antenna may work at close range near airports
-- Outdoor placement with clear sky view significantly improves reception
+## Tracking
 
-## ADS-B History (Optional)
+### Aircraft (ADS-B Dashboard)
 
-The history dashboard persists aircraft messages and per-aircraft snapshots to Postgres for long-running tracking and reporting.
+The aircraft dashboard (`/adsb/dashboard`) shows a radar map with ACARS and VDL2 panels and an airband receiver.
 
-### Enable History
+1. **Choose a source** in the ADS-B tracking bar: a local SDR, or tick **Remote** and enter the host and port of another dump1090's SBS feed (port 30003)
+2. **Set gain and bias-T**, then **Start**
+3. **Click an aircraft** for its details: callsign, registration, type, altitude, speed and squawk
+4. **Display options**: trails, range rings, labels, **Reach** (your real reception outline, built up from the furthest contact in each direction) and alerts
+5. **Filter** to all, military, civil or emergency aircraft, or a range
 
-Set the following environment variables (Docker recommended):
+Toolbar tools:
+
+- **Tune ATC**: tunes the airband receiver to the nearest airport's tower, approach or ATIS frequency for the selected aircraft
+- **Squawk**: squawk code reference
+- **Lookup**: opens the selected aircraft on FlightAware
+- **Instruments**: a pop-out instrument panel for the selected aircraft
+- **Report** and **History**: session report, and the long-term history dashboard
+- **Antenna**: antenna guidance for 1090 MHz
+
+ACARS and VDL2 open from the tabs on the left edge. Each has its own source picker, so they can run on a local SDR while ADS-B runs on an agent, or the other way round.
+
+Aircraft types and registrations need the aircraft database: accept the download prompt the first time. Emergency squawks are highlighted: **7500** hijack, **7600** radio failure, **7700** general emergency. ADS-B starts manually; set `INTERCEPT_ADSB_AUTO_START=true` to start it when the dashboard opens.
+
+#### ACARS
+
+1. Open the ACARS panel and **select a region** (North America, Europe, Asia-Pacific) to fill in frequencies
+2. **Select frequencies**: 131.550 MHz is the primary worldwide
+3. **Start**: messages appear with flight, registration and content
+
+A vertical antenna works best. A quarter-wave is 57 cm at 130 MHz.
+
+#### VDL2
+
+1. Open the VDL2 panel. The standard VDL2 frequencies (136.975, 136.725, 136.775 MHz and others) are preset
+2. **Start** to decode via dumpvdl2
+3. Click a message for the full AVLC frame and raw JSON; export as CSV or JSON
+
+VDL2 is busiest near airports and along flight corridors.
+
+#### ADS-B History (Optional)
+
+History stores aircraft messages and snapshots in PostgreSQL for long-term reporting.
+
+```bash
+./setup.sh --postgres-setup      # local install
+docker compose --profile history up -d   # Docker
+```
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `INTERCEPT_ADSB_HISTORY_ENABLED` | `false` | Enables history storage and reporting |
-| `INTERCEPT_ADSB_DB_HOST` | `localhost` | Postgres host (use `adsb_db` in Docker) |
+| `INTERCEPT_ADSB_DB_HOST` | `localhost` | Postgres host (`adsb_db` in Docker) |
 | `INTERCEPT_ADSB_DB_PORT` | `5432` | Postgres port |
 | `INTERCEPT_ADSB_DB_NAME` | `intercept_adsb` | Database name |
 | `INTERCEPT_ADSB_DB_USER` | `intercept` | Database user |
 | `INTERCEPT_ADSB_DB_PASSWORD` | `intercept` | Database password |
 
-### Other ADS-B Settings
+To keep Postgres data on external storage, set `PGDATA_PATH` (defaults to `./pgdata`). Then open **History** on the aircraft dashboard, or `/adsb/history`. If it shows **HISTORY DISABLED**, check `INTERCEPT_ADSB_HISTORY_ENABLED=true` and that Postgres is running.
+
+### Vessels (AIS Dashboard)
+
+1. Open the vessels dashboard (`/ais/dashboard`) and **Start** to receive AIS on 161.975 and 162.025 MHz
+2. **Click a vessel** for name, MMSI, callsign, destination, speed and heading
+3. **Display options**: trails, rings, labels and **Reach**
+
+**Start DSC** monitors VHF channel 70 (Digital Selective Calling) alongside AIS. Distress, urgency, safety and routine calls are listed; distress positions are plotted with a pulsing marker and an audio alert.
+
+A VHF antenna for 162 MHz works best. Coastal range is typically around 40 nautical miles.
+
+### APRS (Dashboard)
+
+1. Open the APRS dashboard (`/aprs/dashboard`)
+2. **Set the frequency**: 144.390 MHz in North America, 144.800 MHz in Europe
+3. **Start** to decode via direwolf
+4. Stations appear on the map with position reports, weather, telemetry and messages
+
+### GPS
+
+1. **Connect** to gpsd
+2. Position, speed, heading, altitude, fix type and satellites appear in real time, with accuracy figures (DOP and error estimates)
+
+Make sure gpsd is running (for example `sudo gpsd /dev/ttyUSB0 -F /var/run/gpsd.sock`). A cold start can take 30-60 seconds to get a fix.
+
+### Radiosonde
+
+Tracks weather balloons via radiosonde_auto_rx.
+
+1. **Select a region** (Global, Europe, US, Australia) or set a custom frequency range in 400-406 MHz
+2. **Set gain** (0 for auto; around 40 dB is a good start)
+3. **Start**: active sondes appear with position, altitude, temperature, humidity and pressure
+
+## Space
+
+### Satellite (Dashboard)
+
+1. Open the satellite dashboard (`/satellite/dashboard`) and set your location
+2. **Add satellites**: **Celestrak** fetches by category (space stations, weather, amateur, cubesats and more), or **Add TLE** for your own
+3. **Calculate** upcoming passes; the polar plot and ground track follow the selected satellite live
+4. **Schedule a pass**: choose a decoder (telemetry AX.25/AFSK, GMSK, BPSK, or Meteor LRPT capture), minimum elevation and gain, and optionally record IQ
+
+TLEs refresh automatically every 24 hours, or use **Refresh TLE**.
+
+### ISS SSTV
+
+1. **Select device** and set the frequency: 145.800 MHz (the usual ISS downlink) or a preset such as 437.800 MHz
+2. **Choose the modulation**: FM for the ISS, or USB/LSB
+3. **Set your location** for Doppler correction and pass prediction
+4. **Update TLE**, then wait for the next pass (the countdown shows when)
+5. **Start**: decoded images appear in the gallery
+
+The ISS's signal shifts by up to ±3.5 kHz during a pass; INTERCEPT retunes as it goes. You need at least a V-dipole (51 cm elements at 145.8 MHz, 120 degrees apart): the stock antenna will not work. ISS SSTV events are occasional, so check ARISS for dates. Passes above 30 degrees are best. Common modes: PD120, PD180, Martin 1, Scottie 1.
+
+### HF SSTV
+
+1. **Select device** and **choose a frequency** from the presets, or enter your own
+2. **Modulation** is set from the frequency (USB for HF, FM for VHF/UHF)
+3. **Start**: decoded images appear in the gallery
+
+14.230 MHz USB (20m) is the busiest. HF (3-30 MHz) needs an HF-capable SDR or an upconverter; 145 and 433 MHz work with a plain RTL-SDR.
+
+### Weather Satellites
+
+1. **Set your location**
+2. **Select a satellite**: NOAA (APT) or Meteor (LRPT)
+3. **View passes** with polar plot and ground track
+4. **Start Capture** when a satellite is overhead, or enable the **auto-scheduler** to capture every pass
+5. Decoded images appear in the gallery
+
+Decoding uses SatDump. Use a circularly polarised antenna (QFH or turnstile) for 137 MHz.
+
+### WeFax
+
+Decodes HF weather fax charts from maritime and aviation weather stations.
+
+1. **Select a station**: its frequencies fill in automatically
+2. **Check the settings**: IOC 576 and 120 LPM are standard
+3. **Start**, or enable **Auto Capture** to record scheduled broadcasts
+
+HF needs **Direct Sampling (Q-branch)** on an RTL-SDR, or an upconverter. The **Auto USB align** option shifts listed carrier frequencies by -1.9 kHz for USB reception.
+
+### Meteor Scatter
+
+Detects VHF beacon reflections from meteor trails.
+
+1. **Set the center frequency**: 143.050 MHz for the GRAVES radar (Europe)
+2. **Set gain, sample rate and FFT size**
+3. **Tune detection**: SNR threshold, minimum duration, cooldown and drift tolerance
+4. **Start**: pings appear on the waterfall and in the event log; export as CSV or JSON
+
+A Yagi pointed towards the transmitter works best. Activity peaks during meteor showers (Perseids, Geminids).
+
+### Space Weather
+
+No SDR needed: data comes from NOAA SWPC, NASA SDO and HamQSL.
+
+- Solar indices, NOAA scales, band conditions and charts load automatically
+- **Solar imagery**: SDO 193Å, 304Å and magnetogram
+- **D-RAP maps**: HF absorption at 5-30 MHz
+- **Aurora forecast**, **alerts** and **active regions**
+
+Data refreshes every 5 minutes. Kp of 5 or more means a geomagnetic storm, which affects HF propagation.
+
+## Wireless
+
+### WiFi
+
+1. **Select an adapter** that supports monitor mode
+2. **Enable monitor mode** (untick "Kill processes" to keep other connections)
+3. **Start scanning**: networks and clients appear with signal strength, channel and encryption
+4. **Track** a network's signal over time, or **Capture** a handshake
+
+Run with `sudo`. Check your adapter with `iw list | grep monitor`.
+
+### Bluetooth
+
+1. **Select an adapter** and **start scanning**
+2. Devices appear with name, address, manufacturer and classification
+
+Known trackers are flagged automatically, including Apple AirTag, Tile, Samsung SmartTag and Chipolo, using a database of 47,000+ fingerprints.
+
+### WiFi Locate
+
+1. **Set the target**: a BSSID, or click **Locate** on a network in WiFi mode
+2. **Choose the environment**: open field, outdoor or indoor
+3. **Start Locate**: a large dBm reading, signal bar, distance estimate and RSSI history show how close you are
+4. **Enable audio** for proximity tones that speed up as you get closer
+
+WiFi Locate needs a deep scan for continuous updates and starts one if needed. The distance is an estimate; the environment setting affects it a lot.
+
+### BT Locate
+
+1. **Set the target**: a MAC address, a name pattern, or an IRK for devices that randomise their address (**Detect** extracts IRKs from paired devices). Or click **Locate** on a device in Bluetooth mode
+2. **Choose the environment**: open field, outdoor or indoor
+3. **Start Locate**: the display shows proximity (immediate, near, far), estimated distance and RSSI
+4. **Follow the signal**, with optional audio tones; with GPS, detections are plotted as a trail
+
+## LoRa
+
+### Meshtastic (Dashboard)
+
+1. Open the Meshtastic dashboard and **Connect** to a node over USB serial or TCP
+2. **Messages**: the mesh's messages, kept between sessions. **Find in conversation** searches them, **Text only** hides non-text packets, and **↩** replies
+3. **Missed**: asks a Store & Forward router for messages sent while you were away (15 minutes to 24 hours)
+4. **Nodes**: every node the device knows, including those without a position. Search by name or ID, click to centre the map, message a node directly, and favourite, ignore or remove nodes
+5. **Channels** and **Info**: channel settings and node details
+
+Message times are the time the node heard them when the node has a clock (GPS, the phone app or mesh time sync); otherwise the time they reached INTERCEPT.
+
+### Meshcore (Dashboard)
+
+1. Open the Meshcore dashboard and **Scan** or **Connect** to a node over serial, TCP or Bluetooth
+2. **Send** messages to channels and contacts
+3. **Nodes and contacts**: search, add contacts by public key, and run a traceroute
+
+## Intel
+
+### TSCM
+
+Technical surveillance countermeasures: sweeps for hidden transmitters and trackers.
+
+1. **Select a sweep type**: Quick (2 min), Standard (5 min), Full (15 min), or a preset for wireless cameras, body-worn devices or GPS trackers
+2. **Select sources**: WiFi, Bluetooth and/or RF (SDR)
+3. **Select a baseline** to compare against (optional)
+4. **Start Sweep**: devices are classified and scored
+5. **Record a baseline** in a known-clean environment for later comparisons
+
+Scores: **0-2** informational, **3-5** needs review, **6+** high interest. Full coverage needs a WiFi adapter, a Bluetooth adapter and an SDR.
+
+### TSCM Survey
+
+A workspace that walks a survey in order, using the sweeps and baselines from TSCM mode:
+
+1. **Baseline**: the active baseline, its age and health
+2. **Sweep**: what the latest sweep found that the baseline did not (new, missing and changed devices)
+3. **Known devices**: each device's score and the indicators behind it; mark devices as known
+4. **Threats and findings**: resolve threats with notes, add them to a case, and review correlations
+5. **Report**: the client report, with JSON or CSV annexes
+
+### Activity
+
+One reverse-chronological feed of sightings from every mode that reports them. Filter by source, time window (15 minutes to 24 hours) or a single device. **Pause** to read: new sightings are held and shown when you resume.
+
+### Drone Intelligence
+
+1. **Set the WiFi interface** (monitor mode) for Remote ID, and the RTL-SDR index if you have several
+2. **Start Scan**: all available detection methods run together
+3. Contacts appear with ID, detection methods, risk level and last seen; those broadcasting GPS appear on the map
+
+Detection methods:
+
+- **Remote ID (WiFi/BLE)**: decodes ASTM F3411 broadcasts (drone position, operator ID, type, speed, altitude)
+- **433/868 MHz RF** (RTL-SDR): control and telemetry links
+- **2.4/5.8 GHz** (HackRF, receive only): video downlinks
+
+Risk is **high** for a drone without Remote ID or with malformed frames, **medium** when seen on several methods or with a large signal mismatch, and **low** for a compliant Remote ID broadcast. Contacts expire after 120 seconds without a detection.
+
+### Spy Stations
+
+A reference database of number stations and diplomatic HF networks, from priyom.org.
+
+1. **Filter** by type, country or mode (USB, AM, CW, OFDM)
+2. **Details** shows a station's full information
+3. **Tune In** sends the frequency to the Waterfall or WebSDR
+
+Most activity is on HF (3-30 MHz). Notable stations include UVB-76 "The Buzzer" (4625 kHz), E06 and HM01. Nothing is decrypted or decoded.
+
+### WebSDR
+
+1. **Set a frequency** in kHz and a mode (USB, LSB, AM, CW)
+2. **Find Receivers** to list KiwiSDR receivers worldwide, sorted by distance
+3. **Select a receiver** to listen; audio streams to the browser with an S-meter
+
+Needs an internet connection. Spy station presets tune straight to known frequencies.
+
+## Platform
+
+### Message Store
+
+`/messages` keeps everything the decoders hear in one searchable store. Filter by mode, time, identity and position, and export as CSV or JSON. Storage limits (rows, size and age) are set on the same page.
+
+### Watchlists and Alerts
+
+Watchlists match aircraft, ships, callsigns, MAC addresses, frequencies or keywords across all modes. Matches, and alert rules, can be pushed to ntfy, Telegram or any webhook, with a per-station cooldown, an hourly cap and quiet hours. Configure them under **Settings → Alerts**. See [Webhooks and Alerts](WEBHOOKS.md).
+
+### CoT Export (ATAK)
+
+ADS-B, AIS and APRS positions, and Meshtastic node positions, can be sent as Cursor-on-Target to ATAK, WinTAK or TAK Server. It is off unless `INTERCEPT_COT_HOST` is set:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `INTERCEPT_ADSB_AUTO_START` | `false` | Auto-start ADS-B tracking when the dashboard loads |
-| `INTERCEPT_SHARED_OBSERVER_LOCATION` | `true` | Share observer location across ADS-B/AIS/SSTV/Satellite modules |
+| `INTERCEPT_COT_HOST` | (empty: off) | Destination address or multicast group |
+| `INTERCEPT_COT_PORT` | `6969` | Destination port |
+| `INTERCEPT_COT_PROTO` | `udp` | `udp` or `tcp` |
+| `INTERCEPT_COT_STALE_SECONDS` | `60` | How long a position stays valid in TAK |
 
-**Local install example**
+### Accounts
 
-```bash
-INTERCEPT_ADSB_AUTO_START=true \
-INTERCEPT_SHARED_OBSERVER_LOCATION=false \
-sudo ./start.sh
-```
+Sign in with your account; on first start the `admin` password is generated (see [Security](SECURITY.md#authentication)). Under **System → Accounts Management** you can change your display name and password, and browse the users and roles directory.
 
-**Docker example (.env)**
+### Remote Agents
 
-```bash
-INTERCEPT_ADSB_AUTO_START=true
-INTERCEPT_SHARED_OBSERVER_LOCATION=false
-```
+Run INTERCEPT's agent on other machines and control them from one interface.
 
-### Docker Setup
-
-`docker-compose.yml` includes an `adsb_db` service and a persistent volume for history storage:
-
-```bash
-docker compose --profile history up -d
-```
-
-To store Postgres data on external storage, set `PGDATA_PATH` (defaults to `./pgdata`):
-
-```bash
-PGDATA_PATH=/mnt/usbpi1/intercept/pgdata
-```
-
-### Using the History Dashboard
-
-1. Open **/adsb/history**
-2. Use **Start Tracking** to run ADS-B in headless mode
-3. View aircraft history and timelines
-4. Stop tracking when desired (session history is recorded)
-
-If the History dashboard shows **HISTORY DISABLED**, enable `INTERCEPT_ADSB_HISTORY_ENABLED=true` and ensure Postgres is running.
-
-## Satellite Mode
-
-1. **Set Location** - Choose location source:
-   - **Manual Entry** - Type coordinates directly
-   - **Browser GPS** - Use browser's built-in geolocation
-   - **USB GPS Dongle** - Connect a USB GPS receiver for continuous updates
-2. **Add Satellites** - Click "Add Satellite" to enter TLE data or fetch from Celestrak
-3. **Calculate Passes** - Click "Calculate Passes" to predict upcoming passes
-4. **View Sky Plot** - Polar plot shows satellite positions in real-time
-5. **Ground Track** - Map displays satellite orbit path and current position
-6. **Full Dashboard** - Click "Full Screen Dashboard" for dedicated satellite view
-
-### Adding Satellites from Celestrak
-
-1. Click "Add Satellite"
-2. Select "Fetch from Celestrak"
-3. Choose a category (Amateur, Weather, ISS, Starlink, etc.)
-4. Select satellites to add
-
-## Weather Satellites
-
-1. **Set Location** - Enter observer coordinates or use GPS
-2. **Select Satellite** - Choose NOAA (APT) or Meteor (LRPT)
-3. **View Passes** - Upcoming passes shown with polar plot and ground track
-4. **Start Capture** - Click "Start Capture" when a satellite is overhead, or enable auto-scheduler
-5. **View Images** - Decoded imagery appears in the gallery
-
-### Auto-Scheduler
-
-Enable the auto-scheduler to automatically capture passes:
-- Calculates upcoming NOAA and Meteor passes for your location
-- Starts SatDump at the correct time and frequency
-- Decoded images are saved with timestamps
-
-## Space Weather
-
-1. **Switch to Space Weather mode** - Select "Space Weather" from the Space navigation group
-2. **View Dashboard** - Solar indices, NOAA scales, band conditions, and charts load automatically
-3. **Solar Imagery** - Toggle between SDO 193A, 304A, and Magnetogram views
-4. **D-RAP Maps** - Select frequency (5-30 MHz) to view HF radio absorption maps
-5. **Aurora Forecast** - View the OVATION aurora oval for the northern hemisphere
-6. **Alerts** - Review current SWPC space weather alerts and warnings
-7. **Active Regions** - View solar active region data (number, location, area)
-8. **Refresh** - Data auto-refreshes every 5 minutes, or click "Refresh Now"
-
-### Tips
-
-- No SDR hardware required — all data comes from public APIs (NOAA SWPC, NASA SDO, HamQSL)
-- Check HF band conditions before operating on shortwave frequencies
-- Kp >= 5 indicates geomagnetic storm conditions that may affect HF propagation
-- D-RAP maps show where HF absorption is highest — useful for path planning
-- Solar imagery updates approximately every 15 minutes from NASA SDO
-
-## AIS Vessel Tracking
-
-1. **Select Hardware** - Choose your SDR type
-2. **Start Tracking** - Click "Start Tracking" to monitor AIS frequencies (161.975/162.025 MHz)
-3. **View Map** - Vessels appear on the interactive maritime map
-4. **Click Vessels** - View name, MMSI, callsign, destination, speed, heading
-5. **Full Dashboard** - Click "Full Screen Dashboard" for dedicated maritime view
-
-### VHF DSC Channel 70
-
-Digital Selective Calling monitoring runs alongside AIS:
-- Distress, Urgency, Safety, and Routine messages
-- Distress positions plotted with pulsing alert markers
-- Audio alerts for critical messages
-
-## WebSDR
-
-1. **Set Frequency** - Enter a frequency in kHz (e.g., 6500 for 6.5 MHz)
-2. **Select Mode** - Choose demodulation mode (USB, LSB, AM, CW)
-3. **Find Receivers** - Click "Find Receivers" to discover available KiwiSDR nodes worldwide
-4. **Select Receiver** - Click a receiver from the list to connect
-5. **Listen** - Audio streams in real-time via WebSocket
-6. **Adjust Volume** - Use the volume slider and monitor the S-meter
-7. **Spy Station Presets** - Use the quick-tune buttons to jump to known number station frequencies
-
-### Tips
-
-- Requires an internet connection to access the KiwiSDR network
-- Receiver list is cached for 1 hour to reduce API load
-- Receivers are sorted by distance from your location
-- Integrated spy station presets allow quick tuning to SIGINT targets
-
-## ISS SSTV
-
-1. **Select Hardware** - Choose your SDR type
-2. **Select Device** - Choose your SDR device
-3. **Set Frequency** - Default is 145.800 MHz (ISS downlink)
-4. **Set Location** - Enter lat/lon for Doppler correction and pass prediction
-5. **Update TLE** - Click "Update TLE" to fetch latest ISS orbital elements
-6. **Wait for Pass** - The next pass countdown shows when ISS will be overhead
-7. **Start Decoding** - Click "Start" to begin SSTV reception
-8. **View Images** - Decoded SSTV images appear in the gallery with timestamps
-
-### Tips
-
-- A V-dipole or better antenna is required (stock antenna will not work)
-- V-dipole construction: 51 cm per element at 145.8 MHz, 120-degree angle between elements
-- ISS SSTV events occur during special anniversaries and missions — check ARISS for schedules
-- Best passes have elevation > 30 degrees above horizon
-- Doppler shift tracking dramatically improves reception quality
-- Common SSTV modes: PD120, PD180, Martin1, Scottie1
-- Outdoor antenna placement with clear sky view is essential
-
-## HF SSTV
-
-1. **Select Hardware** - Choose your SDR type
-2. **Select Device** - Choose your SDR device
-3. **Select Frequency** - Choose from 13 preset frequencies or enter a custom one
-4. **Modulation** - Auto-selected based on frequency (USB for HF, FM for VHF/UHF)
-5. **Start Decoding** - Click "Start" to begin SSTV reception
-6. **View Images** - Decoded amateur radio images appear in the gallery
-
-### Tips
-
-- HF frequencies (3-30 MHz) require an upconverter with RTL-SDR
-- VHF/UHF frequencies (145 MHz, 433 MHz) work directly with RTL-SDR
-- Most popular frequency: 14.230 MHz USB (20m band) with regular activity
-- Weekend activity peaks on most HF bands
-- Amateur license is not required to receive (listen-only)
-
-## APRS
-
-1. **Select Hardware** - Choose your SDR type
-2. **Set Frequency** - Defaults to regional APRS frequency (144.390 MHz NA, 144.800 MHz EU)
-3. **Start Decoding** - Click "Start Decoding" to begin packet radio reception via direwolf
-4. **View Map** - Station positions appear on the interactive map
-5. **View Messages** - Position reports, telemetry, and messages displayed in real time
-
-## Utility Meters
-
-1. **Start Monitoring** - Click "Start" to begin meter broadcast reception via rtl_amr
-2. **View Meters** - Decoded meter data appears with meter ID, type, and consumption
-3. **Filter** - Filter by meter type (electric, gas, water) or meter ID
-
-## BT Locate (SAR Device Location)
-
-1. **Set Target** - Enter one or more target identifiers:
-   - **MAC Address** - Exact Bluetooth address (AA:BB:CC:DD:EE:FF)
-   - **Name Pattern** - Substring match (e.g., "iPhone", "Galaxy")
-   - **IRK** - 32-character hex Identity Resolving Key for RPA resolution
-   - **Detect IRKs** - Click "Detect" to auto-extract IRKs from paired devices
-2. **Choose Environment** - Select the RF environment preset:
-   - **Open Field** (n=2.0) - Best for open areas with line-of-sight
-   - **Outdoor** (n=2.2) - Default, works well in most outdoor settings
-   - **Indoor** (n=3.0) - For buildings with walls and obstacles
-3. **Start Locate** - Click "Start Locate" to begin tracking
-4. **Monitor HUD** - The proximity display shows:
-   - Proximity band (IMMEDIATE / NEAR / FAR)
-   - Estimated distance in meters
-   - Raw RSSI and smoothed RSSI average
-   - Detection count and GPS-tagged points
-5. **Follow the Signal** - Move towards stronger signal (higher RSSI / closer distance)
-6. **Audio Alerts** - Enable audio for proximity tones that increase in pitch as you get closer
-7. **Review Trail** - Check the map for GPS-tagged detection trail
-
-### Hand-off from Bluetooth Mode
-
-1. Open Bluetooth scanning mode and find the target device
-2. Click the "Locate" button on the device card
-3. BT Locate opens with the device pre-filled
-4. Click "Start Locate" to begin tracking
-
-### Tips
-
-- For devices with address randomization (iPhones, modern Android), use the IRK method
-- Click "Detect" next to the IRK field to auto-extract IRKs from paired devices
-- The RSSI chart shows signal trend over time — use it to determine if you're getting closer
-- Clear the trail when starting a new search area
-
-## WiFi Locate Mode
-
-1. **Set Target** - Enter a BSSID (MAC address) in AA:BB:CC:DD:EE:FF format, or hand off from WiFi mode
-2. **Choose Environment** - Select the RF environment preset:
-   - **Open Field** (n=2.0) - Best for open areas with line-of-sight
-   - **Outdoor** (n=2.8) - Default, works well in most outdoor settings
-   - **Indoor** (n=3.5) - For buildings with walls and obstacles
-3. **Start Locate** - Click "Start Locate" to begin tracking
-4. **Monitor Signal** - The HUD shows:
-   - Large dBm reading with color coding (green/yellow/red)
-   - 20-segment signal bar for quick visual reference
-   - Estimated distance based on path loss model
-   - RSSI history chart for trend analysis
-   - Current/min/max/average statistics
-5. **Follow the Signal** - Move towards stronger signal (higher RSSI / closer distance)
-6. **Audio Alerts** - Enable audio for proximity tones that speed up as signal strengthens
-
-### Hand-off from WiFi Mode
-
-1. Open WiFi scanning mode and start a deep scan
-2. Click any network to open the detail drawer
-3. Click the "Locate" button in the drawer header
-4. WiFi Locate opens with the BSSID and SSID pre-filled
-5. Click "Start Locate" to begin tracking
-
-### Tips
-
-- Deep scan is required for continuous RSSI updates — WiFi Locate auto-starts it if needed
-- The WiFi scan is preserved when switching between WiFi and WiFi Locate modes
-- Signal lost overlay appears after 30 seconds without an update from the target
-- The distance estimate is approximate — environment preset significantly affects accuracy
-- Indoor environments with walls attenuate signal more than open field
-
-## GPS Mode
-
-1. **Start GPS** - Click "Start" to connect to gpsd and begin position tracking
-2. **View Map** - Your position appears on the interactive map with a track trail
-3. **Monitor Stats** - Speed, heading, altitude, and satellite count displayed in real-time
-4. **Record Track** - Enable track recording to save your path
-
-### Tips
-
-- Ensure gpsd is running: `sudo gpsd /dev/ttyUSB0 -F /var/run/gpsd.sock`
-- GPS fix may take 30-60 seconds after cold start
-- Accuracy improves with more satellites in view
-
-## TSCM (Counter-Surveillance)
-
-1. **Select Sweep Type** - Choose from Quick Scan (2 min), Standard (5 min), Full Sweep (15 min), or presets for Wireless Cameras, Body-Worn Devices, or GPS Trackers
-2. **Select Scan Sources** - Toggle WiFi, Bluetooth, and/or RF/SDR scanning and select the appropriate interfaces
-3. **Select Baseline** - Optionally choose a previously recorded baseline to compare against
-4. **Start Sweep** - Click "Start Sweep" to begin scanning
-5. **Review Results** - Detected devices are classified and scored by threat level
-6. **Record Baseline** - In a known clean environment, record a baseline for future comparison
-7. **Export Report** - Generate PDF report, JSON annex, or CSV data
-
-### Threat Levels
-
-- **Informational (0-2)** - Known or expected devices
-- **Needs Review (3-5)** - Unusual devices requiring assessment
-- **High Interest (6+)** - Multiple indicators warrant investigation
-
-### Tips
-
-- Record a baseline in a known clean environment before conducting sweeps
-- Use the meeting window feature to flag new RF signatures during sensitive periods
-- Full functionality requires WiFi adapter, Bluetooth adapter, and SDR hardware
-- Threat detection uses a database of 47K+ known tracker fingerprints
-
-## Drone Intelligence
-
-1. **Open Mode** - Select "Drone Intel" from the Intel group in the navigation bar
-2. **Configure Interfaces** - Enter your WiFi interface name (must support monitor mode) for Remote ID detection
-3. **Set RTL-SDR Index** - If you have multiple RTL-SDR devices, enter the device index (default: 0)
-4. **Start** - Click "Start Scan" to activate all available detection vectors simultaneously
-5. **Monitor Contacts** - Detected drone contacts appear in the contact list with ID, vectors, risk level, and last seen time
-6. **View Map** - Contacts with GPS data from Remote ID are plotted on the live map
-
-### Detection Vectors
-
-- **Remote ID (WiFi/BLE)** — Passive sniff of 802.11 beacon frames and BLE advertisements. Decodes ASTM F3411 payloads: drone GPS, operator ID, drone type, speed, altitude, and emergency status
-- **433/868 MHz RF** — RTL-SDR scans ISM bands for drone control link and telemetry RF signatures
-- **2.4/5.8 GHz** — HackRF (if present) sweeps video downlink bands for active drone transmissions
-
-### Risk Levels
-
-- **High** — Drone operating without Remote ID (non-compliant) or malformed ASTM frame. Warrants immediate attention.
-- **Medium** — Contact detected on multiple RF vectors, or significant RSSI difference between vectors (>15 dB). May indicate evasion or multi-radio platform.
-- **Low** — Compliant Remote ID broadcast, single detection vector. Standard consumer drone.
-
-### Tips
-
-- Remote ID is mandatory for drones >250g in the US (FAA) and EU (EU 2019/945) — absence of Remote ID is itself a significant indicator
-- WiFi adapter must support monitor mode; run `airmon-ng check kill` if other processes interfere
-- The contact map only shows drones that broadcast GPS coordinates via Remote ID
-- Contacts expire after 120 seconds of inactivity — the list shows only currently active drones
-- HackRF detection is passive (receive-only); no transmission occurs
-
-## Spy Stations
-
-1. **Browse Database** - View the full list of documented number stations and diplomatic networks
-2. **Filter by Type** - Toggle between Number Stations and Diplomatic Networks
-3. **Filter by Country** - Select specific countries (Russia, Cuba, Israel, Poland, etc.)
-4. **Filter by Mode** - Filter by demodulation mode (USB, AM, CW, OFDM)
-5. **View Details** - Click "Details" on a station card for full information
-6. **Tune In** - Click "Tune In" to route the station frequency to the Listening Post or WebSDR
-
-### Tips
-
-- Data sourced from priyom.org (non-profit monitoring community)
-- Most activity is on HF bands (3-30 MHz) — propagation varies by time of day
-- Notable stations: UVB-76 "The Buzzer" (4625 kHz), E06 English Man, HM01 Cuban Numbers
-- Legal to monitor in most countries (check local regulations)
-- No decryption or content decoding is included — this is a reference database
-
-## Meshtastic
-
-1. **Connect Device** - Plug in a Meshtastic device via USB or connect via TCP
-2. **Start** - Click "Start" to connect to the mesh network
-3. **View Messages** - Real-time message stream from the mesh
-4. **View Nodes** - Connected nodes displayed with signal metrics (RSSI, SNR)
-5. **Send Messages** - Type messages to broadcast on the mesh
-
-## Offline Mode
-
-1. **Open Settings** - Click the gear icon in the navigation bar
-2. **Offline Tab** - Toggle "Offline Mode" to enable local assets
-3. **Configure Sources** - Switch assets and fonts from CDN to local
-4. **Set Tile Provider** - Choose a map tile provider or enter a custom tile server URL
-5. **Check Assets** - Click "Check Assets" to verify all local files are present
-
-### Tips
-
-- Download required assets: Leaflet JS/CSS, Chart.js, Inter and JetBrains Mono fonts
-- Assets are stored in the `static/vendor/` directory
-- For maps, you need a local tile server (e.g., self-hosted OpenStreetMap tiles)
-- Missing assets fail gracefully with console warnings
-- Useful for air-gapped environments, field deployments, or reducing latency
-
-## Remote Agents (Distributed SIGINT)
-
-Deploy lightweight sensor nodes across multiple locations and aggregate data to a central controller.
-
-### Setting Up an Agent
-
-1. **Install INTERCEPT** on the remote machine
-2. **Create config file** (`intercept_agent.cfg`):
+1. **Create** `intercept_agent.cfg` on the remote machine:
    ```ini
    [agent]
    name = sensor-node-1
@@ -539,37 +416,17 @@ Deploy lightweight sensor nodes across multiple locations and aggregate data to 
    sensor = true
    adsb = true
    ```
-3. **Start the agent**:
-   ```bash
-   python intercept_agent.py --config intercept_agent.cfg
-   ```
+2. **Start it**: `python intercept_agent.py --config intercept_agent.cfg`
+3. **Register it** at `/controller/manage` in the main instance (name, base URL and API key must match), then **Test**
+4. **Select the agent** from the source dropdown in a supported mode. **Show All Agents** combines data from all of them
 
-### Registering Agents in the Controller
+See the [Distributed Agents Guide](DISTRIBUTED_AGENTS.md) for details.
 
-1. Navigate to `/controller/manage` in the main INTERCEPT instance
-2. Enter agent details:
-   - **Name**: Must match config file (e.g., `sensor-node-1`)
-   - **Base URL**: Agent address (e.g., `http://192.168.1.50:8020`)
-   - **API Key**: Must match config file
-3. Click "Register Agent"
-4. Use "Test" to verify connectivity
+### Offline Mode
 
-### Using Remote Agents
+1. Open **Settings → Offline** and turn on **Offline Mode**
+2. Switch assets and fonts from CDN to local
+3. Choose a map tile provider, or enter your own tile server URL
+4. **Check Assets** confirms the local files are present
 
-Once registered, agents appear in mode dropdowns:
-
-1. **Select agent** from the dropdown in supported modes
-2. **Start mode** - Commands are proxied to the remote agent
-3. **View data** - Data streams back to your browser via SSE
-
-### Multi-Agent Streaming
-
-Enable "Show All Agents" to aggregate data from all registered agents simultaneously.
-
-For complete documentation, see [Distributed Agents Guide](DISTRIBUTED_AGENTS.md).
-
-## Webhooks & Notifications
-
-INTERCEPT has a built-in alert engine that fires webhooks on decoded events. Configure rules in the Alerts panel to forward pager messages, ADS-B alerts, WiFi events, or anything else to Discord, Slack, n8n, Home Assistant, or any HTTP endpoint.
-
-See [WEBHOOKS.md](WEBHOOKS.md) for configuration, payload format, and Discord relay setup.
+Local assets live in `static/vendor/`. Maps need a tile server you can reach offline, such as self-hosted OpenStreetMap tiles.

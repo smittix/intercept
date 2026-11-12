@@ -558,6 +558,7 @@ section h2 {
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 32px;
+    min-width: 0; /* let long code lines scroll inside the block instead of widening the page */
 }
 
 .install-card h3 {
@@ -816,7 +817,8 @@ section h2 {
 
 .footer-links {
     display: flex;
-    gap: 32px;
+    flex-wrap: wrap;
+    gap: 16px 32px;
 }
 
 .footer-links a {

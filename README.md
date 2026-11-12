@@ -21,41 +21,61 @@ Support the developer of this open-source project
 </p>
 
 <p align="center">
-  <img src="docs/images/intercept-main.png" alt="Screenshot">
+  <img src="docs/images/adsb.webp" alt="INTERCEPT aircraft dashboard">
 </p>
 
 ---
 
 ## Features
 
-- **Pager Decoding** - POCSAG/FLEX via rtl_fm + multimon-ng
-- **433MHz Sensors** - Weather stations, TPMS, IoT devices via rtl_433
-- **Sub-GHz Analyzer** - RF capture and protocol decoding for 300-928 MHz ISM bands via HackRF
-- **Aircraft Tracking** - ADS-B via dump1090 with real-time map and radar
-- **Vessel Tracking** - AIS ship tracking with VHF DSC distress monitoring
-- **ACARS Messaging** - Aircraft datalink messages via acarsdec
-- **VDL2** - VHF Data Link Mode 2 aircraft datalink decoding via dumpvdl2
-- **Listening Post** - Wideband frequency scanner with real-time audio monitoring
-- **Weather Satellites** - NOAA APT and Meteor LRPT image decoding via SatDump with auto-scheduler
-- **WebSDR** - Remote HF/shortwave listening via KiwiSDR network
-- **ISS SSTV** - Slow-scan TV image reception from the International Space Station
-- **HF SSTV** - Terrestrial SSTV on shortwave frequencies (80m-10m, VHF, UHF)
-- **APRS** - Amateur packet radio position reports and telemetry via direwolf
-- **Satellite Tracking** - Pass prediction with polar plot and ground track map
-- **Utility Meters** - Electric, gas, and water meter reading via rtlamr
-- **ADS-B History** - Persistent aircraft history with reporting dashboard (Postgres optional)
-- **WiFi Scanning** - Monitor mode reconnaissance via aircrack-ng
-- **Bluetooth Scanning** - Device discovery and tracker detection (with Ubertooth support)
-- **BT Locate** - SAR Bluetooth device location with GPS-tagged signal trail mapping and proximity alerts
-- **WiFi Locate** - Locate WiFi access points by BSSID with real-time signal meter, distance estimation, and proximity audio
-- **GPS** - Real-time GPS position tracking with live map, speed, altitude, and satellite info
-- **TSCM** - Counter-surveillance with RF baseline comparison and threat detection
-- **Meshtastic** - LoRa mesh network integration
-- **Space Weather** - Real-time solar and geomagnetic data from NOAA SWPC, NASA SDO, and HamQSL (no SDR required)
-- **Spy Stations** - Number stations and diplomatic HF network database
-- **Remote Agents** - Distributed SIGINT with remote sensor nodes
-- **Offline Mode** - Bundled assets for air-gapped/field deployments
-- **Drone Intelligence** - Multi-vector UAV detection via ASTM F3411 Remote ID (WiFi/BLE), RTL-SDR 433/868 MHz RF, and HackRF 2.4/5.8 GHz scanning with live contact map and risk scoring
+Text and scan modes run in the main app; map-heavy modes open as full-screen dashboards.
+
+**Signals**
+- **Pager**: POCSAG and FLEX via rtl_fm + multimon-ng
+- **433MHz sensors**: 200+ device protocols (weather stations, TPMS, IoT) via rtl_433
+- **Utility meters**: electric, gas and water meter broadcasts via rtlamr
+- **Sub-GHz**: HackRF capture, decode and replay across the 300-928 MHz ISM bands
+- **Waterfall**: real-time spectrum waterfall with click-to-tune audio (FM, AM, USB, LSB), bookmarks and handoff to decoders
+- **CW/Morse**: Morse decoding by tone (HF) or on-off envelope (ISM)
+- **OOK decoder**: raw on-off-keyed frames as bits, hex and ASCII, for reverse-engineering unknown remotes and sensors
+
+**Tracking**
+- **Aircraft dashboard**: ADS-B radar map via dump1090/readsb, with ACARS and VDL2 panels, airband audio, "Tune ATC" and optional PostgreSQL history
+- **Vessels dashboard**: AIS via AIS-catcher, with VHF DSC distress monitoring
+- **APRS dashboard**: amateur packet radio positions and telemetry via direwolf
+- **GPS**: live position, speed, altitude and satellites via gpsd
+- **Radiosonde**: weather balloon telemetry via radiosonde_auto_rx
+
+**Space**
+- **Satellite dashboard**: pass prediction, polar plot and ground track
+- **ISS SSTV and HF SSTV**: slow-scan TV images, with Doppler correction for the ISS
+- **Weather satellites**: NOAA APT and Meteor LRPT via SatDump, with an auto-scheduler
+- **WeFax**: HF weather fax from maritime and aviation stations
+- **Meteor scatter**: VHF beacon reflections from meteor trails
+- **Space weather**: solar and geomagnetic data from NOAA SWPC, NASA SDO and HamQSL (no SDR needed)
+
+**Wireless**
+- **WiFi and Bluetooth**: network and device discovery, tracker detection (AirTag, Tile, SmartTag)
+- **WiFi Locate and BT Locate**: find a specific access point or device by signal strength, with a GPS trail
+
+**LoRa**
+- **Meshtastic and Meshcore dashboards**: messages, searchable node lists and maps; Meshtastic also keeps message history and can fetch missed messages from a Store & Forward router
+
+**Intel**
+- **TSCM and TSCM Survey**: counter-surveillance sweeps against an RF baseline, with a survey workspace and client reports
+- **Activity**: one feed of sightings from every mode
+- **Drone intelligence**: Remote ID (WiFi/BLE) plus RF detection on 433/868 MHz and 2.4/5.8 GHz
+- **Spy stations**: number station and diplomatic HF network database
+- **WebSDR**: listen through remote KiwiSDR receivers
+
+**Platform**
+- **Message store**: everything the decoders hear in one searchable database (`/messages`), with CSV/JSON export
+- **Alerts**: watchlists and alert rules pushed to ntfy, Telegram or any webhook
+- **CoT export**: ADS-B, AIS, APRS and Meshtastic positions to ATAK, WinTAK or TAK Server
+- **SDR devices**: name each dongle and save its PPM correction, gain and bias-T; use a remote SDR over rtl_tcp
+- **User accounts**: sign-in with per-user passwords and a users directory
+- **Remote agents**: run sensor nodes elsewhere and control them from one interface
+- **Offline mode**: bundled assets for air-gapped and field use
 
 ---
 
@@ -95,7 +115,7 @@ Choose what to install during the wizard or via menu option 1:
 
 | # | Profile | Tools |
 |---|---------|-------|
-| 1 | Core SIGINT | rtl_sdr, multimon-ng, rtl_433, dump1090, acarsdec, dumpvdl2, ffmpeg, gpsd |
+| 1 | Core SIGINT | rtl_sdr (with RTL-SDR Blog V4 drivers), multimon-ng, rtl_433, dump1090, acarsdec, dumpvdl2, rtlamr, ffmpeg, gpsd |
 | 2 | Maritime & Radio | AIS-catcher, direwolf |
 | 3 | Weather & Space | SatDump, radiosonde_auto_rx |
 | 4 | RF Security | aircrack-ng, HackRF, BlueZ, hcxtools, Ubertooth, SoapySDR |
@@ -208,7 +228,7 @@ To choose your own up front, set `INTERCEPT_ADMIN_PASSWORD` before first start. 
 | **RTL-SDR** | Required for all SDR features | ~$25-35 |
 | **WiFi adapter** | Must support promiscuous (monitor) mode | ~$20-40 |
 | **Bluetooth adapter** | Device scanning (usually built-in) | - |
-| **GPS** | Any Linux supported GPS Unit | ~10 |
+| **GPS** | Any gpsd-supported GPS receiver | ~$10 |
 
 Most features work with a basic RTL-SDR dongle (RTL2832U + R820T2).
 
@@ -233,12 +253,14 @@ Most features work with a basic RTL-SDR dongle (RTL2832U + R820T2).
 
 ## Documentation
 
-- [Usage Guide](docs/USAGE.md) - Detailed instructions for each mode
-- [Hardware Guide](docs/HARDWARE.md) - SDR hardware, manual install, and advanced setup
+- [Features](docs/FEATURES.md) - Every mode at a glance, with what it needs
+- [Usage Guide](docs/USAGE.md) - How to use each mode
+- [Hardware Guide](docs/HARDWARE.md) - SDR hardware, manual install, multiple dongles
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
+- [Webhooks and Alerts](docs/WEBHOOKS.md) - Watchlists, alert rules and push notifications
 - [Distributed Agents](docs/DISTRIBUTED_AGENTS.md) - Remote sensor node deployment
-- [Webhooks](docs/WEBHOOKS.md) - Alert rules and webhook integration
-- [Security](docs/SECURITY.md) - Network security and best practices
+- [Security](docs/SECURITY.md) - Authentication, network exposure and best practices
+- [UI Guide](docs/UI_GUIDE.md) - For contributors: page patterns and design tokens
 
 ---
 
