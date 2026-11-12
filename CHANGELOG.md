@@ -2,6 +2,12 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.88] - 2026-11-12
+
+### Fixed
+
+- **The main page logged a GPS error on every fix.** With gpsd running, each GPS update threw "updateAprsUserLocation is not defined", which showed as "GPS parse error" in the activity log and browser console. The function moved to the APRS dashboard, and the main page no longer calls it when it isn't there. (#464)
+
 ## [2.33.87] - 2026-11-12
 
 ### Added
