@@ -2,6 +2,17 @@
 
 All notable changes to iNTERCEPT will be documented in this file.
 
+## [2.33.89] - 2026-11-12
+
+### Fixed
+
+- **ISS SSTV and general SSTV ignored the SDR's saved PPM correction.** Every other decoder uses the PPM saved per device in Settings → SDR, but these two sent 0 whenever their PPM box was empty. An empty box now means "device default", as in Pager. (#238, #469)
+- **The account panel never showed status, role or last update.** A typo in an element ID made it throw on every load. (#470)
+
+### Changed
+
+- **macOS setup uses Homebrew's dump1090 when it's installed but not linked,** instead of compiling dump1090 from source. (#419, #468)
+
 ## [2.33.88] - 2026-11-12
 
 ### Fixed

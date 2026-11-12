@@ -7,10 +7,18 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.88"
+VERSION = "2.33.89"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.89",
+        "date": "November 2026",
+        "highlights": [
+            "ISS SSTV and general SSTV now use each SDR's saved PPM correction.",
+            "macOS setup uses Homebrew's dump1090 instead of compiling its own.",
+        ],
+    },
     {
         "version": "2.33.88",
         "date": "November 2026",
