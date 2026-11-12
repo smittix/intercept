@@ -7,10 +7,17 @@ import os
 import sys
 
 # Application version
-VERSION = "2.33.87"
+VERSION = "2.33.88"
 
 # Changelog - latest release notes (shown on welcome screen)
 CHANGELOG = [
+    {
+        "version": "2.33.88",
+        "date": "November 2026",
+        "highlights": [
+            "No more GPS errors on the main page when a GPS receiver has a fix.",
+        ],
+    },
     {
         "version": "2.33.87",
         "date": "November 2026",
