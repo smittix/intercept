@@ -181,7 +181,7 @@
             const user = await response.json();
 
             document.getElementById('accountNameInput').value = user.name || '';
-            document.getElementById('accountStatusTextاعدة').innerText = user.status || 'Active';
+            document.getElementById('accountStatusText').innerText = user.status || 'Active';
             document.getElementById('accountRoleText').innerText = user.role || 'User';
             document.getElementById('accountLastUpdate').innerText = user.last_update || '--';
         } catch (error) {
