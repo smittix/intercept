@@ -238,7 +238,9 @@ function setSensorRunning(running) {
     const scopePanel = document.getElementById('sensorScopePanel');
     if (scopePanel) {
         if (running) {
-            scopePanel.style.display = 'block';
+            // The status sync also calls this on page load and on every mode
+            // switch, so only show the strip while 433MHz is the open mode.
+            scopePanel.style.display = currentMode === 'sensor' ? 'block' : 'none';
             initSensorScope();
         } else {
             stopSensorScope();
