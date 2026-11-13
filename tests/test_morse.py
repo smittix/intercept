@@ -874,6 +874,15 @@ class TestMorseIntegration:
         decoded, _ = self._decode(tmp_path, pcm)
         assert decoded.endswith("Q TEST 123"), decoded
 
+    def test_acquires_far_tone_on_dit_only_leader(self, tmp_path):
+        """Acquisition must lock within the first character even when the
+        opening characters are all dits: gap scans must not reset the
+        two-agreeing-scans candidate, or lock-on waits for the first dah
+        and the first word of every transmission garbles."""
+        pcm = generate_morse_audio("HH5 TEST 123", wpm=18, tone_freq=2200.0, noise_rms=0.02)
+        decoded, _ = self._decode(tmp_path, pcm)
+        assert decoded.endswith("H5 TEST 123"), decoded
+
     def test_long_message_correct_after_first_char(self, tmp_path):
         msg = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG 0123456789"
         pcm = generate_morse_audio(msg, wpm=20, noise_rms=0.05)

@@ -231,7 +231,8 @@ class MorseDecoder:
         self._tone_scan_lo_hz = 300.0
         self._tone_scan_hi_hz = min(2900.0, 0.45 * self.sample_rate)
         self._scan_candidate_freq = 0.0
-        self._tone_scan_interval_blocks = 8
+        self._scan_candidate_block = 0
+        self._tone_scan_interval_blocks = 4
 
         if self.detect_mode == "envelope":
             self._detector = EnvelopeDetector(self._block_size)
@@ -389,25 +390,38 @@ class MorseDecoder:
             return False
         best_freq = float(freqs[band][int(np.argmax(spec[band]))])
 
-        # A real tone puts the peak at the same frequency on consecutive
-        # scans; noise puts its maximum somewhere new each time. Require
-        # two agreeing scans before considering a retune, or the tracker
-        # hops across noise maxima and mints phantom dits as it goes.
-        candidate = self._scan_candidate_freq
-        self._scan_candidate_freq = best_freq
-        if abs(best_freq - candidate) > 60.0:
-            return False
-
         best_mag = float(_goertzel_mag(normalized, best_freq, self.sample_rate))
 
-        # Retune only on a clear tone: it must beat the current bin
+        # Energy gates come first: the peak must beat the current bin
         # meaningfully, stand well above the adjacent-bin noise, and be at
-        # mark level — never chase noise bins during inter-element gaps.
+        # mark level. A scan that lands in an inter-element gap fails here
+        # and must not disturb the acquisition candidate below, or lock-on
+        # waits for two consecutive scans inside one mark (only dahs are
+        # long enough) and the first word of every transmission garbles.
         if (
             best_mag <= (signal_mag * 1.12)
             or best_mag <= (noise_ref * self._snr_qualifier)
             or best_mag < (0.5 * self._signal_peak)
         ):
+            return False
+
+        # A real CW mark towers over its own spectral neighborhood; a band
+        # noise maximum barely clears it. Without this gate the tracker
+        # chases noise peaks on idle channels and mints phantom characters.
+        side_lo = float(_goertzel_mag(normalized, max(150.0, best_freq - 250.0), self.sample_rate))
+        side_hi = float(_goertzel_mag(normalized, min(3400.0, best_freq + 250.0), self.sample_rate))
+        if best_mag < 3.0 * max(1e-9, 0.5 * (side_lo + side_hi)):
+            return False
+
+        # A real tone puts the peak at the same frequency on consecutive
+        # mark-level scans; noise and key clicks put their maximum somewhere
+        # new each time. Require two recent agreeing scans before retuning,
+        # or the tracker hops across noise maxima and mints phantom dits.
+        candidate = self._scan_candidate_freq
+        candidate_age = self._blocks_processed - self._scan_candidate_block
+        self._scan_candidate_freq = best_freq
+        self._scan_candidate_block = self._blocks_processed
+        if abs(best_freq - candidate) > 60.0 or candidate_age > 100:
             return False
 
         if best_mag >= (signal_mag * 2.0):
