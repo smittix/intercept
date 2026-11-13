@@ -285,9 +285,16 @@ def start_morse() -> Response:
 
     sdr_type_str = data.get("sdr_type", "rtlsdr")
 
-    # Check for rtl_tcp (remote SDR) connection
+    # Check for rtl_tcp (remote SDR) connection. Validate before any state
+    # changes: a 400 after _set_state(STARTING) would wedge the lifecycle.
     rtl_tcp_host = data.get("rtl_tcp_host")
     rtl_tcp_port = data.get("rtl_tcp_port", 1234)
+    if rtl_tcp_host:
+        try:
+            rtl_tcp_host = validate_rtl_tcp_host(rtl_tcp_host)
+            rtl_tcp_port = validate_rtl_tcp_port(rtl_tcp_port)
+        except ValueError as e:
+            return api_error(str(e), 400)
 
     with app_module.morse_lock:
         if morse_state in {MORSE_STARTING, MORSE_RUNNING, MORSE_STOPPING}:
@@ -339,11 +346,6 @@ def start_morse() -> Response:
     # Create network or local SDR device
     network_sdr_device = None
     if rtl_tcp_host:
-        try:
-            rtl_tcp_host = validate_rtl_tcp_host(rtl_tcp_host)
-            rtl_tcp_port = validate_rtl_tcp_port(rtl_tcp_port)
-        except ValueError as e:
-            return api_error(str(e), 400)
         network_sdr_device = SDRFactory.create_network_device(rtl_tcp_host, rtl_tcp_port)
         logger.info(f"Using remote SDR: rtl_tcp://{rtl_tcp_host}:{rtl_tcp_port}")
 

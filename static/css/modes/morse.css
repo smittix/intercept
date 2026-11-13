@@ -76,6 +76,26 @@
     color: var(--text-dim);
 }
 
+.morse-advanced {
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    max-height: 1200px;
+    opacity: 1;
+    overflow: hidden;
+}
+
+.morse-advanced.collapsed {
+    max-height: 0;
+    opacity: 0;
+}
+
+.morse-adv-heading {
+    margin: 10px 0 6px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
 .morse-ref-divider {
     margin-top: 4px;
     border-top: 1px solid var(--border-color);

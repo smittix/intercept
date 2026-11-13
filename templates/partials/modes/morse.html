@@ -3,8 +3,8 @@
     <div class="section">
         <h3>CW/Morse Decoder</h3>
         <p class="info-text morse-mode-help">
-            Decode CW (continuous wave) Morse code. Supports HF amateur bands (USB + Goertzel tone
-            detection) and ISM/UHF OOK signals (AM + envelope detection).
+            Decode CW (continuous wave) Morse code. Pick a band preset and press
+            Start &mdash; tone, speed and threshold are tracked automatically.
         </p>
     </div>
 
@@ -67,78 +67,76 @@
         </div>
     </div>
 
-    <div class="section" id="morseToneFreqGroup">
-        <h3>CW Detector</h3>
-        <div class="form-group">
-            <label>Tone Frequency: <span id="morseToneFreqLabel">700</span> Hz</label>
-            <input type="range" id="morseToneFreq" value="700" min="300" max="1200" step="10"
-                   oninput="MorseMode.updateToneLabel(this.value)">
-        </div>
-        <div class="form-group">
-            <label>Bandwidth</label>
-            <select id="morseBandwidth">
-                <option value="50">50 Hz</option>
-                <option value="100">100 Hz</option>
-                <option value="200" selected>200 Hz</option>
-                <option value="400">400 Hz</option>
-            </select>
-        </div>
-        <div class="form-group checkbox-group">
-            <label><input type="checkbox" id="morseAutoToneTrack" checked> Auto Tone Track</label>
-            <label><input type="checkbox" id="morseToneLock"> Hold Tone Lock</label>
-        </div>
-    </div>
-
     <div class="section">
-        <h3>Threshold + WPM</h3>
-        <div class="form-group">
-            <label>Threshold Mode</label>
-            <select id="morseThresholdMode" onchange="MorseMode.onThresholdModeChange()">
-                <option value="auto" selected>Auto</option>
-                <option value="manual">Manual</option>
-            </select>
-        </div>
-        <div class="form-group" id="morseThresholdAutoRow">
-            <label>Threshold Multiplier</label>
-            <input type="number" id="morseThresholdMultiplier" value="2.8" min="1.1" max="8" step="0.1">
-        </div>
-        <div class="form-group" id="morseThresholdOffsetRow">
-            <label>Threshold Offset</label>
-            <input type="number" id="morseThresholdOffset" value="0" min="0" step="0.1">
-        </div>
-        <div class="form-group" id="morseManualThresholdRow" style="display: none;">
-            <label>Manual Threshold</label>
-            <input type="number" id="morseManualThreshold" value="0" min="0" step="0.1">
-        </div>
-        <div class="form-group">
-            <label>Minimum Signal Gate</label>
-            <input type="number" id="morseSignalGate" value="0.05" min="0" max="1" step="0.01">
-        </div>
-        <div class="form-group">
-            <label>WPM Mode</label>
-            <select id="morseWpmMode" onchange="MorseMode.onWpmModeChange()">
-                <option value="auto" selected>Auto</option>
-                <option value="manual">Manual</option>
-            </select>
-        </div>
-        <div class="form-group" id="morseWpmManualRow" style="display: none;">
-            <label>Manual Speed: <span id="morseWpmLabel">15</span> WPM</label>
-            <input type="range" id="morseWpm" value="15" min="5" max="50" step="1"
-                   oninput="MorseMode.updateWpmLabel(this.value)">
-        </div>
-        <div class="form-group checkbox-group">
-            <label><input type="checkbox" id="morseWpmLock"> Lock WPM Estimator</label>
-        </div>
-    </div>
+        <h3 style="cursor: pointer;" onclick="this.parentElement.querySelector('.morse-advanced').classList.toggle('collapsed')">
+            Advanced Settings <span class="morse-ref-toggle">(click to toggle)</span>
+        </h3>
+        <div class="morse-advanced collapsed">
+            <div id="morseToneFreqGroup">
+                <h4 class="morse-adv-heading">CW Detector</h4>
+                <div class="form-group">
+                    <label>Tone Frequency: <span id="morseToneFreqLabel">700</span> Hz</label>
+                    <input type="range" id="morseToneFreq" value="700" min="300" max="1200" step="10"
+                           oninput="MorseMode.updateToneLabel(this.value)">
+                    <span class="help-text morse-help-text">Starting point only; auto tracking follows the actual tone.</span>
+                </div>
+                <div class="form-group">
+                    <label>Bandwidth</label>
+                    <select id="morseBandwidth">
+                        <option value="50">50 Hz</option>
+                        <option value="100">100 Hz</option>
+                        <option value="200" selected>200 Hz</option>
+                        <option value="400">400 Hz</option>
+                    </select>
+                </div>
+                <div class="form-group checkbox-group">
+                    <label><input type="checkbox" id="morseAutoToneTrack" checked> Auto Tone Track</label>
+                    <label><input type="checkbox" id="morseToneLock"> Hold Tone Lock</label>
+                </div>
+            </div>
 
-    <div class="section">
-        <h3>Output</h3>
-        <div class="form-group checkbox-group">
-            <label><input type="checkbox" id="morseShowRaw" checked> Show Raw Morse</label>
-            <label><input type="checkbox" id="morseShowDiag"> Show Decoder Logs</label>
-        </div>
-        <div class="morse-actions-row">
-            <button class="btn btn-sm btn-ghost" id="morseCalibrateBtn" onclick="MorseMode.calibrate()">Reset / Calibrate</button>
+            <h4 class="morse-adv-heading">Threshold</h4>
+            <div class="form-group">
+                <label>Threshold Mode</label>
+                <select id="morseThresholdMode" onchange="MorseMode.onThresholdModeChange()">
+                    <option value="auto" selected>Auto</option>
+                    <option value="manual">Manual</option>
+                </select>
+            </div>
+            <div class="form-group" id="morseManualThresholdRow" style="display: none;">
+                <label>Manual Threshold</label>
+                <input type="number" id="morseManualThreshold" value="0" min="0" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>Minimum Signal Gate (0 = off)</label>
+                <input type="number" id="morseSignalGate" value="0" min="0" max="1" step="0.01">
+            </div>
+
+            <h4 class="morse-adv-heading">Speed</h4>
+            <div class="form-group">
+                <label>WPM Mode</label>
+                <select id="morseWpmMode" onchange="MorseMode.onWpmModeChange()">
+                    <option value="auto" selected>Auto</option>
+                    <option value="manual">Manual</option>
+                </select>
+            </div>
+            <div class="form-group" id="morseWpmManualRow" style="display: none;">
+                <label>Manual Speed: <span id="morseWpmLabel">15</span> WPM</label>
+                <input type="range" id="morseWpm" value="15" min="5" max="50" step="1"
+                       oninput="MorseMode.updateWpmLabel(this.value)">
+            </div>
+            <div class="form-group checkbox-group">
+                <label><input type="checkbox" id="morseWpmLock"> Lock WPM Estimator</label>
+            </div>
+
+            <h4 class="morse-adv-heading">Output</h4>
+            <div class="form-group checkbox-group">
+                <label><input type="checkbox" id="morseShowRaw" checked> Show Raw Morse</label>
+                <label><input type="checkbox" id="morseShowDiag"> Show Decoder Logs</label>
+            </div>
+            <div class="morse-actions-row">
+                <button class="btn btn-sm btn-ghost" id="morseCalibrateBtn" onclick="MorseMode.calibrate()">Reset / Calibrate</button>
+            </div>
         </div>
     </div>
 

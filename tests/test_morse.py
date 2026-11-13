@@ -12,6 +12,8 @@ import time
 import wave
 from collections import Counter
 
+import pytest
+
 import app as app_module
 import routes.morse as morse_routes
 from utils.morse import (
@@ -54,8 +56,20 @@ def generate_silence(duration: float, sample_rate: int = 8000) -> bytes:
     return b"\x00\x00" * n_samples
 
 
-def generate_morse_audio(text: str, wpm: int = 15, tone_freq: float = 700.0, sample_rate: int = 8000) -> bytes:
-    """Generate synthetic CW PCM for the given text."""
+def generate_morse_audio(
+    text: str,
+    wpm: int = 15,
+    tone_freq: float = 700.0,
+    sample_rate: int = 8000,
+    noise_rms: float = 0.0,
+    noise_seed: int = 1234,
+) -> bytes:
+    """Generate synthetic CW PCM for the given text.
+
+    noise_rms adds white Gaussian noise so tests exercise realistic audio:
+    with the 0.8 tone amplitude, noise_rms 0.05 is ~21 dB SNR and 0.15 is
+    ~12 dB. A decoder that only handles noise-free audio must fail here.
+    """
     dit_dur = 1.2 / wpm
     dah_dur = 3 * dit_dur
     element_gap = dit_dur
@@ -86,7 +100,17 @@ def generate_morse_audio(text: str, wpm: int = 15, tone_freq: float = 700.0, sam
             audio += generate_silence(word_gap, sample_rate)
 
     # Leading/trailing silence for threshold settling.
-    return generate_silence(0.3, sample_rate) + audio + generate_silence(0.3, sample_rate)
+    audio = generate_silence(0.3, sample_rate) + audio + generate_silence(0.3, sample_rate)
+
+    if noise_rms > 0.0:
+        import numpy as np
+
+        samples = np.frombuffer(audio, dtype=np.int16).astype(np.float64) / 32768.0
+        rng = np.random.default_rng(noise_seed)
+        samples = np.clip(samples + rng.normal(0.0, noise_rms, len(samples)), -1.0, 1.0)
+        audio = (samples * 32767.0).astype(np.int16).tobytes()
+
+    return audio
 
 
 def write_wav(path, pcm_bytes: bytes, sample_rate: int = 8000) -> None:
@@ -658,6 +682,22 @@ class TestMorseLifecycleRoutes:
         assert stop_resp.get_json()["status"] == "stopped"
         assert 1 in released_devices
 
+    def test_invalid_rtl_tcp_host_does_not_wedge_state(self, client):
+        """A 400 on rtl_tcp validation must leave the lifecycle idle so the
+        next start attempt is not refused with 409."""
+        _login_session(client)
+        self._reset_route_state()
+
+        resp = client.post(
+            "/morse/start",
+            json={"frequency": "14.060", "rtl_tcp_host": "bad host!", "rtl_tcp_port": 1234},
+        )
+        assert resp.status_code == 400
+
+        status = client.get("/morse/status").get_json()
+        assert status["state"] == "idle"
+        assert status["running"] is False
+
 
 # ---------------------------------------------------------------------------
 # Integration: synthetic CW -> WAV decode
@@ -665,14 +705,17 @@ class TestMorseLifecycleRoutes:
 
 
 class TestMorseIntegration:
-    def test_decode_morse_wav_contains_expected_phrase(self, tmp_path):
-        wav_path = tmp_path / "cq_test_123.wav"
-        pcm = generate_morse_audio("CQ TEST 123", wpm=15, tone_freq=700.0)
+    def _decode(self, tmp_path, pcm: bytes, **kwargs):
+        wav_path = tmp_path / "cw.wav"
         write_wav(wav_path, pcm, sample_rate=8000)
+        result = decode_morse_wav_file(wav_path, sample_rate=8000, **kwargs)
+        return " ".join(str(result.get("text", "")).split()), result
 
-        result = decode_morse_wav_file(
-            wav_path,
-            sample_rate=8000,
+    def test_decode_morse_wav_contains_expected_phrase(self, tmp_path):
+        pcm = generate_morse_audio("CQ TEST 123", wpm=15, tone_freq=700.0)
+        decoded, result = self._decode(
+            tmp_path,
+            pcm,
             tone_freq=700.0,
             wpm=15,
             bandwidth_hz=200,
@@ -682,9 +725,45 @@ class TestMorseIntegration:
             min_signal_gate=0.0,
         )
 
-        decoded = " ".join(str(result.get("text", "")).split())
         assert "CQ TEST 123" in decoded
 
         events = result.get("events", [])
         event_counts = Counter(e.get("type") for e in events)
         assert event_counts["morse_char"] >= len("CQTEST123")
+
+    @pytest.mark.parametrize("noise_rms", [0.02, 0.05, 0.1, 0.15])
+    def test_decodes_noisy_audio(self, tmp_path, noise_rms):
+        """Real audio always carries noise; 0.15 noise_rms is ~12 dB SNR."""
+        pcm = generate_morse_audio("CQ TEST 123", wpm=15, noise_rms=noise_rms)
+        decoded, _ = self._decode(tmp_path, pcm)
+        assert decoded == "CQ TEST 123"
+
+    @pytest.mark.parametrize("wpm", [25, 30])
+    def test_decodes_fast_cw_after_sync(self, tmp_path, wpm):
+        """Fast CW decodes once the speed estimator syncs; the first
+        character may garble while it locks on."""
+        pcm = generate_morse_audio("CQ TEST 123", wpm=wpm, noise_rms=0.02)
+        decoded, _ = self._decode(tmp_path, pcm)
+        assert decoded.endswith("Q TEST 123"), decoded
+
+    def test_decodes_mistuned_tone(self, tmp_path):
+        """Signal 50 Hz off the configured 700 Hz detector: auto tone
+        tracking must acquire it."""
+        pcm = generate_morse_audio("CQ TEST 123", wpm=18, tone_freq=650.0, noise_rms=0.05)
+        decoded, _ = self._decode(tmp_path, pcm)
+        assert decoded.endswith("Q TEST 123"), decoded
+
+    def test_long_message_correct_after_first_char(self, tmp_path):
+        msg = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG 0123456789"
+        pcm = generate_morse_audio(msg, wpm=20, noise_rms=0.05)
+        decoded, _ = self._decode(tmp_path, pcm)
+        assert decoded.endswith(msg[2:]), decoded
+
+    def test_pure_noise_decodes_almost_nothing(self, tmp_path):
+        import numpy as np
+
+        rng = np.random.default_rng(9)
+        samples = np.clip(rng.normal(0.0, 0.1, 8000 * 12), -1.0, 1.0)
+        pcm = (samples * 32767.0).astype(np.int16).tobytes()
+        decoded, _ = self._decode(tmp_path, pcm)
+        assert len(decoded.replace(" ", "")) <= 2, decoded
