@@ -9,9 +9,13 @@ VIS header structure:
     Break (1200 Hz, ~10ms)
     Leader tone (1900 Hz, ~300ms)
     Start bit (1200 Hz, 30ms)
-    8 data bits (1100 Hz = 1, 1300 Hz = 0, 30ms each)
+    7 data bits (1100 Hz = 1, 1300 Hz = 0, 30ms each, LSB first)
     Parity bit (even parity, 30ms)
     Stop bit (1200 Hz, 30ms)
+
+The code is 7 bits, not 8: reading an eighth "data" bit swallows the
+parity bit, shifts the stop bit into the parity slot, and hands the
+image decoder its audio one bit (30 ms) late — skewing every line.
 """
 
 from __future__ import annotations
@@ -349,7 +353,7 @@ class VISDetector:
                 self._tone_counter = 0
                 self._bit_accumulator = []
 
-                if len(self._data_bits) == 8:
+                if len(self._data_bits) == 7:
                     self._state = VISState.PARITY
 
         elif self._state == VISState.PARITY:
@@ -437,7 +441,7 @@ class VISDetector:
         Returns:
             (vis_code, mode_name) or None if validation fails.
         """
-        if len(self._data_bits) != 8:
+        if len(self._data_bits) != 7:
             return None
 
         parity_ok = (sum(self._data_bits) + self._parity_bit) % 2 == 0
@@ -457,7 +461,7 @@ class VISDetector:
             return vis_code, mode_name
 
         # Case 2: one data bit is wrong — try flipping each
-        for flip in range(8):
+        for flip in range(7):
             corrected = vis_code ^ (1 << flip)
             # Flipping one data bit should fix parity too
             corrected_parity_ok = (bin(corrected).count("1") + self._parity_bit) % 2 == 0

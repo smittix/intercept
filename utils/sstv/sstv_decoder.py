@@ -30,7 +30,7 @@ from utils.doppler import DopplerInfo, DopplerTracker  # noqa: F401
 from utils.logging import get_logger
 
 from .constants import ISS_SSTV_FREQ, SAMPLE_RATE
-from .dsp import goertzel_mag, normalize_audio
+from .dsp import StreamingBandpass, goertzel_mag, normalize_audio
 from .image_decoder import SSTVImageDecoder
 from .modes import get_mode
 from .vis import VISDetector
@@ -328,6 +328,7 @@ class SSTVDecoder:
         """
         chunk_bytes = SAMPLE_RATE // 10 * 2  # 100ms of int16 = 9600 bytes
         vis_detector = VISDetector(sample_rate=SAMPLE_RATE)
+        bandpass = StreamingBandpass(sample_rate=SAMPLE_RATE)
         image_decoder: SSTVImageDecoder | None = None
         current_mode_name: str | None = None
         chunk_counter = 0
@@ -366,7 +367,7 @@ class SSTVDecoder:
                 if n_samples == 0:
                     continue
                 raw_samples = np.frombuffer(raw_data[: n_samples * 2], dtype=np.int16)
-                samples = normalize_audio(raw_samples)
+                samples = bandpass.process(normalize_audio(raw_samples))
 
                 chunk_counter += 1
 
@@ -807,6 +808,9 @@ class SSTVDecoder:
             # Resample if needed
             if file_sample_rate != SAMPLE_RATE:
                 audio = self._resample(audio, file_sample_rate, SAMPLE_RATE)
+
+            # Same bandpass as the live pipeline (see StreamingBandpass)
+            audio = StreamingBandpass(sample_rate=SAMPLE_RATE).process(audio)
 
             # Process through VIS detector + image decoder
             vis_detector = VISDetector(sample_rate=SAMPLE_RATE)

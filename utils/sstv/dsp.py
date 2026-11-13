@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
-from scipy.signal import lfilter
+from scipy.signal import firwin, lfilter
 
 from .constants import (
     FREQ_PIXEL_HIGH,
@@ -229,6 +229,50 @@ def goertzel_batch(audio_matrix: np.ndarray, frequencies: np.ndarray, sample_rat
         s1 = s0
 
     return s1 * s1 + s2 * s2 - coeff * s1 * s2
+
+
+class StreamingBandpass:
+    """Linear-phase FIR bandpass applied statefully across chunks.
+
+    rtl_fm's SSB output carries noise across the full output bandwidth
+    (24 kHz at 48 kS/s) while all SSTV tones live between 1100 and
+    2300 Hz (±250 Hz tuning offset). The instantaneous-frequency pixel
+    demodulator reads the spectral centroid of whatever it is given, so
+    unfiltered wideband noise drags every pixel toward white even when
+    the narrowband Goertzel VIS detector hears the signal clearly.
+    Linear phase keeps sync-to-pixel timing exact; the constant group
+    delay is harmless because VIS detection and pixel decoding happen
+    on the same delayed stream.
+    """
+
+    def __init__(
+        self,
+        sample_rate: int = SAMPLE_RATE,
+        low_hz: float = 400.0,
+        high_hz: float = 3000.0,
+        num_taps: int = 257,
+    ):
+        self._taps = firwin(num_taps, [low_hz, high_hz], pass_zero=False, fs=sample_rate)
+        self._zi = np.zeros(num_taps - 1, dtype=np.float64)
+        # Discard the group delay so the filtered stream stays time-aligned
+        # with the input: otherwise the tail of the VIS stop bit (1200 Hz)
+        # leaks past the handover point and merges with the first sync pulse.
+        self._to_drop = (num_taps - 1) // 2
+
+    def process(self, samples: np.ndarray) -> np.ndarray:
+        """Filter one chunk, carrying filter state to the next call."""
+        if len(samples) == 0:
+            return samples
+        out, self._zi = lfilter(self._taps, (1.0,), samples, zi=self._zi)
+        if self._to_drop:
+            k = min(self._to_drop, len(out))
+            out = out[k:]
+            self._to_drop -= k
+        return out
+
+    def flush(self) -> np.ndarray:
+        """Push out the samples still inside the filter (file decoding)."""
+        return self.process(np.zeros((len(self._taps) - 1) // 2, dtype=np.float64))
 
 
 def normalize_audio(raw: np.ndarray) -> np.ndarray:
