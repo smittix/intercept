@@ -225,9 +225,11 @@ class MorseDecoder:
         self._block_duration = self._block_size / float(self.sample_rate)
 
         self._active_tone_freq = float(_clamp(self.tone_freq, 300.0, 1200.0))
-        self._tone_anchor_freq = self._active_tone_freq
-        self._tone_scan_range_hz = 240.0
-        self._tone_scan_step_hz = 10.0
+        # Audio band searched for a CW beat note. Wide on purpose: a TX a
+        # kHz or two off the dial still lands in the USB passband, and the
+        # tracker should find it rather than decode key-click splatter.
+        self._tone_scan_lo_hz = 300.0
+        self._tone_scan_hi_hz = min(2900.0, 0.45 * self.sample_rate)
         self._tone_scan_interval_blocks = 8
 
         if self.detect_mode == "envelope":
@@ -237,12 +239,12 @@ class MorseDecoder:
         else:
             self._detector = GoertzelFilter(self._active_tone_freq, self.sample_rate, self._block_size)
             self._noise_detector_low = GoertzelFilter(
-                _clamp(self._active_tone_freq - max(150.0, self.bandwidth_hz), 150.0, 2000.0),
+                _clamp(self._active_tone_freq - max(150.0, self.bandwidth_hz), 150.0, 3400.0),
                 self.sample_rate,
                 self._block_size,
             )
             self._noise_detector_high = GoertzelFilter(
-                _clamp(self._active_tone_freq + max(150.0, self.bandwidth_hz), 150.0, 2000.0),
+                _clamp(self._active_tone_freq + max(150.0, self.bandwidth_hz), 150.0, 3400.0),
                 self.sample_rate,
                 self._block_size,
             )
@@ -263,7 +265,10 @@ class MorseDecoder:
         # signal; split EMAs on pure noise settle near a 2.3x ratio.
         self._min_contrast = 3.0
         # Goertzel squelch: tone bin must beat the adjacent bins by this.
-        self._snr_qualifier = 2.0
+        # 1.5 tolerates the splatter of strong/clipped signals (seen on-air:
+        # a local TX raised the adjacent bins enough that 2.0 chopped real
+        # marks) while the contrast gate still keeps pure noise silent.
+        self._snr_qualifier = 1.5
 
         # Smoothed level for scope/metrics display only.
         self._env_alpha = 0.5
@@ -275,7 +280,10 @@ class MorseDecoder:
         dit_sec = 1.2 / max(self.wpm, 1)
         dit_blocks = max(1.0, dit_sec / self._block_duration)
         self._dah_threshold = 2.2 * dit_blocks
-        self._dit_min = 0.38 * dit_blocks
+        # 20 ms absolute floor: a 50 WPM dit is 24 ms, anything shorter is
+        # a key click or noise blip, not keying.
+        self._min_element_blocks = max(1.0, 0.02 / self._block_duration)
+        self._dit_min = max(self._min_element_blocks, 0.38 * dit_blocks)
         if self.detect_mode == "envelope":
             # Tighter gaps for OOK — clean binary transitions tolerate this.
             self._char_gap = 2.0 * dit_blocks
@@ -344,12 +352,12 @@ class MorseDecoder:
         self._detector = GoertzelFilter(self._active_tone_freq, self.sample_rate, self._block_size)
         ref_offset = max(150.0, self.bandwidth_hz)
         self._noise_detector_low = GoertzelFilter(
-            _clamp(self._active_tone_freq - ref_offset, 150.0, 2000.0),
+            _clamp(self._active_tone_freq - ref_offset, 150.0, 3400.0),
             self.sample_rate,
             self._block_size,
         )
         self._noise_detector_high = GoertzelFilter(
-            _clamp(self._active_tone_freq + ref_offset, 150.0, 2000.0),
+            _clamp(self._active_tone_freq + ref_offset, 150.0, 3400.0),
             self.sample_rate,
             self._block_size,
         )
@@ -360,30 +368,24 @@ class MorseDecoder:
         signal_mag: float,
         noise_ref: float,
     ) -> bool:
-        """Track dominant CW tone in a local window when a valid tone is present.
+        """Track the dominant CW tone anywhere in the audio passband.
 
         Returns True when the detector frequency changed.
         """
         if not self.auto_tone_track or self.tone_lock:
             return False
-
-        # Scan around the configured tone (not the active one), so the
-        # detector can always find its way back to a signal near the anchor.
-        lo = _clamp(self._tone_anchor_freq - self._tone_scan_range_hz, 300.0, 1200.0)
-        hi = _clamp(self._tone_anchor_freq + self._tone_scan_range_hz, 300.0, 1200.0)
-        if hi <= lo:
+        if self._tone_scan_hi_hz <= self._tone_scan_lo_hz:
             return False
 
-        best_freq = self._active_tone_freq
-        best_mag = float(signal_mag)
-
-        freq = lo
-        while freq <= hi + 1e-6:
-            mag = _goertzel_mag(normalized, freq, self.sample_rate)
-            if mag > best_mag:
-                best_mag = mag
-                best_freq = freq
-            freq += self._tone_scan_step_hz
+        # Coarse FFT peak over the whole band (one vectorized op), then a
+        # Goertzel confirmation at that frequency in the detector's scale.
+        spec = np.abs(np.fft.rfft(normalized, n=4096))
+        freqs = np.fft.rfftfreq(4096, 1.0 / self.sample_rate)
+        band = (freqs >= self._tone_scan_lo_hz) & (freqs <= self._tone_scan_hi_hz)
+        if not np.any(band):
+            return False
+        best_freq = float(freqs[band][int(np.argmax(spec[band]))])
+        best_mag = float(_goertzel_mag(normalized, best_freq, self.sample_rate))
 
         # Retune only on a clear tone: it must beat the current bin
         # meaningfully, stand well above the adjacent-bin noise, and be at
@@ -402,12 +404,7 @@ class MorseDecoder:
             # Smooth and cap per-step movement to avoid jumps on noisy windows.
             delta = _clamp(best_freq - self._active_tone_freq, -60.0, 60.0)
             smoothed = self._active_tone_freq + (0.35 * delta)
-        # Do not drift too far from the configured tone unless the user retunes.
-        smoothed = _clamp(
-            smoothed,
-            max(300.0, self._tone_anchor_freq - 240.0),
-            min(1200.0, self._tone_anchor_freq + 240.0),
-        )
+        smoothed = _clamp(smoothed, self._tone_scan_lo_hz, self._tone_scan_hi_hz)
 
         if abs(smoothed - self._active_tone_freq) >= 2.5:
             self._active_tone_freq = smoothed
@@ -443,6 +440,9 @@ class MorseDecoder:
             return
         if blocks > (0.45 / self._block_duration):
             # Far longer than any supported dit (0.24 s at 5 WPM): skip.
+            return
+        if blocks < self._min_element_blocks:
+            # Shorter than any supported dit: a click, not keying.
             return
         self._dit_observations.append(float(blocks))
 
@@ -550,7 +550,7 @@ class MorseDecoder:
 
             dit_blocks = self._effective_dit_blocks()
             self._dah_threshold = 2.2 * dit_blocks
-            self._dit_min = max(1.0, 0.38 * dit_blocks)
+            self._dit_min = max(self._min_element_blocks, 0.38 * dit_blocks)
             # Bridge dropouts up to ~30 ms, never a real inter-element gap.
             self._dropout_tolerance = max(1.0, min(0.45 * dit_blocks, 0.03 / self._block_duration))
             if self.detect_mode == "envelope":

@@ -843,6 +843,14 @@ class TestMorseIntegration:
         decoded, _ = self._decode(tmp_path, pcm)
         assert decoded.endswith("Q TEST 123"), decoded
 
+    def test_decodes_tone_far_from_anchor(self, tmp_path):
+        """A TX ~1.5 kHz off the dial beats far outside the configured
+        700 Hz tone (seen on-air at 2.27 kHz); acquisition must cover the
+        whole audio passband, not just a window around the anchor."""
+        pcm = generate_morse_audio("CQ TEST 123", wpm=18, tone_freq=2200.0, noise_rms=0.02)
+        decoded, _ = self._decode(tmp_path, pcm)
+        assert decoded.endswith("Q TEST 123"), decoded
+
     def test_long_message_correct_after_first_char(self, tmp_path):
         msg = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG 0123456789"
         pcm = generate_morse_audio(msg, wpm=20, noise_rms=0.05)
