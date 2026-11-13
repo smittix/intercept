@@ -13,7 +13,8 @@ class TestSweepPeaksRoute:
             resp = client.get("/subghz/sweep/peaks")
         assert resp.status_code == 200
         body = resp.get_json()
-        assert body["peaks"] == [{"freq": 315.0, "power": -55.5}, {"freq": 433.92, "power": -40.0}]
+        # strongest first, so a reader that sees only the top of the list still sees the best signal
+        assert body["peaks"] == [{"freq": 433.92, "power": -40.0}, {"freq": 315.0, "power": -55.5}]
         assert body["count"] == 2
 
     def test_empty_when_no_sweep_has_run(self, client):
