@@ -190,7 +190,7 @@ Each signal type has its own Flask blueprint:
   `tests/test_mode_registry.py` enforces registry/asset consistency.
 
 ### Docker
-- `Dockerfile` - Single-stage build with all SDR tools compiled from source (dump1090, AIS-catcher, slowrx, SatDump, etc.). CMD runs `start.sh` (gunicorn + gevent)
+- `Dockerfile` - Single-stage build with all SDR tools compiled from source (dump1090, AIS-catcher, SatDump, etc.). CMD runs `start.sh` (gunicorn + gevent)
 - `docker-compose.yml` - Two profiles: `basic` (standalone) and `history` (with Postgres for ADS-B)
 - `build-multiarch.sh` - Multi-arch build script for amd64 + arm64 (RPi5)
 - Data persisted via `./data:/app/data` volume mount

@@ -220,15 +220,19 @@ class MorseDecoder:
         self.wpm_lock = bool(wpm_lock)
         self.min_signal_gate = float(_clamp(float(min_signal_gate), 0.0, 1.0))
 
-        # ~50 analysis windows/s at 8 kHz keeps CPU low and timing stable.
-        self._block_size = max(64, self.sample_rate // 50)
+        # 10 ms analysis windows: fine enough to time 30+ WPM elements.
+        self._block_size = max(64, self.sample_rate // 100)
         self._block_duration = self._block_size / float(self.sample_rate)
 
         self._active_tone_freq = float(_clamp(self.tone_freq, 300.0, 1200.0))
-        self._tone_anchor_freq = self._active_tone_freq
-        self._tone_scan_range_hz = 180.0
-        self._tone_scan_step_hz = 10.0
-        self._tone_scan_interval_blocks = 8
+        # Audio band searched for a CW beat note. Wide on purpose: a TX a
+        # kHz or two off the dial still lands in the USB passband, and the
+        # tracker should find it rather than decode key-click splatter.
+        self._tone_scan_lo_hz = 300.0
+        self._tone_scan_hi_hz = min(2900.0, 0.45 * self.sample_rate)
+        self._scan_candidate_freq = 0.0
+        self._scan_candidate_block = 0
+        self._tone_scan_interval_blocks = 4
 
         if self.detect_mode == "envelope":
             self._detector = EnvelopeDetector(self._block_size)
@@ -237,50 +241,51 @@ class MorseDecoder:
         else:
             self._detector = GoertzelFilter(self._active_tone_freq, self.sample_rate, self._block_size)
             self._noise_detector_low = GoertzelFilter(
-                _clamp(self._active_tone_freq - max(150.0, self.bandwidth_hz), 150.0, 2000.0),
+                _clamp(self._active_tone_freq - max(150.0, self.bandwidth_hz), 150.0, 3400.0),
                 self.sample_rate,
                 self._block_size,
             )
             self._noise_detector_high = GoertzelFilter(
-                _clamp(self._active_tone_freq + max(150.0, self.bandwidth_hz), 150.0, 2000.0),
+                _clamp(self._active_tone_freq + max(150.0, self.bandwidth_hz), 150.0, 3400.0),
                 self.sample_rate,
                 self._block_size,
             )
 
-        # AGC for weak HF/direct-sampling signals.
-        self._agc_target = 0.22
-        self._agc_gain = 1.0
-        self._agc_alpha = 0.06
-
-        # Envelope smoothing.
-        # OOK has clean binary transitions; use symmetric fast alpha.
-        # HF CW has gradual fading (QSB); use asymmetric slower release.
-        if self.detect_mode == "envelope":
-            self._attack_alpha = 0.55
-            self._release_alpha = 0.55
-        else:
-            self._attack_alpha = 0.55
-            self._release_alpha = 0.45
-        self._envelope = 0.0
-
-        # Adaptive threshold model.
+        # Mark/space level model: split EMAs of the per-block detector
+        # magnitude. Blocks above the midpoint feed the signal peak, blocks
+        # below feed the noise floor, and the on/off thresholds sit between
+        # the two — detection is relative, so no AGC is needed.
+        self._levels_primed = False
         self._noise_floor = 0.0
         self._signal_peak = 0.0
         self._threshold = 0.0
-        self._hysteresis = 0.12
+        self._split_alpha = 0.12
+        self._peak_decay = 0.002
+        self._on_fraction = 0.55
+        self._off_fraction = 0.35
+        # Peak must exceed floor by this factor before anything counts as
+        # signal; split EMAs on pure noise settle near a 2.3x ratio.
+        self._min_contrast = 3.0
+        # Goertzel squelch: tone bin must beat the adjacent bins by this.
+        # 1.5 tolerates the splatter of strong/clipped signals (seen on-air:
+        # a local TX raised the adjacent bins enough that 2.0 chopped real
+        # marks) while the contrast gate still keeps pure noise silent.
+        self._snr_qualifier = 1.5
 
-        # Warm-up bootstrap.
-        self._WARMUP_BLOCKS = 16
-        self._SETTLE_BLOCKS = 140
-        self._mag_min = float("inf")
-        self._mag_max = 0.0
+        # Smoothed level for scope/metrics display only.
+        self._env_alpha = 0.5
+        self._envelope = 0.0
+
         self._blocks_processed = 0
 
         # Timing model (in block units, kept for backward compatibility with tests).
         dit_sec = 1.2 / max(self.wpm, 1)
         dit_blocks = max(1.0, dit_sec / self._block_duration)
         self._dah_threshold = 2.2 * dit_blocks
-        self._dit_min = 0.38 * dit_blocks
+        # 20 ms absolute floor: a 50 WPM dit is 24 ms, anything shorter is
+        # a key click or noise blip, not keying.
+        self._min_element_blocks = max(1.0, 0.02 / self._block_duration)
+        self._dit_min = max(self._min_element_blocks, 0.38 * dit_blocks)
         if self.detect_mode == "envelope":
             # Tighter gaps for OOK — clean binary transitions tolerate this.
             self._char_gap = 2.0 * dit_blocks
@@ -296,11 +301,13 @@ class MorseDecoder:
         self._tone_blocks = 0.0
         self._silence_blocks = 0.0
         self._current_symbol = ""
+        self._space_pending = False
         self._pending_buffer: list[int] = []
 
-        # Dropout tolerance: bridge brief signal dropouts mid-element (~40ms).
+        # Dropout tolerance: bridge brief dropouts mid-element, scaled to the
+        # dit estimate so fast CW's inter-element gaps are not swallowed.
         self._dropout_blocks: float = 0.0
-        self._dropout_tolerance: float = 2.0
+        self._dropout_tolerance: float = max(1.0, min(0.45 * dit_blocks, 0.03 / self._block_duration))
 
         # Output / diagnostics.
         self._last_level = 0.0
@@ -308,18 +315,19 @@ class MorseDecoder:
 
     def reset_calibration(self) -> None:
         """Reset adaptive threshold and timing estimator state."""
+        self._levels_primed = False
         self._noise_floor = 0.0
         self._signal_peak = 0.0
         self._threshold = 0.0
-        self._mag_min = float("inf")
-        self._mag_max = 0.0
         self._blocks_processed = 0
         self._dit_observations.clear()
         self._estimated_wpm = float(self.wpm)
         self._tone_on = False
         self._tone_blocks = 0.0
         self._silence_blocks = 0.0
+        self._dropout_blocks = 0.0
         self._current_symbol = ""
+        self._space_pending = False
 
     def get_metrics(self) -> dict[str, float | bool]:
         """Return latest decoder metrics for UI/status messages."""
@@ -336,16 +344,9 @@ class MorseDecoder:
         if self.detect_mode == "envelope":
             metrics["snr"] = 0.0
             metrics["noise_ref"] = 0.0
-            metrics["snr_on"] = 0.0
-            metrics["snr_off"] = 0.0
         else:
-            snr_mult = max(1.15, self.threshold_multiplier * 0.5)
-            snr_on = snr_mult * (1.0 + self._hysteresis)
-            snr_off = snr_mult * (1.0 - self._hysteresis)
-            metrics["snr"] = float(self._last_level / max(self._noise_floor, 1e-6))
-            metrics["noise_ref"] = float(self._noise_floor)
-            metrics["snr_on"] = float(snr_on)
-            metrics["snr_off"] = float(snr_off)
+            metrics["snr"] = float(self._last_level / max(self._last_noise_ref, 1e-6))
+            metrics["noise_ref"] = float(self._last_noise_ref)
         return metrics
 
     def _rebuild_detectors(self) -> None:
@@ -355,12 +356,12 @@ class MorseDecoder:
         self._detector = GoertzelFilter(self._active_tone_freq, self.sample_rate, self._block_size)
         ref_offset = max(150.0, self.bandwidth_hz)
         self._noise_detector_low = GoertzelFilter(
-            _clamp(self._active_tone_freq - ref_offset, 150.0, 2000.0),
+            _clamp(self._active_tone_freq - ref_offset, 150.0, 3400.0),
             self.sample_rate,
             self._block_size,
         )
         self._noise_detector_high = GoertzelFilter(
-            _clamp(self._active_tone_freq + ref_offset, 150.0, 2000.0),
+            _clamp(self._active_tone_freq + ref_offset, 150.0, 3400.0),
             self.sample_rate,
             self._block_size,
         )
@@ -371,46 +372,66 @@ class MorseDecoder:
         signal_mag: float,
         noise_ref: float,
     ) -> bool:
-        """Track dominant CW tone in a local window when a valid tone is present.
+        """Track the dominant CW tone anywhere in the audio passband.
 
         Returns True when the detector frequency changed.
         """
         if not self.auto_tone_track or self.tone_lock:
             return False
-
-        # Skip retunes when the detector is mostly seeing noise.
-        if signal_mag <= max(noise_ref * 1.8, 0.02):
+        if self._tone_scan_hi_hz <= self._tone_scan_lo_hz:
             return False
 
-        lo = _clamp(self._active_tone_freq - self._tone_scan_range_hz, 300.0, 1200.0)
-        hi = _clamp(self._active_tone_freq + self._tone_scan_range_hz, 300.0, 1200.0)
-        if hi <= lo:
+        # Coarse FFT peak over the whole band (one vectorized op), then a
+        # Goertzel confirmation at that frequency in the detector's scale.
+        spec = np.abs(np.fft.rfft(normalized, n=4096))
+        freqs = np.fft.rfftfreq(4096, 1.0 / self.sample_rate)
+        band = (freqs >= self._tone_scan_lo_hz) & (freqs <= self._tone_scan_hi_hz)
+        if not np.any(band):
+            return False
+        best_freq = float(freqs[band][int(np.argmax(spec[band]))])
+
+        best_mag = float(_goertzel_mag(normalized, best_freq, self.sample_rate))
+
+        # Energy gates come first: the peak must beat the current bin
+        # meaningfully, stand well above the adjacent-bin noise, and be at
+        # mark level. A scan that lands in an inter-element gap fails here
+        # and must not disturb the acquisition candidate below, or lock-on
+        # waits for two consecutive scans inside one mark (only dahs are
+        # long enough) and the first word of every transmission garbles.
+        if (
+            best_mag <= (signal_mag * 1.12)
+            or best_mag <= (noise_ref * self._snr_qualifier)
+            or best_mag < (0.5 * self._signal_peak)
+        ):
             return False
 
-        best_freq = self._active_tone_freq
-        best_mag = float(signal_mag)
-
-        freq = lo
-        while freq <= hi + 1e-6:
-            mag = _goertzel_mag(normalized, freq, self.sample_rate)
-            if mag > best_mag:
-                best_mag = mag
-                best_freq = freq
-            freq += self._tone_scan_step_hz
-
-        # Require a meaningful improvement before moving off the current tone.
-        if best_mag <= (signal_mag * 1.12):
+        # A real CW mark towers over its own spectral neighborhood; a band
+        # noise maximum barely clears it. Without this gate the tracker
+        # chases noise peaks on idle channels and mints phantom characters.
+        side_lo = float(_goertzel_mag(normalized, max(150.0, best_freq - 250.0), self.sample_rate))
+        side_hi = float(_goertzel_mag(normalized, min(3400.0, best_freq + 250.0), self.sample_rate))
+        if best_mag < 3.0 * max(1e-9, 0.5 * (side_lo + side_hi)):
             return False
 
-        # Smooth and cap per-step movement to avoid jumps on noisy windows.
-        delta = _clamp(best_freq - self._active_tone_freq, -30.0, 30.0)
-        smoothed = self._active_tone_freq + (0.35 * delta)
-        # Do not drift too far from the configured tone unless the user retunes.
-        smoothed = _clamp(
-            smoothed,
-            max(300.0, self._tone_anchor_freq - 240.0),
-            min(1200.0, self._tone_anchor_freq + 240.0),
-        )
+        # A real tone puts the peak at the same frequency on consecutive
+        # mark-level scans; noise and key clicks put their maximum somewhere
+        # new each time. Require two recent agreeing scans before retuning,
+        # or the tracker hops across noise maxima and mints phantom dits.
+        candidate = self._scan_candidate_freq
+        candidate_age = self._blocks_processed - self._scan_candidate_block
+        self._scan_candidate_freq = best_freq
+        self._scan_candidate_block = self._blocks_processed
+        if abs(best_freq - candidate) > 60.0 or candidate_age > 100:
+            return False
+
+        if best_mag >= (signal_mag * 2.0):
+            # Current bin is clearly mistuned: jump straight to the tone.
+            smoothed = best_freq
+        else:
+            # Smooth and cap per-step movement to avoid jumps on noisy windows.
+            delta = _clamp(best_freq - self._active_tone_freq, -60.0, 60.0)
+            smoothed = self._active_tone_freq + (0.35 * delta)
+        smoothed = _clamp(smoothed, self._tone_scan_lo_hz, self._tone_scan_hi_hz)
 
         if abs(smoothed - self._active_tone_freq) >= 2.5:
             self._active_tone_freq = smoothed
@@ -428,8 +449,18 @@ class MorseDecoder:
 
         if self._dit_observations:
             ordered = sorted(self._dit_observations)
-            mid = ordered[len(ordered) // 2]
-            dit_blocks = max(1.0, float(mid))
+            # Observations mix dit and dah durations. Cluster around the
+            # shortest reliable sample: when fading eats the dits, a plain
+            # quartile lands on dah durations and triples the estimate,
+            # which stretches the gap thresholds until no character ever
+            # terminates. The 20 ms element floor keeps the anchor honest,
+            # and anchoring at the ~12th percentile tolerates one stray
+            # fragment of a chopped element.
+            anchor = float(ordered[len(ordered) // 8])
+            lows = [o for o in ordered if o <= 2.0 * anchor]
+            # Lower quartile of the cluster: stretched (Farnsworth) gaps
+            # land in the cluster too and would drag a median upward.
+            dit_blocks = max(1.0, float(lows[len(lows) // 4]))
             est_wpm = 1.2 / (dit_blocks * self._block_duration)
             self._estimated_wpm = _clamp(est_wpm, 5.0, 60.0)
             return dit_blocks
@@ -438,14 +469,57 @@ class MorseDecoder:
         return max(1.0, (1.2 / max(self.wpm, 1)) / self._block_duration)
 
     def _record_dit_candidate(self, blocks: float) -> None:
-        """Feed a possible dit duration into the estimator."""
+        """Feed a tone/gap duration into the dit estimator."""
         if blocks <= 0:
             return
         if self.wpm_mode == "manual" or self.wpm_lock:
             return
-        if blocks > 20:
+        if blocks > (0.45 / self._block_duration):
+            # Far longer than any supported dit (0.24 s at 5 WPM): skip.
+            return
+        if blocks < self._min_element_blocks:
+            # Shorter than any supported dit: a click, not keying.
             return
         self._dit_observations.append(float(blocks))
+
+    def _detect_tone(self, mag: float, noise_ref: float) -> bool:
+        """Update the mark/space level model and classify this block."""
+        if not self._levels_primed:
+            self._levels_primed = True
+            self._noise_floor = mag
+            self._signal_peak = mag
+        else:
+            midpoint = self._noise_floor + 0.5 * (self._signal_peak - self._noise_floor)
+            if mag > midpoint:
+                self._signal_peak += self._split_alpha * (mag - self._signal_peak)
+            else:
+                self._noise_floor += self._split_alpha * (mag - self._noise_floor)
+            # Slow droop so the detector re-arms after a signal disappears
+            # or fades, instead of holding a stale peak forever.
+            self._signal_peak += self._peak_decay * (self._noise_floor - self._signal_peak)
+            if self._signal_peak < self._noise_floor:
+                self._signal_peak = self._noise_floor
+
+        span = max(0.0, self._signal_peak - self._noise_floor)
+        manual = self.threshold_mode == "manual" and self.manual_threshold > 0.0
+        if manual:
+            on_level = self.manual_threshold * 1.1
+            off_level = self.manual_threshold * 0.9
+        else:
+            on_level = self._noise_floor + self._on_fraction * span
+            off_level = self._noise_floor + self._off_fraction * span
+        self._threshold = on_level
+
+        # Without real mark/space contrast there is only noise: stay silent.
+        if not manual and self._signal_peak <= (self._noise_floor * self._min_contrast + 1e-4):
+            return False
+
+        tone = mag >= (off_level if self._tone_on else on_level)
+        if tone and self.detect_mode == "goertzel":
+            tone = mag >= noise_ref * self._snr_qualifier
+        if tone and self.min_signal_gate > 0.0:
+            tone = mag >= (self._noise_floor + self.min_signal_gate * span)
+        return tone
 
     def _decode_symbol(self, symbol: str, timestamp: str) -> dict[str, Any] | None:
         char = MORSE_TABLE.get(symbol)
@@ -457,6 +531,22 @@ class MorseDecoder:
             "morse": symbol,
             "timestamp": timestamp,
         }
+
+    def _finish_symbol(self, timestamp: str) -> dict[str, Any]:
+        """Close the pending symbol, emitting '*' when the pattern is
+        unreadable — dropped copy must be visible, not silent."""
+        symbol = self._current_symbol
+        self._current_symbol = ""
+        self._space_pending = True
+        decoded = self._decode_symbol(symbol, timestamp)
+        if decoded is None:
+            decoded = {
+                "type": "morse_char",
+                "char": "*",
+                "morse": symbol,
+                "timestamp": timestamp,
+            }
+        return decoded
 
     def process_block(self, pcm_bytes: bytes) -> list[dict[str, Any]]:
         """Process PCM bytes and return decode/scope events."""
@@ -476,150 +566,45 @@ class MorseDecoder:
         n_used = n_blocks * self._block_size
         self._pending_buffer = pending[n_used:].tolist()
         blocks = pending[:n_used].reshape(n_blocks, self._block_size) / 32768.0
-        block_rms = np.sqrt(np.mean(np.square(blocks), axis=1)).tolist()
 
         amplitudes: list[float] = []
 
-        for block, rms in zip(blocks, block_rms):
-            # AGC
-            if rms > 1e-7:
-                desired_gain = self._agc_target / rms
-                self._agc_gain += self._agc_alpha * (desired_gain - self._agc_gain)
-                self._agc_gain = _clamp(self._agc_gain, 0.2, 450.0)
-            normalized = block * self._agc_gain
-
+        for block in blocks:
             self._blocks_processed += 1
 
-            mag = self._detector.magnitude(normalized)
+            mag = float(self._detector.magnitude(block))
 
-            if self.detect_mode == "envelope":
-                # Envelope mode: direct magnitude threshold, no noise detectors
-                noise_ref = 0.0
-                level = float(mag)
-                alpha = self._attack_alpha if level >= self._envelope else self._release_alpha
-                self._envelope += alpha * (level - self._envelope)
-                self._last_level = self._envelope
-                self._last_noise_ref = 0.0
-                amplitudes.append(level)
-
-                if self._blocks_processed <= self._WARMUP_BLOCKS:
-                    self._mag_min = min(self._mag_min, level)
-                    self._mag_max = max(self._mag_max, level)
-                    if self._blocks_processed == self._WARMUP_BLOCKS:
-                        self._noise_floor = self._mag_min if math.isfinite(self._mag_min) else 0.0
-                        if self._mag_max <= (self._noise_floor * 1.2):
-                            self._signal_peak = max(self._noise_floor + 0.5, self._noise_floor * 2.5)
-                        else:
-                            self._signal_peak = max(self._mag_max, self._noise_floor * 1.8)
-                        self._threshold = self._noise_floor + 0.22 * (self._signal_peak - self._noise_floor)
-                    tone_detected = False
-                else:
-                    settle_alpha = (
-                        0.30 if self._blocks_processed < (self._WARMUP_BLOCKS + self._SETTLE_BLOCKS) else 0.06
-                    )
-                    if level <= self._threshold:
-                        self._noise_floor += settle_alpha * (level - self._noise_floor)
-                    else:
-                        self._signal_peak += settle_alpha * (level - self._signal_peak)
-                    self._signal_peak = max(self._signal_peak, self._noise_floor * 1.05)
-
-                    if self.threshold_mode == "manual":
-                        self._threshold = max(0.0, self.manual_threshold)
-                    else:
-                        self._threshold = (
-                            max(0.0, self._noise_floor * self.threshold_multiplier) + self.threshold_offset
-                        )
-                        self._threshold = max(self._threshold, self._noise_floor + 0.35)
-
-                    dynamic_span = max(0.0, self._signal_peak - self._noise_floor)
-                    gate_level = self._noise_floor + (self.min_signal_gate * dynamic_span)
-                    gate_ok = self.min_signal_gate <= 0.0 or level >= gate_level
-
-                    # Direct magnitude threshold with hysteresis (no SNR)
-                    if self._tone_on:
-                        tone_detected = gate_ok and level >= (self._threshold * (1.0 - self._hysteresis))
-                    else:
-                        tone_detected = gate_ok and level >= (self._threshold * (1.0 + self._hysteresis))
-            else:
-                # Goertzel mode: SNR-based tone detection with noise reference
-                noise_low = self._noise_detector_low.magnitude(normalized)
-                noise_high = self._noise_detector_high.magnitude(normalized)
+            if self.detect_mode == "goertzel":
+                noise_low = self._noise_detector_low.magnitude(block)
+                noise_high = self._noise_detector_high.magnitude(block)
                 noise_ref = max(1e-9, (noise_low + noise_high) * 0.5)
 
                 if (
                     self.auto_tone_track
                     and not self.tone_lock
-                    and self._blocks_processed > self._WARMUP_BLOCKS
                     and (self._blocks_processed % self._tone_scan_interval_blocks == 0)
-                    and self._estimate_tone_frequency(normalized, mag, noise_ref)
+                    and self._estimate_tone_frequency(block, mag, noise_ref)
                 ):
                     # Detector changed; refresh magnitudes for this window.
-                    mag = self._detector.magnitude(normalized)
-                    noise_low = self._noise_detector_low.magnitude(normalized)
-                    noise_high = self._noise_detector_high.magnitude(normalized)
+                    mag = float(self._detector.magnitude(block))
+                    noise_low = self._noise_detector_low.magnitude(block)
+                    noise_high = self._noise_detector_high.magnitude(block)
                     noise_ref = max(1e-9, (noise_low + noise_high) * 0.5)
+            else:
+                noise_ref = 0.0
 
-                level = float(mag)
-                alpha = self._attack_alpha if level >= self._envelope else self._release_alpha
-                self._envelope += alpha * (level - self._envelope)
-                self._last_level = self._envelope
-                self._last_noise_ref = noise_ref
-                amplitudes.append(level)
+            self._envelope += self._env_alpha * (mag - self._envelope)
+            self._last_level = self._envelope
+            self._last_noise_ref = noise_ref
+            amplitudes.append(mag)
 
-                if self._blocks_processed <= self._WARMUP_BLOCKS:
-                    self._mag_min = min(self._mag_min, level)
-                    self._mag_max = max(self._mag_max, level)
-                    if self._blocks_processed == self._WARMUP_BLOCKS:
-                        self._noise_floor = self._mag_min if math.isfinite(self._mag_min) else 0.0
-                        if self._mag_max <= (self._noise_floor * 1.2):
-                            self._signal_peak = max(self._noise_floor + 0.5, self._noise_floor * 2.5)
-                        else:
-                            self._signal_peak = max(self._mag_max, self._noise_floor * 1.8)
-                        self._threshold = self._noise_floor + 0.22 * (self._signal_peak - self._noise_floor)
-                    tone_detected = False
-                else:
-                    settle_alpha = (
-                        0.30 if self._blocks_processed < (self._WARMUP_BLOCKS + self._SETTLE_BLOCKS) else 0.06
-                    )
-
-                    detector_level = level
-
-                    if detector_level <= self._threshold:
-                        self._noise_floor += settle_alpha * (detector_level - self._noise_floor)
-                    else:
-                        self._signal_peak += settle_alpha * (detector_level - self._signal_peak)
-
-                    self._signal_peak = max(self._signal_peak, self._noise_floor * 1.05)
-
-                    # Blend adjacent-band noise reference into noise floor.
-                    self._noise_floor += (settle_alpha * 0.25) * (noise_ref - self._noise_floor)
-
-                    if self.threshold_mode == "manual":
-                        self._threshold = max(0.0, self.manual_threshold)
-                    else:
-                        self._threshold = (
-                            max(0.0, self._noise_floor * self.threshold_multiplier) + self.threshold_offset
-                        )
-                        self._threshold = max(self._threshold, self._noise_floor + 0.35)
-
-                    dynamic_span = max(0.0, self._signal_peak - self._noise_floor)
-                    gate_level = self._noise_floor + (self.min_signal_gate * dynamic_span)
-                    gate_ok = self.min_signal_gate <= 0.0 or detector_level >= gate_level
-
-                    # SNR-based tone detection (gain-invariant).
-                    snr = level / max(noise_ref, 1e-6)
-                    snr_mult = max(1.15, self.threshold_multiplier * 0.5)
-                    snr_on = snr_mult * (1.0 + self._hysteresis)
-                    snr_off = snr_mult * (1.0 - self._hysteresis)
-
-                    if self._tone_on:
-                        tone_detected = gate_ok and snr >= snr_off
-                    else:
-                        tone_detected = gate_ok and snr >= snr_on
+            tone_detected = self._detect_tone(mag, noise_ref)
 
             dit_blocks = self._effective_dit_blocks()
             self._dah_threshold = 2.2 * dit_blocks
-            self._dit_min = max(1.0, 0.38 * dit_blocks)
+            self._dit_min = max(self._min_element_blocks, 0.38 * dit_blocks)
+            # Bridge dropouts up to ~30 ms, never a real inter-element gap.
+            self._dropout_tolerance = max(1.0, min(0.45 * dit_blocks, 0.03 / self._block_duration))
             if self.detect_mode == "envelope":
                 self._char_gap = 2.0 * dit_blocks
                 self._word_gap = 5.0 * dit_blocks
@@ -635,40 +620,9 @@ class MorseDecoder:
                 self._silence_blocks = 0.0
                 self._tone_blocks = 0.0
 
-                if self._current_symbol and silence_count >= self._char_gap:
-                    timestamp = datetime.now().strftime("%H:%M:%S")
-                    decoded = self._decode_symbol(self._current_symbol, timestamp)
-                    if decoded is not None:
-                        events.append(decoded)
-
-                    if silence_count >= self._word_gap:
-                        events.append(
-                            {
-                                "type": "morse_space",
-                                "timestamp": timestamp,
-                            }
-                        )
-                        events.append(
-                            {
-                                "type": "morse_gap",
-                                "gap": "word",
-                                "duration_ms": round(silence_count * self._block_duration * 1000.0, 1),
-                            }
-                        )
-                    else:
-                        events.append(
-                            {
-                                "type": "morse_gap",
-                                "gap": "char",
-                                "duration_ms": round(silence_count * self._block_duration * 1000.0, 1),
-                            }
-                        )
-
-                    self._current_symbol = ""
-                elif silence_count >= 1.0:
+                if self._current_symbol and 1.0 <= silence_count <= (self._char_gap * 0.95):
                     # Intra-symbol gap candidate improves dit estimate for Farnsworth-style spacing.
-                    if silence_count <= (self._char_gap * 0.95):
-                        self._record_dit_candidate(silence_count)
+                    self._record_dit_candidate(silence_count)
 
             elif (not tone_detected) and self._tone_on:
                 # Possible tone dropout — tolerate brief gaps before confirming edge-down.
@@ -698,11 +652,13 @@ class MorseDecoder:
                             "duration_ms": round(tone_count * self._block_duration * 1000.0, 1),
                         }
                     )
-                    if element == ".":
-                        self._record_dit_candidate(tone_count)
-                    elif tone_count <= (self._dah_threshold * 1.6):
-                        # Some operators send short-ish dahs; still useful for tracking.
-                        self._record_dit_candidate(tone_count / 3.0)
+                    # Raw duration, dit or dah: the estimator clusters them
+                    # without trusting the current classification.
+                    self._record_dit_candidate(tone_count)
+                    if len(self._current_symbol) >= 8:
+                        # Longer than any valid code: close it out rather
+                        # than accumulating one endless symbol.
+                        events.append(self._finish_symbol(datetime.now().strftime("%H:%M:%S")))
 
             elif tone_detected and self._tone_on:
                 # Recover any dropout blocks — tone resumed, so they were part of the element.
@@ -711,6 +667,36 @@ class MorseDecoder:
 
             elif (not tone_detected) and (not self._tone_on):
                 self._silence_blocks += 1.0
+
+                # Emit characters as soon as their gap elapses, not at the
+                # next key-down: text must appear even when the sender
+                # pauses or stops transmitting.
+                if self._current_symbol and self._silence_blocks >= self._char_gap:
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    events.append(self._finish_symbol(timestamp))
+                    events.append(
+                        {
+                            "type": "morse_gap",
+                            "gap": "char",
+                            "duration_ms": round(self._silence_blocks * self._block_duration * 1000.0, 1),
+                        }
+                    )
+                elif self._space_pending and self._silence_blocks >= self._word_gap:
+                    self._space_pending = False
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    events.append(
+                        {
+                            "type": "morse_space",
+                            "timestamp": timestamp,
+                        }
+                    )
+                    events.append(
+                        {
+                            "type": "morse_gap",
+                            "gap": "word",
+                            "duration_ms": round(self._silence_blocks * self._block_duration * 1000.0, 1),
+                        }
+                    )
 
         if amplitudes:
             scope_event: dict[str, Any] = {
@@ -728,16 +714,9 @@ class MorseDecoder:
             if self.detect_mode == "envelope":
                 scope_event["snr"] = 0.0
                 scope_event["noise_ref"] = 0.0
-                scope_event["snr_on"] = 0.0
-                scope_event["snr_off"] = 0.0
             else:
-                snr_mult = max(1.15, self.threshold_multiplier * 0.5)
-                snr_on = snr_mult * (1.0 + self._hysteresis)
-                snr_off = snr_mult * (1.0 - self._hysteresis)
                 scope_event["snr"] = round(self._last_level / max(self._last_noise_ref, 1e-6), 2)
                 scope_event["noise_ref"] = round(self._last_noise_ref, 4)
-                scope_event["snr_on"] = round(snr_on, 2)
-                scope_event["snr_off"] = round(snr_off, 2)
             events.append(scope_event)
 
         return events
@@ -759,10 +738,7 @@ class MorseDecoder:
             )
 
         if self._current_symbol:
-            decoded = self._decode_symbol(self._current_symbol, datetime.now().strftime("%H:%M:%S"))
-            if decoded is not None:
-                events.append(decoded)
-            self._current_symbol = ""
+            events.append(self._finish_symbol(datetime.now().strftime("%H:%M:%S")))
 
         self._tone_on = False
         self._tone_blocks = 0.0
@@ -931,34 +907,6 @@ def _emit_waiting_scope(output_queue: queue.Queue, waiting_since: float) -> None
         )
 
 
-def _is_probably_rtl_log_text(data: bytes) -> bool:
-    """Heuristic: identify rtl_fm stderr log chunks when streams are merged."""
-    if not data:
-        return False
-    # PCM usually contains NULLs/non-printables; plain log lines do not.
-    if b"\x00" in data:
-        return False
-    printable = sum(1 for b in data if (32 <= b <= 126) or b in (9, 10, 13))
-    ratio = printable / max(1, len(data))
-    if ratio < 0.92:
-        return False
-    lower = data.lower()
-    keywords = (
-        b"rtl_fm",
-        b"found ",
-        b"using device",
-        b"tuned to",
-        b"sampling at",
-        b"output at",
-        b"buffer size",
-        b"gain",
-        b"direct sampling",
-        b"oversampling",
-        b"exact sample rate",
-    )
-    return any(token in lower for token in keywords)
-
-
 def morse_decoder_thread(
     rtl_stdout,
     output_queue: queue.Queue,
@@ -970,7 +918,6 @@ def morse_decoder_thread(
     control_queue: queue.Queue | None = None,
     pcm_ready_event: threading.Event | None = None,
     stream_ready_event: threading.Event | None = None,
-    strip_text_chunks: bool = False,
 ) -> None:
     """Decode Morse from live PCM stream and push events to *output_queue*."""
     import logging
@@ -1060,25 +1007,6 @@ def morse_decoder_thread(
                                     "text": f"[pcm] first raw chunk: {len(data)} bytes",
                                 }
                             )
-
-                    if strip_text_chunks and _is_probably_rtl_log_text(data):
-                        try:
-                            text = data.decode("utf-8", errors="replace")
-                        except Exception:
-                            text = ""
-                        if text:
-                            for line in text.splitlines():
-                                clean = line.strip()
-                                if not clean:
-                                    continue
-                                with contextlib.suppress(queue.Full):
-                                    output_queue.put_nowait(
-                                        {
-                                            "type": "info",
-                                            "text": f"[rtl_fm] {clean}",
-                                        }
-                                    )
-                        continue
 
                     try:
                         raw_queue.put(data, timeout=0.2)
@@ -1181,293 +1109,6 @@ def morse_decoder_thread(
                 {
                     "type": "info",
                     "text": f"[pcm] decoder thread error: {e}",
-                }
-            )
-    finally:
-        stop_event.set()
-        if reader_thread is not None:
-            reader_thread.join(timeout=0.35)
-
-        for event in decoder.flush():
-            with contextlib.suppress(queue.Full):
-                output_queue.put_nowait(event)
-
-        with contextlib.suppress(queue.Full):
-            output_queue.put_nowait(
-                {
-                    "type": "status",
-                    "status": "stopped",
-                    "metrics": decoder.get_metrics(),
-                }
-            )
-
-
-def _cu8_to_complex(raw: bytes) -> np.ndarray:
-    """Convert interleaved unsigned 8-bit IQ to complex64 samples."""
-    if len(raw) < 2:
-        return np.empty(0, dtype=np.complex64)
-    usable = len(raw) - (len(raw) % 2)
-    if usable <= 0:
-        return np.empty(0, dtype=np.complex64)
-    u8 = np.frombuffer(raw[:usable], dtype=np.uint8).astype(np.float32)
-    i = (u8[0::2] - 127.5) / 128.0
-    q = (u8[1::2] - 127.5) / 128.0
-    return (i + 1j * q).astype(np.complex64)
-
-
-def _iq_usb_to_pcm16(
-    iq_samples: np.ndarray,
-    iq_sample_rate: int,
-    audio_sample_rate: int,
-) -> bytes:
-    """Minimal USB demod from complex IQ to 16-bit PCM."""
-    if iq_samples.size < 16 or iq_sample_rate <= 0 or audio_sample_rate <= 0:
-        return b""
-
-    audio = np.real(iq_samples).astype(np.float64)
-    audio -= float(np.mean(audio))
-
-    # Cheap decimation first, then linear resample for exact output rate.
-    decim = max(1, int(iq_sample_rate // max(audio_sample_rate, 1)))
-    if decim > 1:
-        usable = (audio.size // decim) * decim
-        if usable < decim:
-            return b""
-        audio = audio[:usable].reshape(-1, decim).mean(axis=1)
-    fs1 = float(iq_sample_rate) / float(decim)
-    if audio.size < 8:
-        return b""
-
-    taps = int(max(1, min(31, fs1 / 12000.0)))
-    if taps > 1:
-        kernel = np.ones(taps, dtype=np.float64) / float(taps)
-        audio = np.convolve(audio, kernel, mode="same")
-
-    if abs(fs1 - float(audio_sample_rate)) > 1.0:
-        out_len = int(audio.size * float(audio_sample_rate) / fs1)
-        if out_len < 8:
-            return b""
-        x_old = np.linspace(0.0, 1.0, audio.size, endpoint=False, dtype=np.float64)
-        x_new = np.linspace(0.0, 1.0, out_len, endpoint=False, dtype=np.float64)
-        audio = np.interp(x_new, x_old, audio)
-
-    peak = float(np.max(np.abs(audio))) if audio.size else 0.0
-    if peak > 0.0:
-        audio = audio * min(8.0, 0.85 / peak)
-
-    pcm = np.clip(audio, -1.0, 1.0)
-    return (pcm * 32767.0).astype(np.int16).tobytes()
-
-
-def morse_iq_decoder_thread(
-    iq_stdout,
-    output_queue: queue.Queue,
-    stop_event: threading.Event,
-    iq_sample_rate: int,
-    sample_rate: int = 22050,
-    tone_freq: float = 700.0,
-    wpm: int = 15,
-    decoder_config: dict[str, Any] | None = None,
-    control_queue: queue.Queue | None = None,
-    pcm_ready_event: threading.Event | None = None,
-    stream_ready_event: threading.Event | None = None,
-) -> None:
-    """Decode Morse from raw IQ (cu8) by in-process USB demodulation."""
-    import logging
-
-    logger = logging.getLogger("intercept.morse")
-
-    CHUNK = 65536
-    SCOPE_INTERVAL = 0.10
-    WAITING_INTERVAL = 0.25
-    STALLED_AFTER_DATA_SECONDS = 1.5
-
-    cfg = dict(decoder_config or {})
-    decoder = MorseDecoder(
-        sample_rate=int(cfg.get("sample_rate", sample_rate)),
-        tone_freq=float(cfg.get("tone_freq", tone_freq)),
-        wpm=int(cfg.get("wpm", wpm)),
-        bandwidth_hz=int(cfg.get("bandwidth_hz", 200)),
-        auto_tone_track=_coerce_bool(cfg.get("auto_tone_track", True), True),
-        tone_lock=_coerce_bool(cfg.get("tone_lock", False), False),
-        threshold_mode=_normalize_threshold_mode(cfg.get("threshold_mode", "auto")),
-        manual_threshold=float(cfg.get("manual_threshold", 0.0) or 0.0),
-        threshold_multiplier=float(cfg.get("threshold_multiplier", 2.8) or 2.8),
-        threshold_offset=float(cfg.get("threshold_offset", 0.0) or 0.0),
-        wpm_mode=_normalize_wpm_mode(cfg.get("wpm_mode", "auto")),
-        wpm_lock=_coerce_bool(cfg.get("wpm_lock", False), False),
-        min_signal_gate=float(cfg.get("min_signal_gate", 0.0) or 0.0),
-        detect_mode=str(cfg.get("detect_mode", "goertzel")),
-    )
-
-    last_scope = time.monotonic()
-    last_waiting_emit = 0.0
-    waiting_since: float | None = None
-    last_pcm_at: float | None = None
-    pcm_bytes = 0
-    pcm_report_at = time.monotonic()
-    first_pcm_logged = False
-    reader_done = threading.Event()
-    reader_thread: threading.Thread | None = None
-    first_raw_logged = False
-
-    raw_queue: queue.Queue[bytes] = queue.Queue(maxsize=96)
-
-    try:
-
-        def _reader_loop() -> None:
-            nonlocal first_raw_logged
-            try:
-                fd = None
-                with contextlib.suppress(Exception):
-                    fd = iq_stdout.fileno()
-                while not stop_event.is_set():
-                    try:
-                        if fd is not None:
-                            ready, _, _ = select.select([fd], [], [], 0.20)
-                            if not ready:
-                                continue
-                            data = os.read(fd, CHUNK)
-                        elif hasattr(iq_stdout, "read1"):
-                            data = iq_stdout.read1(CHUNK)
-                        else:
-                            data = iq_stdout.read(CHUNK)
-                    except Exception as e:
-                        with contextlib.suppress(queue.Full):
-                            output_queue.put_nowait(
-                                {
-                                    "type": "info",
-                                    "text": f"[iq] reader error: {e}",
-                                }
-                            )
-                        break
-
-                    if data is None:
-                        continue
-                    if not data:
-                        break
-
-                    if not first_raw_logged:
-                        first_raw_logged = True
-                        if stream_ready_event is not None:
-                            stream_ready_event.set()
-                        with contextlib.suppress(queue.Full):
-                            output_queue.put_nowait(
-                                {
-                                    "type": "info",
-                                    "text": f"[iq] first raw chunk: {len(data)} bytes",
-                                }
-                            )
-
-                    try:
-                        raw_queue.put(data, timeout=0.2)
-                    except queue.Full:
-                        with contextlib.suppress(queue.Empty):
-                            raw_queue.get_nowait()
-                        with contextlib.suppress(queue.Full):
-                            raw_queue.put_nowait(data)
-            finally:
-                reader_done.set()
-                with contextlib.suppress(queue.Full):
-                    raw_queue.put_nowait(b"")
-
-        reader_thread = threading.Thread(
-            target=_reader_loop,
-            daemon=True,
-            name="morse-iq-reader",
-        )
-        reader_thread.start()
-
-        while not stop_event.is_set():
-            if not _drain_control_queue(control_queue, decoder):
-                break
-
-            try:
-                raw = raw_queue.get(timeout=0.20)
-            except queue.Empty:
-                now = time.monotonic()
-                should_emit_waiting = False
-                if last_pcm_at is None or (now - last_pcm_at) >= STALLED_AFTER_DATA_SECONDS:
-                    should_emit_waiting = True
-
-                if should_emit_waiting and waiting_since is None:
-                    waiting_since = now
-                if should_emit_waiting and now - last_waiting_emit >= WAITING_INTERVAL:
-                    last_waiting_emit = now
-                    _emit_waiting_scope(output_queue, waiting_since)
-
-                if reader_done.is_set():
-                    break
-                continue
-
-            if not raw:
-                if reader_done.is_set() and last_pcm_at is None:
-                    with contextlib.suppress(queue.Full):
-                        output_queue.put_nowait(
-                            {
-                                "type": "info",
-                                "text": "[iq] stream ended before samples were received",
-                            }
-                        )
-                break
-
-            iq = _cu8_to_complex(raw)
-            pcm = _iq_usb_to_pcm16(
-                iq_samples=iq,
-                iq_sample_rate=int(iq_sample_rate),
-                audio_sample_rate=int(decoder.sample_rate),
-            )
-            if not pcm:
-                continue
-
-            waiting_since = None
-            last_pcm_at = time.monotonic()
-            pcm_bytes += len(pcm)
-
-            if not first_pcm_logged:
-                first_pcm_logged = True
-                if pcm_ready_event is not None:
-                    pcm_ready_event.set()
-                with contextlib.suppress(queue.Full):
-                    output_queue.put_nowait(
-                        {
-                            "type": "info",
-                            "text": f"[pcm] first IQ demod chunk: {len(pcm)} bytes",
-                        }
-                    )
-
-            events = decoder.process_block(pcm)
-            for event in events:
-                if event.get("type") == "scope":
-                    now = time.monotonic()
-                    if now - last_scope >= SCOPE_INTERVAL:
-                        last_scope = now
-                        with contextlib.suppress(queue.Full):
-                            output_queue.put_nowait(event)
-                else:
-                    with contextlib.suppress(queue.Full):
-                        output_queue.put_nowait(event)
-
-            now = time.monotonic()
-            if (now - pcm_report_at) >= 1.0:
-                kbps = (pcm_bytes * 8.0) / max(1e-6, (now - pcm_report_at)) / 1000.0
-                with contextlib.suppress(queue.Full):
-                    output_queue.put_nowait(
-                        {
-                            "type": "info",
-                            "text": f"[pcm] {pcm_bytes} B in {now - pcm_report_at:.1f}s ({kbps:.1f} kbps)",
-                        }
-                    )
-                pcm_bytes = 0
-                pcm_report_at = now
-
-    except Exception as e:  # pragma: no cover - runtime safety
-        logger.debug(f"Morse IQ decoder thread error: {e}")
-        with contextlib.suppress(queue.Full):
-            output_queue.put_nowait(
-                {
-                    "type": "info",
-                    "text": f"[iq] decoder thread error: {e}",
                 }
             )
     finally:

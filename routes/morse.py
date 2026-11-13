@@ -285,9 +285,16 @@ def start_morse() -> Response:
 
     sdr_type_str = data.get("sdr_type", "rtlsdr")
 
-    # Check for rtl_tcp (remote SDR) connection
+    # Check for rtl_tcp (remote SDR) connection. Validate before any state
+    # changes: a 400 after _set_state(STARTING) would wedge the lifecycle.
     rtl_tcp_host = data.get("rtl_tcp_host")
     rtl_tcp_port = data.get("rtl_tcp_port", 1234)
+    if rtl_tcp_host:
+        try:
+            rtl_tcp_host = validate_rtl_tcp_host(rtl_tcp_host)
+            rtl_tcp_port = validate_rtl_tcp_port(rtl_tcp_port)
+        except ValueError as e:
+            return api_error(str(e), 400)
 
     with app_module.morse_lock:
         if morse_state in {MORSE_STARTING, MORSE_RUNNING, MORSE_STOPPING}:
@@ -339,11 +346,6 @@ def start_morse() -> Response:
     # Create network or local SDR device
     network_sdr_device = None
     if rtl_tcp_host:
-        try:
-            rtl_tcp_host = validate_rtl_tcp_host(rtl_tcp_host)
-            rtl_tcp_port = validate_rtl_tcp_port(rtl_tcp_port)
-        except ValueError as e:
-            return api_error(str(e), 400)
         network_sdr_device = SDRFactory.create_network_device(rtl_tcp_host, rtl_tcp_port)
         logger.info(f"Using remote SDR: rtl_tcp://{rtl_tcp_host}:{rtl_tcp_port}")
 
@@ -402,7 +404,18 @@ def start_morse() -> Response:
         and detect_mode != "envelope"  # direct sampling is HF-only
         and float(freq) < 24.0
     )
-    direct_sampling_attempts: list[int | None] = [2, 1, None] if can_try_direct_sampling else [None]
+
+    def _direct_sampling_attempts_for(device_index: int) -> list[int | None]:
+        if not can_try_direct_sampling:
+            return [None]
+        # RTL-SDR Blog V4 receives HF through its built-in upconverter;
+        # forcing direct sampling bypasses it and the input goes deaf.
+        name = str(device_catalog.get(device_index, {}).get("name", ""))
+        if "blog v4" in name.lower():
+            return [None]
+        return [2, 1, None]
+
+    direct_sampling_attempts: list[int | None] = _direct_sampling_attempts_for(requested_device_index)
 
     runtime_config: dict[str, Any] = {
         "sample_rate": sample_rate,
@@ -505,6 +518,7 @@ def start_morse() -> Response:
             runtime_config.pop("startup_waiting", None)
             runtime_config.pop("startup_warning", None)
 
+            direct_sampling_attempts = _direct_sampling_attempts_for(active_device_index)
             for attempt_index, direct_sampling_mode in enumerate(direct_sampling_attempts, start=1):
                 rtl_process = None
                 stop_event = None

@@ -121,15 +121,6 @@ RUN cd /tmp \
     && cp src/dumpvdl2 /staging/usr/bin/dumpvdl2 \
     && rm -rf /tmp/dumpvdl2
 
-# Build slowrx (SSTV decoder) — pinned to known-good commit
-RUN cd /tmp \
-    && git clone https://github.com/windytan/slowrx.git \
-    && cd slowrx \
-    && git checkout ca6d7012 \
-    && make \
-    && install -m 0755 slowrx /staging/usr/local/bin/slowrx \
-    && rm -rf /tmp/slowrx
-
 # Build SatDump (weather satellite decoder - NOAA APT & Meteor LRPT) — pinned to v1.2.2
 # Split into compile (heavy, cached) and staging (light, safe to change) layers
 RUN cd /tmp \
