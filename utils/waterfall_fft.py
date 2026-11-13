@@ -37,8 +37,11 @@ def cu8_to_complex(raw: bytes) -> np.ndarray:
 
 def cs8_to_complex(raw: bytes) -> np.ndarray:
     """Convert signed 8-bit I/Q bytes (hackrf_transfer's format) to complex64."""
-    iq = np.frombuffer(raw, dtype=np.int8).astype(np.float32) / 128.0
-    return iq[0::2] + 1j * iq[1::2]
+    iq = np.frombuffer(raw, dtype=np.int8).astype(np.float32)
+    iq /= 128.0
+    if iq.size % 2:
+        return iq[0::2] + 1j * iq[1::2]
+    return iq.view(np.complex64)
 
 
 def compute_power_spectrum(
