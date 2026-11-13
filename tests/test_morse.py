@@ -682,6 +682,96 @@ class TestMorseLifecycleRoutes:
         assert stop_resp.get_json()["status"] == "stopped"
         assert 1 in released_devices
 
+    def test_blog_v4_skips_direct_sampling(self, client, monkeypatch):
+        """RTL-SDR Blog V4 receives HF through its built-in upconverter;
+        the route must never force direct sampling on it (which leaves the
+        input deaf) even for HF frequencies."""
+        _login_session(client)
+        self._reset_route_state()
+
+        monkeypatch.setattr(app_module, "claim_sdr_device", lambda idx, mode, sdr_type="rtlsdr": None)
+        monkeypatch.setattr(app_module, "release_sdr_device", lambda idx, sdr_type="rtlsdr": None)
+
+        class DummyDevice:
+            def __init__(self, index: int):
+                self.sdr_type = morse_routes.SDRType.RTL_SDR
+                self.index = index
+
+        class DummyDetected:
+            def __init__(self, index: int):
+                self.sdr_type = morse_routes.SDRType.RTL_SDR
+                self.index = index
+                self.name = "RTLSDRBlog, Blog V4"
+                self.serial = f"1000000{index}"
+
+        rtl_cmds = []
+
+        class DummyBuilder:
+            def build_fm_demod_command(self, **kwargs):
+                cmd = ["rtl_fm", "-f", "14.0593M", "-M", "usb", "-s", "22050"]
+                if kwargs.get("direct_sampling") is not None:
+                    cmd.extend(["-E", f"direct{kwargs['direct_sampling']}"])
+                cmd.append("-")
+                return cmd
+
+        monkeypatch.setattr(
+            morse_routes.SDRFactory,
+            "create_default_device",
+            staticmethod(lambda sdr_type, index: DummyDevice(int(index))),
+        )
+        monkeypatch.setattr(morse_routes.SDRFactory, "get_builder", staticmethod(lambda sdr_type: DummyBuilder()))
+        monkeypatch.setattr(
+            morse_routes.SDRFactory,
+            "detect_devices",
+            staticmethod(lambda: [DummyDetected(0)]),
+        )
+
+        pcm = generate_morse_audio("E", wpm=15, sample_rate=22050)
+
+        class FakeRtlProc:
+            def __init__(self, payload: bytes):
+                self.stdout = io.BytesIO(payload)
+                self.stderr = io.BytesIO(b"")
+                self.returncode = None
+
+            def poll(self):
+                return self.returncode
+
+            def terminate(self):
+                self.returncode = 0
+
+            def wait(self, timeout=None):
+                self.returncode = 0
+                return 0
+
+            def kill(self):
+                self.returncode = -9
+
+        def fake_popen(cmd, *args, **kwargs):
+            rtl_cmds.append(cmd)
+            return FakeRtlProc(pcm)
+
+        monkeypatch.setattr(morse_routes.subprocess, "Popen", fake_popen)
+        monkeypatch.setattr(morse_routes, "register_process", lambda _proc: None)
+        monkeypatch.setattr(morse_routes, "unregister_process", lambda _proc: None)
+        monkeypatch.setattr(
+            morse_routes,
+            "safe_terminate",
+            lambda proc, timeout=0.0: setattr(proc, "returncode", 0),
+        )
+
+        start_resp = client.post(
+            "/morse/start",
+            json={"frequency": "14.060", "gain": "40", "device": "0"},
+        )
+        assert start_resp.status_code == 200
+        assert start_resp.get_json()["status"] == "started"
+        assert len(rtl_cmds) == 1
+        assert not any("direct" in str(arg) for arg in rtl_cmds[0]), rtl_cmds[0]
+
+        stop_resp = client.post("/morse/stop")
+        assert stop_resp.status_code == 200
+
     def test_invalid_rtl_tcp_host_does_not_wedge_state(self, client):
         """A 400 on rtl_tcp validation must leave the lifecycle idle so the
         next start attempt is not refused with 409."""
