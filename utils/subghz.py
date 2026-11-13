@@ -175,6 +175,7 @@ class SubGhzManager:
         # Sweep state
         self._sweep_running = False
         self._sweep_thread: threading.Thread | None = None
+        self._sweep_peaks: dict[float, float] = {}
 
         # Tool availability
         self._hackrf_available: bool | None = None
@@ -2338,6 +2339,7 @@ class SubGhzManager:
         if device_err:
             return {"status": "error", "message": device_err}
 
+        self._reset_sweep_peaks()
         # Wait for previous sweep thread to exit (blocking) before lock
         if self._sweep_thread and self._sweep_thread.is_alive():
             self._sweep_thread.join(timeout=2.0)
@@ -2502,7 +2504,9 @@ class SubGhzManager:
                         continue
 
                     for i, power in enumerate(powers):
-                        pending[round((hz_low + i * hz_bin_width) / 1_000_000, 4)] = round(power, 1)
+                        freq = round((hz_low + i * hz_bin_width) / 1_000_000, 4)
+                        pending[freq] = round(power, 1)  # live view: latest reading, as before
+                        self._keep_peak(freq, round(power, 1))  # peak record: strongest reading
                 except Exception as exc:
                     logger.debug(f"Skipping malformed sweep line: {exc}")
                     continue
@@ -2517,6 +2521,30 @@ class SubGhzManager:
             self._emit_sweep_points(pending)
         except Exception as e:
             logger.error(f"Error reading sweep output: {e}")
+
+    PEAK_LIMIT = 200  # the strongest readings kept after a sweep ends
+
+    def _keep_peak(self, freq: float, power: float) -> None:
+        peaks = self._sweep_peaks
+        if freq in peaks:
+            if power > peaks[freq]:
+                peaks[freq] = power
+            return
+        if len(peaks) < self.PEAK_LIMIT:
+            peaks[freq] = power
+            return
+        # full: only a reading stronger than the weakest kept one earns a place; the sort runs rarely
+        weakest = min(peaks, key=peaks.get)
+        if power > peaks[weakest]:
+            del peaks[weakest]
+            peaks[freq] = power
+
+    def sweep_peaks(self) -> dict[float, float]:
+        """The strongest reading kept for each frequency in the last sweep."""
+        return dict(self._sweep_peaks)
+
+    def _reset_sweep_peaks(self) -> None:
+        self._sweep_peaks = {}
 
     def _emit_sweep_points(self, pending: dict[float, float]) -> None:
         if pending:

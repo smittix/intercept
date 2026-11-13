@@ -328,6 +328,14 @@ def stop_sweep():
     return jsonify(result)
 
 
+@subghz_bp.route("/sweep/peaks")
+def get_sweep_peaks():
+    """The strongest reading kept for each frequency in the last sweep. Read-only."""
+    peaks = get_subghz_manager().sweep_peaks()
+    rows = [{"freq": freq, "power": power} for freq, power in sorted(peaks.items())]
+    return jsonify({"peaks": rows, "count": len(rows)})
+
+
 # ------------------------------------------------------------------
 # CAPTURES LIBRARY
 # ------------------------------------------------------------------
