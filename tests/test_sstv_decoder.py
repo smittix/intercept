@@ -75,8 +75,11 @@ def generate_vis_header(vis_code: int, sample_rate: int = SAMPLE_RATE) -> np.nda
     """Generate a synthetic VIS header for a given code.
 
     Structure: leader1 (300ms) + break (10ms) + leader2 (300ms)
-             + start_bit (30ms) + 8 data bits (30ms each)
+             + start_bit (30ms) + 7 data bits (30ms each, LSB first)
              + parity bit (30ms) + stop_bit (30ms)
+
+    This matches what real SSTV encoders (MMSSTV, QSSTV, phone apps)
+    transmit: the VIS code is 7 bits, the eighth slot is the parity bit.
     """
     parts = []
 
@@ -92,9 +95,9 @@ def generate_vis_header(vis_code: int, sample_rate: int = SAMPLE_RATE) -> np.nda
     # Start bit (1200 Hz, 30ms)
     parts.append(generate_tone(FREQ_SYNC, 0.030, sample_rate))
 
-    # 8 data bits (LSB first)
+    # 7 data bits (LSB first)
     ones_count = 0
-    for i in range(8):
+    for i in range(7):
         bit = (vis_code >> i) & 1
         if bit:
             ones_count += 1
@@ -492,7 +495,7 @@ class TestVISDetector:
         parts.append(generate_tone(FREQ_SYNC, 0.030))  # start bit
 
         # Transmit corrupted data bits
-        for i in range(8):
+        for i in range(7):
             bit = (corrupted_code >> i) & 1
             if bit:
                 parts.append(generate_tone(FREQ_VIS_BIT_1, 0.030))
@@ -769,6 +772,11 @@ class TestImageDecoder:
                 line_audio = np.concatenate([line_audio, np.zeros(line_samples - len(line_audio))])
 
             decoder.feed(line_audio)
+
+        # A real stream keeps flowing after the image (rtl_fm never stops);
+        # sync-end detection may hold the final line until a few trailing
+        # samples arrive.
+        decoder.feed(generate_tone(FREQ_BLACK, 0.050))
 
         assert decoder.is_complete
         img = decoder.get_image()
@@ -1169,3 +1177,174 @@ class TestIntegration:
 
         decoder.stop()
         assert decoder.is_running is False
+
+
+# ---------------------------------------------------------------------------
+# End-to-end: spec-timed transmissions through the full pipeline
+# ---------------------------------------------------------------------------
+
+
+def _encode_transmission(mode, img: np.ndarray) -> np.ndarray:
+    """Encode a full SSTV transmission (leader + VIS + image) per the spec.
+
+    Continuous-phase FM synthesis; timings come straight from the mode
+    spec, the way MMSSTV/QSSTV and phone apps transmit. This is the
+    ground truth the decoder must handle, independent of its internals.
+    """
+    from utils.sstv.modes import ColorModel, SyncPosition
+
+    segments: list[tuple[float, float]] = [(1900.0, 0.5)]  # pre-tone
+
+    # VIS: leader, break, leader, start + 7 data bits + parity + stop
+    segments += [(1900.0, 0.3), (1200.0, 0.01), (1900.0, 0.3), (1200.0, 0.03)]
+    parity = 0
+    for b in range(7):
+        bit = (mode.vis_code >> b) & 1
+        parity ^= bit
+        segments.append((1100.0 if bit else 1300.0, 0.03))
+    segments.append((1100.0 if parity else 1300.0, 0.03))
+    segments.append((1200.0, 0.03))
+
+    def pixels(values: np.ndarray, duration_s: float) -> None:
+        per = duration_s / len(values)
+        for v in values:
+            segments.append((1500.0 + (float(v) / 255.0) * 800.0, per))
+
+    ms = 1e-3
+    for line in range(img.shape[0]):
+        r, g, b = img[line, :, 0], img[line, :, 1], img[line, :, 2]
+        if mode.color_model == ColorModel.RGB and mode.sync_position == SyncPosition.FRONT:
+            # Martin: sync, porch, G, porch, B, porch, R, porch
+            segments.append((1200.0, mode.sync_duration_ms * ms))
+            segments.append((1500.0, mode.sync_porch_ms * ms))
+            pixels(g, mode.channels[0].duration_ms * ms)
+            segments.append((1500.0, mode.sync_porch_ms * ms))
+            pixels(b, mode.channels[1].duration_ms * ms)
+            segments.append((1500.0, mode.sync_porch_ms * ms))
+            pixels(r, mode.channels[2].duration_ms * ms)
+            segments.append((1500.0, mode.sync_porch_ms * ms))
+        elif mode.color_model == ColorModel.RGB:
+            # Scottie: one starting sync, then sep, G, sep, B, sync, porch, R
+            if line == 0:
+                segments.append((1200.0, mode.sync_duration_ms * ms))
+            segments.append((1500.0, mode.sync_porch_ms * ms))
+            pixels(g, mode.channels[0].duration_ms * ms)
+            segments.append((1500.0, mode.sync_porch_ms * ms))
+            pixels(b, mode.channels[1].duration_ms * ms)
+            segments.append((1200.0, mode.sync_duration_ms * ms))
+            segments.append((1500.0, mode.sync_porch_ms * ms))
+            pixels(r, mode.channels[2].duration_ms * ms)
+        else:
+            # Robot36: sync, porch, Y, separator+porch, Cr/Cb alternating
+            rgbf = img[line].astype(np.float64)
+            y = 0.299 * rgbf[:, 0] + 0.587 * rgbf[:, 1] + 0.114 * rgbf[:, 2]
+            cr = (rgbf[:, 0] - y) * 0.713 + 128
+            cb = (rgbf[:, 2] - y) * 0.564 + 128
+            segments.append((1200.0, mode.sync_duration_ms * ms))
+            segments.append((1500.0, mode.sync_porch_ms * ms))
+            pixels(np.clip(y, 0, 255), mode.channels[0].duration_ms * ms)
+            segments.append((1500.0 if line % 2 == 0 else 2300.0, 0.0045))
+            segments.append((1900.0, 0.0015))
+            chroma = cr if line % 2 == 0 else cb
+            pixels(np.clip(chroma, 0, 255), mode.channels[1].duration_ms * ms)
+
+    segments.append((1500.0, 0.2))
+
+    t_end = 0.0
+    events = []
+    for f, d in segments:
+        events.append((t_end, t_end + d, f))
+        t_end += d
+    n = int(t_end * SAMPLE_RATE)
+    freq = np.zeros(n)
+    for start, end, f in events:
+        freq[int(start * SAMPLE_RATE) : int(end * SAMPLE_RATE)] = f
+    for i in range(1, n):
+        if freq[i] == 0:
+            freq[i] = freq[i - 1]
+    phase = np.cumsum(2 * np.pi * freq / SAMPLE_RATE)
+    return 0.8 * np.sin(phase)
+
+
+def _decode_transmission(audio: np.ndarray):
+    """Run audio through the pipeline the way the live decoder does."""
+    from utils.sstv.dsp import StreamingBandpass
+    from utils.sstv.image_decoder import SSTVImageDecoder
+    from utils.sstv.modes import get_mode
+
+    bandpass = StreamingBandpass(sample_rate=SAMPLE_RATE)
+    vis = VISDetector(sample_rate=SAMPLE_RATE)
+    decoder = None
+    chunk = SAMPLE_RATE // 10
+    for off in range(0, len(audio), chunk):
+        samples = bandpass.process(audio[off : off + chunk])
+        if decoder is None:
+            result = vis.feed(samples)
+            if result is not None:
+                decoder = SSTVImageDecoder(get_mode(result[0]), sample_rate=SAMPLE_RATE, freq_offset=vis.freq_offset)
+                decoder.feed(vis.remaining_buffer.copy())
+        else:
+            decoder.feed(samples)
+    if decoder is not None:
+        decoder.feed(bandpass.flush())
+    return decoder
+
+
+class TestEndToEnd:
+    """Decode spec-timed transmissions, as real SSTV software sends them."""
+
+    def test_vis_handover_is_prompt(self):
+        """The image decoder must receive its audio from the end of the VIS
+        stop bit, not one bit later: a late handover skews every line."""
+        header = generate_vis_header(44)
+        marker = generate_tone(FREQ_WHITE, 0.5)
+        audio = np.concatenate([generate_tone(FREQ_LEADER, 0.1), header, marker])
+
+        detector = VISDetector()
+        result = detector.feed(audio)
+        assert result is not None and result[0] == 44
+        handover = len(audio) - len(detector.remaining_buffer)
+        image_start = len(audio) - len(marker)
+        error_ms = (handover - image_start) / SAMPLE_RATE * 1000.0
+        assert abs(error_ms) <= 12.0, f"handover off by {error_ms:.1f} ms"
+
+    @pytest.mark.parametrize("mode_name", ["Martin2", "Scottie2"])
+    def test_stripe_lands_where_transmitted(self, mode_name):
+        """A vertical stripe must come out at its transmitted position in
+        every channel; constant offsets mean sync/VIS timing is broken."""
+        pytest.importorskip("PIL")
+        from utils.sstv.modes import get_mode_by_name
+
+        mode = get_mode_by_name(mode_name)
+        img = np.zeros((40, mode.width, 3), dtype=np.uint8)  # 40 lines is enough
+        img[:, 100:110] = 255
+        decoder = _decode_transmission(_encode_transmission(mode, img))
+        assert decoder is not None, "VIS not detected"
+        assert decoder.current_line >= 30
+        arr = np.asarray(decoder.get_image()).astype(np.float64)
+        rows = arr[5:25]
+        for channel in range(3):
+            profile = rows[:, :, channel].mean(axis=0)
+            bright = np.where(profile > 128)[0]
+            assert len(bright) > 0, f"channel {channel}: stripe missing"
+            center = (bright.min() + bright.max()) / 2.0
+            assert abs(center - 104.5) <= 6, f"channel {channel}: stripe at {center}"
+
+    def test_wideband_noise_does_not_bleach_image(self):
+        """rtl_fm SSB output carries noise across its whole bandwidth. The
+        instantaneous-frequency demodulator must not read that noise as
+        'very high frequency' and clip a grey image toward white."""
+        pytest.importorskip("PIL")
+        from utils.sstv.modes import get_mode_by_name
+
+        mode = get_mode_by_name("Robot36")
+        img = np.full((40, mode.width, 3), 128, dtype=np.uint8)
+        audio = _encode_transmission(mode, img)
+        rng = np.random.default_rng(7)
+        audio = audio + rng.normal(0.0, 0.25, len(audio))
+        decoder = _decode_transmission(audio)
+        assert decoder is not None, "VIS not detected"
+        assert decoder.current_line >= 30
+        grey = np.asarray(decoder.get_image().convert("L"), dtype=np.float64)
+        body = grey[5:25, 20:-20]
+        assert 100 <= body.mean() <= 156, f"grey image decoded at {body.mean():.0f}"

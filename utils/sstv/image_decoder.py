@@ -19,7 +19,6 @@ from .constants import (
     SAMPLE_RATE,
 )
 from .dsp import (
-    goertzel,
     goertzel_batch,
     samples_for_duration,
 )
@@ -160,36 +159,46 @@ class SSTVImageDecoder:
 
         return self._complete
 
-    def _find_sync(self, search_region: np.ndarray) -> int | None:
-        """Find the 1200 Hz sync pulse within a search region.
+    def _find_sync_end(self, search_region: np.ndarray) -> int | None:
+        """Find where the 1200 Hz sync pulse ends within a search region.
 
-        Scans through the region looking for a stretch of 1200 Hz
-        tone of approximately the right duration.
+        The trailing edge is what anchors pixel timing, and unlike the
+        leading edge it is immune to any 1200 Hz remnant merging into the
+        front of the pulse (the VIS stop bit before an image's first sync
+        is also 1200 Hz). Every window fully inside the pulse has
+        near-maximal sync energy, so the end is the last window of the
+        first contiguous near-peak run.
 
         Args:
             search_region: Audio samples to search within.
 
         Returns:
-            Sample offset of the sync pulse start, or None if not found.
+            Sample offset just past the sync pulse, or None if not found.
         """
         window_size = min(self._sync_samples, 200)
         if len(search_region) < window_size:
             return None
 
-        best_pos = None
-        best_energy = 0.0
-
-        step = window_size // 2
-        for pos in range(0, len(search_region) - window_size, step):
-            chunk = search_region[pos : pos + window_size]
-            sync_energy = goertzel(chunk, self._sync_freq, self._sample_rate)
-            # Check it's actually sync, not data at 1200 Hz area
-            black_energy = goertzel(chunk, self._black_freq, self._sample_rate)
-            if sync_energy > best_energy and sync_energy > black_energy * 2:
-                best_energy = sync_energy
-                best_pos = pos
-
-        return best_pos
+        step = 10
+        windows = np.lib.stride_tricks.sliding_window_view(search_region, window_size)[::step]
+        energies = goertzel_batch(windows, np.array([self._sync_freq, self._black_freq]), self._sample_rate)
+        sync_e = energies[:, 0]
+        black_e = energies[:, 1]
+        # Check it's actually sync, not data at the 1200 Hz area
+        valid = sync_e > black_e * 2
+        if not valid.any():
+            return None
+        peak = float(sync_e[valid].max())
+        if peak <= 0:
+            return None
+        good = np.flatnonzero(valid & (sync_e >= 0.85 * peak))
+        run_end = int(good[0])
+        for idx in good[1:]:
+            if int(idx) - run_end <= 3:
+                run_end = int(idx)
+            else:
+                break
+        return run_end * step + window_size
 
     def _decode_line(self) -> None:
         """Decode one scanline from the buffer."""
@@ -215,17 +224,26 @@ class SSTVImageDecoder:
             search_end = min(len(self._buffer), self._sync_samples + search_margin)
             search_region = self._buffer[search_start:search_end]
 
-            sync_pos = self._find_sync(search_region)
-            if sync_pos is not None:
-                line_start = sync_pos
+            sync_end = self._find_sync_end(search_region)
+            if sync_end is not None:
                 self._synced = True
-            # Skip sync + porch to get to pixel data
-            pixel_start = line_start + self._sync_samples + self._porch_samples
+                pixel_start = sync_end + self._porch_samples
+            else:
+                # No sync found: assume nominal timing from the buffer start
+                pixel_start = line_start + self._sync_samples + self._porch_samples
 
         elif self._mode.sync_position == SyncPosition.MIDDLE:
             # Scottie: sep(1.5ms) -> G -> sep(1.5ms) -> B -> sync(9ms) -> porch(1.5ms) -> R
-            # Skip initial separator (same duration as porch)
+            # Skip initial separator (same duration as porch). The very first
+            # line additionally starts with a 9 ms "starting sync" pulse that
+            # exists only once per image; leaving it unconsumed shifts every
+            # line of the image by its duration. Locate it to absorb any
+            # VIS-handover jitter — Scottie lines never re-sync after this.
             pixel_start = self._porch_samples
+            if self._current_line == 0:
+                search_end = min(len(self._buffer), self._sync_samples + search_margin)
+                sync_end = self._find_sync_end(self._buffer[:search_end])
+                pixel_start += sync_end if sync_end is not None else self._sync_samples
             line_start = 0
 
         else:
@@ -238,8 +256,14 @@ class SSTVImageDecoder:
                 # Not enough data yet - put the data back and wait
                 return
 
-            channel_audio = self._buffer[pos : pos + ch_samples]
-            pixels = self._decode_channel_pixels(channel_audio)
+            # Include guard samples around the channel: the FFT Hilbert
+            # transform assumes periodicity, so the discontinuity at the
+            # segment edges corrupts the instantaneous frequency there —
+            # enough to blow out the first and last pixel of fast modes.
+            lead = min(64, pos)
+            trail = min(64, len(self._buffer) - (pos + ch_samples))
+            channel_audio = self._buffer[pos - lead : pos + ch_samples + trail]
+            pixels = self._decode_channel_pixels(channel_audio, lead, trail)
             self._channel_data[ch_idx][self._current_line, :] = pixels
             pos += ch_samples
 
@@ -306,7 +330,7 @@ class SSTVImageDecoder:
         if self._current_line >= self._total_audio_lines:
             self._complete = True
 
-    def _decode_channel_pixels(self, audio: np.ndarray) -> np.ndarray:
+    def _decode_channel_pixels(self, audio: np.ndarray, lead: int = 0, trail: int = 0) -> np.ndarray:
         """Decode pixel values from a channel's audio data.
 
         Uses the analytic signal (Hilbert transform via FFT) to compute
@@ -318,7 +342,9 @@ class SSTVImageDecoder:
         ~11-13 audio samples.
 
         Args:
-            audio: Audio samples for one channel of one scanline.
+            audio: Audio samples for one channel of one scanline, with
+                ``lead``/``trail`` guard samples on each side that absorb
+                the transform's edge artifacts and are discarded.
 
         Returns:
             Array of pixel values (0-255), shape (width,).
@@ -326,7 +352,7 @@ class SSTVImageDecoder:
         width = self._mode.width
         n = len(audio)
 
-        if n < width:
+        if n - lead - trail < width:
             return np.zeros(width, dtype=np.uint8)
 
         # --- Analytic signal via Hilbert transform (FFT method) ---
@@ -348,6 +374,14 @@ class SSTVImageDecoder:
         # --- Instantaneous frequency ---
         phase = np.unwrap(np.angle(analytic))
         inst_freq = np.diff(phase) * (self._sample_rate / (2.0 * np.pi))
+
+        # Noise spikes send the instantaneous frequency anywhere up to
+        # ±Nyquist; one such sample would drag a whole pixel's average to
+        # full white or black. No SSTV tone lives outside 400-3000 Hz.
+        np.clip(inst_freq, 400.0, 3000.0, out=inst_freq)
+
+        # Drop the guard samples (diff consumed one sample overall)
+        inst_freq = inst_freq[lead : len(inst_freq) - trail]
 
         # --- Average frequency per pixel ---
         freq_len = len(inst_freq)
