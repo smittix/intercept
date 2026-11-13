@@ -230,6 +230,7 @@ class MorseDecoder:
         # tracker should find it rather than decode key-click splatter.
         self._tone_scan_lo_hz = 300.0
         self._tone_scan_hi_hz = min(2900.0, 0.45 * self.sample_rate)
+        self._scan_candidate_freq = 0.0
         self._tone_scan_interval_blocks = 8
 
         if self.detect_mode == "envelope":
@@ -385,6 +386,16 @@ class MorseDecoder:
         if not np.any(band):
             return False
         best_freq = float(freqs[band][int(np.argmax(spec[band]))])
+
+        # A real tone puts the peak at the same frequency on consecutive
+        # scans; noise puts its maximum somewhere new each time. Require
+        # two agreeing scans before considering a retune, or the tracker
+        # hops across noise maxima and mints phantom dits as it goes.
+        candidate = self._scan_candidate_freq
+        self._scan_candidate_freq = best_freq
+        if abs(best_freq - candidate) > 60.0:
+            return False
+
         best_mag = float(_goertzel_mag(normalized, best_freq, self.sample_rate))
 
         # Retune only on a clear tone: it must beat the current bin
