@@ -887,9 +887,7 @@ class DeviceIdentityEngine:
         """Get all service UUIDs from cluster."""
         uuids = set()
         for session in cluster.sessions:
-            for obs in session.observations:
-                if hasattr(obs, "service_uuids") and obs.service_uuids:
-                    uuids.update(obs.service_uuids)
+            uuids.update(self._get_session_service_uuids(session))
         return uuids
 
     def _get_session_service_uuids(self, session: DeviceSession) -> set[str]:
@@ -1053,10 +1051,45 @@ class DeviceIdentityEngine:
 
     def finalize_all_sessions(self) -> None:
         """Finalize all active sessions (call at end of monitoring)."""
-        for session in list(self.ble_sessions.values()):
-            self._finalize_session(session)
-        for session in list(self.wifi_sessions.values()):
-            self._finalize_session(session)
+        def memoize(method, version):
+            cache = {}
+
+            def cached(*args):
+                key = version(*args)
+                if key not in cache:
+                    cache[key] = method(*args)
+                return cache[key]
+
+            return cached
+
+        # Cluster features change when a session is appended. Session features
+        # stay fixed during this pass; discard every cache when the pass ends.
+        methods = {
+            "_get_cluster_manufacturer_data": lambda cluster: (id(cluster), len(cluster.sessions)),
+            "_get_cluster_service_uuids": lambda cluster: (id(cluster), len(cluster.sessions)),
+            "_get_cluster_intervals": lambda cluster: (id(cluster), len(cluster.sessions)),
+            "_get_session_manufacturer_data": lambda session: id(session),
+            "_get_session_service_uuids": lambda session: id(session),
+            "_get_session_name": lambda session: id(session),
+            "_calculate_cluster_similarity": lambda cluster, session: (
+                id(cluster), len(cluster.sessions), id(session)
+            ),
+        }
+        previous = {name: self.__dict__.get(name) for name in methods}
+        present = {name for name in methods if name in self.__dict__}
+        try:
+            for name, version in methods.items():
+                setattr(self, name, memoize(getattr(self, name), version))
+            for session in list(self.ble_sessions.values()):
+                self._finalize_session(session)
+            for session in list(self.wifi_sessions.values()):
+                self._finalize_session(session)
+        finally:
+            for name in methods:
+                if name in present:
+                    setattr(self, name, previous[name])
+                else:
+                    delattr(self, name)
 
     def get_clusters(self, min_confidence: float = 0.0) -> list[DeviceCluster]:
         """Get all clusters above minimum confidence."""
