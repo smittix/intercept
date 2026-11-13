@@ -300,6 +300,7 @@ class MorseDecoder:
         self._tone_blocks = 0.0
         self._silence_blocks = 0.0
         self._current_symbol = ""
+        self._space_pending = False
         self._pending_buffer: list[int] = []
 
         # Dropout tolerance: bridge brief dropouts mid-element, scaled to the
@@ -325,6 +326,7 @@ class MorseDecoder:
         self._silence_blocks = 0.0
         self._dropout_blocks = 0.0
         self._current_symbol = ""
+        self._space_pending = False
 
     def get_metrics(self) -> dict[str, float | bool]:
         """Return latest decoder metrics for UI/status messages."""
@@ -433,9 +435,18 @@ class MorseDecoder:
 
         if self._dit_observations:
             ordered = sorted(self._dit_observations)
-            # Observations mix dit and dah durations; the lower quartile
-            # lands on the dits without needing prior classification.
-            dit_blocks = max(1.0, float(ordered[len(ordered) // 4]))
+            # Observations mix dit and dah durations. Cluster around the
+            # shortest reliable sample: when fading eats the dits, a plain
+            # quartile lands on dah durations and triples the estimate,
+            # which stretches the gap thresholds until no character ever
+            # terminates. The 20 ms element floor keeps the anchor honest,
+            # and anchoring at the ~12th percentile tolerates one stray
+            # fragment of a chopped element.
+            anchor = float(ordered[len(ordered) // 8])
+            lows = [o for o in ordered if o <= 2.0 * anchor]
+            # Lower quartile of the cluster: stretched (Farnsworth) gaps
+            # land in the cluster too and would drag a median upward.
+            dit_blocks = max(1.0, float(lows[len(lows) // 4]))
             est_wpm = 1.2 / (dit_blocks * self._block_duration)
             self._estimated_wpm = _clamp(est_wpm, 5.0, 60.0)
             return dit_blocks
@@ -506,6 +517,22 @@ class MorseDecoder:
             "morse": symbol,
             "timestamp": timestamp,
         }
+
+    def _finish_symbol(self, timestamp: str) -> dict[str, Any]:
+        """Close the pending symbol, emitting '*' when the pattern is
+        unreadable — dropped copy must be visible, not silent."""
+        symbol = self._current_symbol
+        self._current_symbol = ""
+        self._space_pending = True
+        decoded = self._decode_symbol(symbol, timestamp)
+        if decoded is None:
+            decoded = {
+                "type": "morse_char",
+                "char": "*",
+                "morse": symbol,
+                "timestamp": timestamp,
+            }
+        return decoded
 
     def process_block(self, pcm_bytes: bytes) -> list[dict[str, Any]]:
         """Process PCM bytes and return decode/scope events."""
@@ -579,40 +606,9 @@ class MorseDecoder:
                 self._silence_blocks = 0.0
                 self._tone_blocks = 0.0
 
-                if self._current_symbol and silence_count >= self._char_gap:
-                    timestamp = datetime.now().strftime("%H:%M:%S")
-                    decoded = self._decode_symbol(self._current_symbol, timestamp)
-                    if decoded is not None:
-                        events.append(decoded)
-
-                    if silence_count >= self._word_gap:
-                        events.append(
-                            {
-                                "type": "morse_space",
-                                "timestamp": timestamp,
-                            }
-                        )
-                        events.append(
-                            {
-                                "type": "morse_gap",
-                                "gap": "word",
-                                "duration_ms": round(silence_count * self._block_duration * 1000.0, 1),
-                            }
-                        )
-                    else:
-                        events.append(
-                            {
-                                "type": "morse_gap",
-                                "gap": "char",
-                                "duration_ms": round(silence_count * self._block_duration * 1000.0, 1),
-                            }
-                        )
-
-                    self._current_symbol = ""
-                elif silence_count >= 1.0:
+                if self._current_symbol and 1.0 <= silence_count <= (self._char_gap * 0.95):
                     # Intra-symbol gap candidate improves dit estimate for Farnsworth-style spacing.
-                    if silence_count <= (self._char_gap * 0.95):
-                        self._record_dit_candidate(silence_count)
+                    self._record_dit_candidate(silence_count)
 
             elif (not tone_detected) and self._tone_on:
                 # Possible tone dropout — tolerate brief gaps before confirming edge-down.
@@ -642,9 +638,13 @@ class MorseDecoder:
                             "duration_ms": round(tone_count * self._block_duration * 1000.0, 1),
                         }
                     )
-                    # Raw duration, dit or dah: the quartile estimator sorts
-                    # them out without trusting the current classification.
+                    # Raw duration, dit or dah: the estimator clusters them
+                    # without trusting the current classification.
                     self._record_dit_candidate(tone_count)
+                    if len(self._current_symbol) >= 8:
+                        # Longer than any valid code: close it out rather
+                        # than accumulating one endless symbol.
+                        events.append(self._finish_symbol(datetime.now().strftime("%H:%M:%S")))
 
             elif tone_detected and self._tone_on:
                 # Recover any dropout blocks — tone resumed, so they were part of the element.
@@ -653,6 +653,36 @@ class MorseDecoder:
 
             elif (not tone_detected) and (not self._tone_on):
                 self._silence_blocks += 1.0
+
+                # Emit characters as soon as their gap elapses, not at the
+                # next key-down: text must appear even when the sender
+                # pauses or stops transmitting.
+                if self._current_symbol and self._silence_blocks >= self._char_gap:
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    events.append(self._finish_symbol(timestamp))
+                    events.append(
+                        {
+                            "type": "morse_gap",
+                            "gap": "char",
+                            "duration_ms": round(self._silence_blocks * self._block_duration * 1000.0, 1),
+                        }
+                    )
+                elif self._space_pending and self._silence_blocks >= self._word_gap:
+                    self._space_pending = False
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    events.append(
+                        {
+                            "type": "morse_space",
+                            "timestamp": timestamp,
+                        }
+                    )
+                    events.append(
+                        {
+                            "type": "morse_gap",
+                            "gap": "word",
+                            "duration_ms": round(self._silence_blocks * self._block_duration * 1000.0, 1),
+                        }
+                    )
 
         if amplitudes:
             scope_event: dict[str, Any] = {
@@ -694,10 +724,7 @@ class MorseDecoder:
             )
 
         if self._current_symbol:
-            decoded = self._decode_symbol(self._current_symbol, datetime.now().strftime("%H:%M:%S"))
-            if decoded is not None:
-                events.append(decoded)
-            self._current_symbol = ""
+            events.append(self._finish_symbol(datetime.now().strftime("%H:%M:%S")))
 
         self._tone_on = False
         self._tone_blocks = 0.0

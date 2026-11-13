@@ -300,6 +300,29 @@ class TestTimingAndWpmEstimator:
         assert "." in elements
         assert "-" in elements
 
+    def test_characters_emit_without_followup_tone(self):
+        """Characters must appear once their gap elapses, not at the next
+        key-down: a sender who pauses or stops must still produce text
+        (seen on-air as 'raw elements but no decoded text')."""
+        audio = generate_morse_audio("SOS", wpm=15) + generate_silence(3.0)
+        decoder = MorseDecoder(sample_rate=8000, tone_freq=700.0, wpm=15)
+        events = decoder.process_block(audio)  # no flush on purpose
+        text = "".join(e.get("char", "") for e in events if e.get("type") == "morse_char")
+        assert text == "SOS"
+
+    def test_unreadable_symbol_prints_placeholder(self):
+        """A pattern with no table entry must print '*', not vanish, and an
+        endless element run must be closed out rather than accumulated."""
+        decoder = MorseDecoder(sample_rate=8000, tone_freq=700.0, wpm=15)
+        dit = 1.2 / 15.0
+        audio = generate_silence(0.4)
+        for _ in range(9):  # nine dits: longer than any valid code
+            audio += generate_tone(700.0, dit) + generate_silence(dit)
+        audio += generate_silence(1.5)
+        events = decoder.process_block(audio)
+        chars = [e["char"] for e in events if e.get("type") == "morse_char"]
+        assert "*" in chars, chars
+
     def test_wpm_estimator_sanity(self):
         target_wpm = 18
         audio = generate_morse_audio("PARIS PARIS PARIS", wpm=target_wpm)
