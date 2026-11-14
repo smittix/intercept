@@ -36,6 +36,7 @@ dependencies = [
     "pyserial>=3.5",
     "Werkzeug>=3.1.9",
     "bleak>=3.1.0",
+    "dbus-python>=1.5.1",
     "requests>=2.34.2",
 ]
 

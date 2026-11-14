@@ -175,6 +175,7 @@ class SubGhzManager:
         # Sweep state
         self._sweep_running = False
         self._sweep_thread: threading.Thread | None = None
+        self._sweep_peaks: dict[float, float] = {}
 
         # Tool availability
         self._hackrf_available: bool | None = None
@@ -407,6 +408,21 @@ class SubGhzManager:
                     self._rx_process = None
                     logger.error(f"Failed to open RX file: {e}")
                     return {"status": "error", "message": "Failed to open capture file"}
+
+                # A radio that dies at once (device busy, bad args) must not report started.
+                if self._rx_process.poll() is not None or not self._rx_file_handle:
+                    msg = self._rx_stderr_peek() or "Radio process exited immediately"
+                    safe_terminate(self._rx_process)
+                    try:
+                        self._rx_file_handle.close()
+                    except Exception:
+                        pass
+                    unregister_process(self._rx_process)
+                    self._rx_process = None
+                    self._rx_file_handle = None
+                    if self._rx_thread and self._rx_thread.is_alive():
+                        self._rx_thread.join(timeout=1.0)
+                    return {"status": "error", "message": f"Receive failed to start: {msg}"}
 
                 self._rx_start_time = time.time()
                 self._rx_frequency_hz = frequency_hz
@@ -1151,6 +1167,21 @@ class SubGhzManager:
             return bins_vals.tolist()
         except Exception:
             return []
+
+    def _rx_stderr_peek(self) -> str:
+        """Non-blocking read of whatever the radio wrote to stderr before dying."""
+        proc = self._rx_process
+        if not proc or not proc.stderr:
+            return ""
+        try:
+            import os, select
+            fd = proc.stderr.fileno()
+            if select.select([fd], [], [], 0)[0]:
+                data = os.read(fd, 2048).decode("utf-8", errors="replace").strip()
+                return data[:300]
+        except Exception:
+            pass
+        return ""
 
     def _monitor_rx_stderr(self) -> None:
         process = self._rx_process
@@ -2338,6 +2369,7 @@ class SubGhzManager:
         if device_err:
             return {"status": "error", "message": device_err}
 
+        self._reset_sweep_peaks()
         # Wait for previous sweep thread to exit (blocking) before lock
         if self._sweep_thread and self._sweep_thread.is_alive():
             self._sweep_thread.join(timeout=2.0)
@@ -2502,7 +2534,9 @@ class SubGhzManager:
                         continue
 
                     for i, power in enumerate(powers):
-                        pending[round((hz_low + i * hz_bin_width) / 1_000_000, 4)] = round(power, 1)
+                        freq = round((hz_low + i * hz_bin_width) / 1_000_000, 4)
+                        pending[freq] = round(power, 1)  # live view: latest reading, as before
+                        self._keep_peak(freq, round(power, 1))  # peak record: strongest reading
                 except Exception as exc:
                     logger.debug(f"Skipping malformed sweep line: {exc}")
                     continue
@@ -2517,6 +2551,30 @@ class SubGhzManager:
             self._emit_sweep_points(pending)
         except Exception as e:
             logger.error(f"Error reading sweep output: {e}")
+
+    PEAK_LIMIT = 200  # the strongest readings kept after a sweep ends
+
+    def _keep_peak(self, freq: float, power: float) -> None:
+        peaks = self._sweep_peaks
+        if freq in peaks:
+            if power > peaks[freq]:
+                peaks[freq] = power
+            return
+        if len(peaks) < self.PEAK_LIMIT:
+            peaks[freq] = power
+            return
+        # full: only a reading stronger than the weakest kept one earns a place; the sort runs rarely
+        weakest = min(peaks, key=peaks.get)
+        if power > peaks[weakest]:
+            del peaks[weakest]
+            peaks[freq] = power
+
+    def sweep_peaks(self) -> dict[float, float]:
+        """The strongest reading kept for each frequency in the last sweep."""
+        return dict(self._sweep_peaks)
+
+    def _reset_sweep_peaks(self) -> None:
+        self._sweep_peaks = {}
 
     def _emit_sweep_points(self, pending: dict[float, float]) -> None:
         if pending:

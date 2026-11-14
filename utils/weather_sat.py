@@ -221,11 +221,12 @@ class WeatherSatDecoder:
     def decoder_available(self) -> str | None:
         """Return name of available decoder or None.
 
-        A miss is checked again, so installing SatDump takes effect without
+        Checked on every call, so installing or removing SatDump takes effect without
         restarting iNTERCEPT.
         """
-        if self._decoder is None:
-            self._decoder = self._detect_decoder()
+        # Check again on every call, hit or miss: a hit that stuck after SatDump was removed
+        # would let the route start a decoder that is no longer there.
+        self._decoder = self._detect_decoder()
         return self._decoder
 
     @property
