@@ -409,6 +409,21 @@ class SubGhzManager:
                     logger.error(f"Failed to open RX file: {e}")
                     return {"status": "error", "message": "Failed to open capture file"}
 
+                # A radio that dies at once (device busy, bad args) must not report started.
+                if self._rx_process.poll() is not None or not self._rx_file_handle:
+                    msg = self._rx_stderr_peek() or "Radio process exited immediately"
+                    safe_terminate(self._rx_process)
+                    try:
+                        self._rx_file_handle.close()
+                    except Exception:
+                        pass
+                    unregister_process(self._rx_process)
+                    self._rx_process = None
+                    self._rx_file_handle = None
+                    if self._rx_thread and self._rx_thread.is_alive():
+                        self._rx_thread.join(timeout=1.0)
+                    return {"status": "error", "message": f"Receive failed to start: {msg}"}
+
                 self._rx_start_time = time.time()
                 self._rx_frequency_hz = frequency_hz
                 self._rx_sample_rate = sample_rate
@@ -1152,6 +1167,21 @@ class SubGhzManager:
             return bins_vals.tolist()
         except Exception:
             return []
+
+    def _rx_stderr_peek(self) -> str:
+        """Non-blocking read of whatever the radio wrote to stderr before dying."""
+        proc = self._rx_process
+        if not proc or not proc.stderr:
+            return ""
+        try:
+            import os, select
+            fd = proc.stderr.fileno()
+            if select.select([fd], [], [], 0)[0]:
+                data = os.read(fd, 2048).decode("utf-8", errors="replace").strip()
+                return data[:300]
+        except Exception:
+            pass
+        return ""
 
     def _monitor_rx_stderr(self) -> None:
         process = self._rx_process
