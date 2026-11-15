@@ -13,9 +13,11 @@ const SSTV = (function() {
     let dopplerStatus = '';  // latest Doppler reading, shown alongside the listening status
     let issMap = null;
     let issMarker = null;
+    let observerMarker = null;
     let issTrackLine = null;
     let issTrackPast = null;
     let issPosition = null;
+    let followIss = true;
     let issUpdateInterval = null;
     let issTrackInterval = null;
     let countdownInterval = null;
@@ -28,6 +30,7 @@ const SSTV = (function() {
     const ISS_MODULATION = 'fm';
     const SETTINGS_KEY = 'sstvIssSettings';
     const SETTINGS_INPUT_IDS = ['sstvPreset', 'sstvFrequency', 'sstvModulation', 'sstvGain', 'sstvPpm'];
+    const MAP_HEIGHT_KEY = 'sstvMapHeight';
     let settingsListenersAttached = false;
 
     // Signal scope state
@@ -55,15 +58,14 @@ const SSTV = (function() {
             checkStatus(),
             loadImages(),
             loadIssSchedule(),
-            updateIssPosition(),
         ]).catch(err => console.error('SSTV init error:', err));
 
         // DOM-only setup (no network, fast)
         initMap();
+        initMapResize();
         startCountdown();
-        // ISS tracking interval (first call already in Promise.all above)
-        if (issUpdateInterval) clearInterval(issUpdateInterval);
-        issUpdateInterval = setInterval(updateIssPosition, 5000);
+        // Position + ground track fetches and their refresh intervals
+        startIssTracking();
         // Ensure Leaflet recomputes dimensions after the SSTV pane becomes visible.
         setTimeout(() => invalidateMap(), 80);
         setTimeout(() => invalidateMap(), 260);
@@ -125,6 +127,7 @@ const SSTV = (function() {
                 localStorage.setItem('observerLat', lat.toString());
                 localStorage.setItem('observerLon', lon.toString());
             }
+            updateObserverMarker();
             loadIssSchedule(); // Refresh pass predictions
         }
     }
@@ -281,6 +284,7 @@ const SSTV = (function() {
                 btn.disabled = false;
 
                 showNotification('SSTV', 'Location updated from GPS');
+                updateObserverMarker();
                 loadIssSchedule();
             },
             (err) => {
@@ -352,21 +356,6 @@ const SSTV = (function() {
                 className: 'tile-layer-cyan'
             }).addTo(issMap);
 
-        // Upgrade tiles in background via Settings (with timeout fallback)
-        if (typeof Settings !== 'undefined') {
-            try {
-                await Promise.race([
-                    Settings.init(),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Settings timeout')), 5000))
-                ]);
-                issMap.removeLayer(fallbackTiles);
-                Settings.createTileLayer().addTo(issMap);
-                Settings.registerMap(issMap);
-            } catch (e) {
-                console.warn('SSTV: Settings init failed/timed out, using fallback tiles:', e);
-            }
-        }
-
         if (typeof MapUtils !== 'undefined') MapUtils.addGraticuleControl(issMap);
 
         // Create ISS icon
@@ -395,13 +384,152 @@ const SSTV = (function() {
             dashArray: '6, 4'
         }).addTo(issMap);
 
+        updateObserverMarker();
+
         issMap.on('resize moveend zoomend', () => {
             if (pendingMapInvalidate) invalidateMap();
         });
 
+        // A manual pan or zoom means the user wants to look at something;
+        // stop re-centring on the ISS until they turn Follow back on.
+        issMap.on('dragstart zoomstart', () => setFollow(false, { recenter: false }));
+
         // Initial layout passes for first-time mode load.
         setTimeout(() => invalidateMap(), 40);
         setTimeout(() => invalidateMap(), 180);
+
+        // Upgrade tiles in background via Settings (with timeout fallback).
+        // Everything above is created first so position/track fetches that
+        // finish during this await still land on the map.
+        if (typeof Settings !== 'undefined') {
+            try {
+                await Promise.race([
+                    Settings.init(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Settings timeout')), 5000))
+                ]);
+                issMap.removeLayer(fallbackTiles);
+                Settings.createTileLayer().addTo(issMap);
+                Settings.registerMap(issMap);
+            } catch (e) {
+                console.warn('SSTV: Settings init failed/timed out, using fallback tiles:', e);
+            }
+        }
+    }
+
+    /**
+     * Show the observer's location on the map (from the LOC inputs).
+     */
+    function updateObserverMarker() {
+        if (!issMap) return;
+        const location = getObserverLocation();
+        if (!location) return;
+        const latLng = [location.latitude, location.longitude];
+        if (observerMarker) {
+            observerMarker.setLatLng(latLng);
+            if (followIss) applyFollowView(true);
+            return;
+        }
+        const icon = L.divIcon({
+            className: 'sstv-observer-marker',
+            html: `<div class="sstv-observer-dot"></div><div class="sstv-observer-label">QTH</div>`,
+            iconSize: [40, 26],
+            iconAnchor: [20, 7]
+        });
+        observerMarker = L.marker(latLng, { icon }).addTo(issMap);
+    }
+
+    /**
+     * Frame the follow view: keep the ISS and the QTH (when set) in view.
+     * Only moves the map when `force` is set or a point nears the view edge,
+     * so routine position updates don't make the map jump.
+     */
+    function applyFollowView(force) {
+        if (!issMap || !issPosition || !isMapContainerVisible()) return;
+        const qth = getObserverLocation();
+        const view = issMap.getBounds().pad(-0.2);
+
+        if (qth) {
+            // Pick the ISS longitude copy closest to the QTH so the fit
+            // doesn't span the long way around the antimeridian.
+            let issLon = issPosition.lon;
+            if (Math.abs(issLon - qth.longitude) > 180) {
+                issLon += issLon < qth.longitude ? 360 : -360;
+            }
+            const issLatLng = L.latLng(issPosition.lat, issLon);
+            const qthLatLng = L.latLng(qth.latitude, qth.longitude);
+            if (force || !view.contains(issLatLng) || !view.contains(qthLatLng)) {
+                issMap.fitBounds(L.latLngBounds([issLatLng, qthLatLng]).pad(0.35), {
+                    animate: false,
+                    maxZoom: 4,
+                });
+            }
+        } else {
+            const issLatLng = L.latLng(issPosition.lat, issPosition.lon);
+            if (force || !view.contains(issLatLng)) {
+                issMap.setView(issLatLng, issMap.getZoom(), { animate: false });
+            }
+        }
+    }
+
+    /**
+     * Turn follow-the-ISS on or off and sync the toggle button.
+     */
+    function setFollow(on, { recenter = true } = {}) {
+        followIss = on;
+        const btn = document.getElementById('sstvFollowBtn');
+        if (btn) btn.classList.toggle('active', on);
+        if (on && recenter) applyFollowView(true);
+    }
+
+    function toggleFollow() {
+        setFollow(!followIss);
+    }
+
+    /**
+     * Make the map section resizable via its drag handle; persist the height.
+     */
+    function initMapResize() {
+        const section = document.getElementById('sstvMapSection');
+        const handle = document.getElementById('sstvMapResizeHandle');
+        if (!section || !handle || handle.dataset.bound) return;
+        handle.dataset.bound = '1';
+
+        const clampHeight = (h) => Math.max(160, Math.min(600, Math.round(h)));
+
+        const stored = parseInt(localStorage.getItem(MAP_HEIGHT_KEY), 10);
+        if (Number.isFinite(stored)) section.style.height = clampHeight(stored) + 'px';
+
+        handle.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            handle.setPointerCapture(e.pointerId);
+            handle.classList.add('dragging');
+            const startY = e.clientY;
+            const startH = section.getBoundingClientRect().height;
+
+            const onMove = (ev) => {
+                section.style.height = clampHeight(startH + (ev.clientY - startY)) + 'px';
+            };
+            const onUp = () => {
+                handle.removeEventListener('pointermove', onMove);
+                handle.removeEventListener('pointerup', onUp);
+                handle.removeEventListener('pointercancel', onUp);
+                handle.classList.remove('dragging');
+                try {
+                    localStorage.setItem(MAP_HEIGHT_KEY, String(Math.round(section.getBoundingClientRect().height)));
+                } catch (err) {
+                    // Storage unavailable; height just won't persist
+                }
+            };
+            handle.addEventListener('pointermove', onMove);
+            handle.addEventListener('pointerup', onUp);
+            handle.addEventListener('pointercancel', onUp);
+        });
+
+        // Re-tile Leaflet whenever the section changes size (drag, window
+        // resize, or the pane becoming visible again).
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(() => invalidateMap()).observe(section);
+        }
     }
 
     /**
@@ -674,9 +802,11 @@ const SSTV = (function() {
 
         // Track is fetched separately by updateIssTrack() via /sstv/iss-track
 
-        // Pan map to follow ISS only when the map pane is currently renderable.
+        // Follow only when enabled and the map pane is renderable; the view
+        // keeps the QTH and ISS framed together and only moves when needed —
+        // re-panning on every 5 s update made the map constantly jump.
         if (isMapContainerVisible()) {
-            issMap.panTo([lat, lon], { animate: true, duration: 0.5 });
+            if (followIss) applyFollowView(false);
         } else {
             pendingMapInvalidate = true;
         }
@@ -845,8 +975,10 @@ const SSTV = (function() {
                     <circle cx="12" cy="12" r="3"/>
                     <path d="M3 9h2M19 9h2M3 15h2M19 15h2"/>
                 </svg>
-                <h4>ISS SSTV Decoder</h4>
-                <p>Click Start to listen for SSTV transmissions on ${frequency.toFixed(3)} MHz ${modulation.toUpperCase()}</p>
+                <div class="sstv-idle-text">
+                    <h4>Decoder idle</h4>
+                    <p>Press Start to listen on ${frequency.toFixed(3)} MHz ${modulation.toUpperCase()}</p>
+                </div>
             </div>
         `;
     }
@@ -1578,6 +1710,7 @@ const SSTV = (function() {
         stopCountdown,
         invalidateMap,
         selectPreset,
+        toggleFollow,
         destroy
     };
 

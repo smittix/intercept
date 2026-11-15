@@ -221,8 +221,10 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-width: 300px;
+    flex: 0 0 380px;
+    min-width: 0;
+    align-self: flex-start;
+    max-height: 100%;
 }
 
 .sstv-live-header {
@@ -271,6 +273,11 @@
     image-rendering: pixelated;
 }
 
+#sstvDecodeImg {
+    max-width: 100%;
+    height: auto;
+}
+
 .sstv-decode-info {
     width: 100%;
     margin-top: 12px;
@@ -308,33 +315,81 @@
     text-align: center;
 }
 
-/* Idle state */
+/* Idle state (compact row) */
 .sstv-idle-state {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 40px 20px;
+    gap: 12px;
+    width: 100%;
+    padding: 4px 2px;
     color: var(--text-dim);
 }
 
 .sstv-idle-state svg {
-    width: 64px;
-    height: 64px;
-    opacity: 0.3;
-    margin-bottom: 16px;
+    width: 28px;
+    height: 28px;
+    opacity: 0.35;
+    flex-shrink: 0;
 }
 
 .sstv-idle-state h4 {
-    font-size: 14px;
+    font-size: 12px;
     color: var(--text-secondary);
-    margin-bottom: 8px;
+    margin-bottom: 2px;
 }
 
 .sstv-idle-state p {
-    font-size: 12px;
-    max-width: 250px;
+    font-size: 11px;
+}
+
+/* ============================================
+   SIGNAL SCOPE (inside live section)
+   ============================================ */
+.sstv-scope-panel {
+    border-top: 1px solid var(--border-color);
+    padding: 8px 10px 10px;
+}
+
+.sstv-scope-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-bottom: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.sstv-scope-stats {
+    display: flex;
+    gap: 14px;
+}
+
+.sstv-scope-rms,
+.sstv-scope-peak {
+    font-family: var(--font-data);
+    font-variant-numeric: tabular-nums;
+}
+
+.sstv-scope-rms {
+    color: var(--accent-purple);
+}
+
+.sstv-scope-peak {
+    color: var(--accent-red);
+}
+
+#sstvScopeCanvas {
+    width: 100%;
+    height: 80px;
+    display: block;
+    border-radius: 3px;
+    background: #050510;
 }
 
 /* ============================================
@@ -347,8 +402,8 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    flex: 1.5;
-    min-width: 300px;
+    flex: 1;
+    min-width: 0;
 }
 
 .sstv-gallery-header {
@@ -497,22 +552,14 @@
 }
 
 /* ============================================
-   TOP ROW (Map + Countdown)
+   ISS MAP SECTION (resizable)
    ============================================ */
-.sstv-top-row {
+.sstv-map-section {
     display: flex;
-    gap: 12px;
-    height: 220px;
+    flex-direction: column;
+    height: 320px;
+    min-height: 160px;
     flex-shrink: 0;
-}
-
-/* ============================================
-   ISS MAP ROW
-   ============================================ */
-.sstv-map-row {
-    flex: 1.5;
-    min-width: 0;
-    height: 100%;
 }
 
 .sstv-map-container {
@@ -521,7 +568,70 @@
     border: 1px solid var(--border-color);
     border-radius: 8px;
     overflow: hidden;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
+}
+
+.sstv-map-resize-handle {
+    height: 12px;
+    flex-shrink: 0;
+    cursor: ns-resize;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sstv-map-resize-handle::before {
+    content: '';
+    width: 44px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border-color);
+    transition: background 0.15s, width 0.15s;
+}
+
+.sstv-map-resize-handle:hover::before,
+.sstv-map-resize-handle.dragging::before {
+    background: var(--accent-cyan);
+    width: 64px;
+}
+
+.sstv-map-follow-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 5px 9px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--border-color);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.sstv-map-follow-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.sstv-map-follow-btn.active {
+    color: var(--accent-cyan);
+    border-color: var(--accent-cyan);
+}
+
+.sstv-map-follow-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+    color: var(--text-primary);
 }
 
 .sstv-iss-map {
@@ -536,7 +646,8 @@
     left: 0;
     right: 0;
     display: flex;
-    justify-content: space-between;
+    /* Keep clear of the graticule control in the bottom-left corner */
+    justify-content: flex-end;
     align-items: center;
     padding: 8px 12px;
     background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
@@ -632,74 +743,96 @@
     border: none;
 }
 
+/* Observer (QTH) marker */
+.sstv-observer-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.leaflet-marker-icon.sstv-observer-marker {
+    background: transparent;
+    border: none;
+}
+
+.sstv-observer-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--accent-cyan);
+    border: 2px solid #fff;
+    border-radius: 50%;
+}
+
+.sstv-observer-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: bold;
+    color: var(--accent-cyan);
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.8), 0 0 6px rgba(0, 0, 0, 0.5);
+    margin-top: 1px;
+}
+
 /* ============================================
-   COUNTDOWN PANEL
+   NEXT PASS BAR
    ============================================ */
-.sstv-countdown-panel {
-    flex: 1;
-    min-width: 280px;
-    max-width: 380px;
+.sstv-pass-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 14px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    height: 100%;
+    flex-wrap: wrap;
+    flex-shrink: 0;
 }
 
-.sstv-countdown-header {
+.sstv-pass-bar-title {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 14px;
-    background: rgba(0, 0, 0, 0.2);
-    border-bottom: 1px solid var(--border-color);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     color: var(--text-primary);
 }
 
-.sstv-countdown-header svg {
+.sstv-pass-bar-title svg {
+    width: 15px;
+    height: 15px;
     color: var(--accent-cyan);
 }
 
-.sstv-countdown-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-    gap: 10px;
+.sstv-pass-bar-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color);
 }
 
 .sstv-countdown-timer {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
+    align-items: baseline;
+    gap: 8px;
 }
 
 .sstv-countdown-value {
     font-family: var(--font-data);
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 700;
     color: var(--accent-cyan);
-    letter-spacing: 2px;
-    text-shadow: 0 0 20px rgba(var(--accent-cyan-rgb), 0.3);
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
 }
 
 .sstv-countdown-value.imminent {
     color: var(--accent-green);
-    text-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
     animation: countdown-pulse 1s ease-in-out infinite;
 }
 
 .sstv-countdown-value.active {
     color: var(--accent-yellow);
-    text-shadow: 0 0 20px rgba(255, 204, 0, 0.4);
     animation: countdown-pulse 0.5s ease-in-out infinite;
 }
 
@@ -710,20 +843,15 @@
 
 .sstv-countdown-label {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 9px;
     color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
 .sstv-countdown-details {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px 12px;
-    width: 100%;
-    padding: 10px;
-    background: var(--bg-secondary);
-    border-radius: 6px;
+    display: flex;
+    gap: 16px;
 }
 
 .sstv-countdown-detail {
@@ -751,11 +879,8 @@
 .sstv-countdown-status {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 6px;
-    padding: 8px 14px;
-    background: rgba(0, 0, 0, 0.15);
-    border-top: 1px solid var(--border-color);
+    margin-left: auto;
     font-family: var(--font-mono);
     font-size: 9px;
     color: var(--text-dim);
@@ -978,50 +1103,30 @@
    RESPONSIVE
    ============================================ */
 @media (max-width: 1024px) {
-    .sstv-main-row {
-        flex-direction: column;
+    /* Stack everything and let the whole pane scroll as one page */
+    .sstv-visuals-container {
         overflow-y: auto;
     }
 
+    .sstv-main-row {
+        flex-direction: column;
+        flex: none;
+        overflow: visible;
+    }
+
     .sstv-live-section {
-        max-width: none;
-        min-height: 350px;
+        flex: none;
+        align-self: stretch;
+        max-height: none;
     }
 
     .sstv-gallery-section {
+        flex: none;
         min-height: 300px;
     }
-}
 
-@media (max-width: 1024px) {
-    .sstv-top-row {
-        flex-direction: column;
-        height: auto;
-    }
-
-    .sstv-map-row {
-        flex: none;
-        height: 180px;
-    }
-
-    .sstv-countdown-panel {
-        min-width: auto;
-        max-width: none;
-        height: auto;
-    }
-
-    .sstv-countdown-value {
-        font-size: 24px;
-    }
-
-    .sstv-iss-map {
-        height: 180px;
-    }
-
-    .sstv-map-overlay {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
+    .sstv-gallery-grid {
+        overflow: visible;
     }
 }
 
@@ -1032,8 +1137,17 @@
         flex-wrap: wrap;
     }
 
-    .sstv-strip-divider {
+    .sstv-strip-divider,
+    .sstv-pass-bar-divider {
         display: none;
+    }
+
+    .sstv-pass-bar {
+        gap: 10px 16px;
+    }
+
+    .sstv-countdown-status {
+        margin-left: 0;
     }
 
     .sstv-strip-location {
@@ -1048,10 +1162,6 @@
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         gap: 8px;
         padding: 8px;
-    }
-
-    .sstv-iss-map {
-        height: 150px;
     }
 
     .sstv-map-info {
