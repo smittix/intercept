@@ -2239,76 +2239,65 @@
                         </div>
                     </div>
 
-                    <!-- ISS Tracking Map + Countdown Row -->
-                    <div class="sstv-top-row">
-                        <!-- ISS Map -->
-                        <div class="sstv-map-row">
-                            <div class="sstv-map-container">
-                                <div id="sstvIssMap" class="sstv-iss-map"></div>
-                                <div class="sstv-map-overlay">
-                                    <div class="sstv-map-info">
-                                        <span class="sstv-map-label">ISS</span>
-                                        <span class="sstv-map-coords"><span id="sstvIssLat">--.-</span>°, <span id="sstvIssLon">--.-</span>°</span>
-                                        <span class="sstv-map-alt">Alt: <span id="sstvIssAlt">---</span> km</span>
-                                    </div>
-                                </div>
+                    <!-- Next Pass Bar -->
+                    <div class="sstv-pass-bar">
+                        <div class="sstv-pass-bar-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <span>Next Pass</span>
+                        </div>
+                        <div class="sstv-countdown-timer">
+                            <span class="sstv-countdown-value" id="sstvCountdownValue">--:--:--</span>
+                            <span class="sstv-countdown-label" id="sstvCountdownLabel">Set location</span>
+                        </div>
+                        <div class="sstv-pass-bar-divider"></div>
+                        <div class="sstv-countdown-details">
+                            <div class="sstv-countdown-detail">
+                                <span class="sstv-detail-label">Start</span>
+                                <span class="sstv-detail-value" id="sstvPassStart">--:--</span>
+                            </div>
+                            <div class="sstv-countdown-detail">
+                                <span class="sstv-detail-label">Max El</span>
+                                <span class="sstv-detail-value" id="sstvPassMaxEl">--°</span>
+                            </div>
+                            <div class="sstv-countdown-detail">
+                                <span class="sstv-detail-label">Duration</span>
+                                <span class="sstv-detail-value" id="sstvPassDuration">-- min</span>
+                            </div>
+                            <div class="sstv-countdown-detail">
+                                <span class="sstv-detail-label">Direction</span>
+                                <span class="sstv-detail-value" id="sstvPassDirection">--</span>
                             </div>
                         </div>
-
-                        <!-- Next Pass Countdown Panel -->
-                        <div class="sstv-countdown-panel">
-                            <div class="sstv-countdown-header">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <polyline points="12 6 12 12 16 14"/>
-                                </svg>
-                                <span>Next Pass</span>
-                            </div>
-                            <div class="sstv-countdown-body">
-                                <div class="sstv-countdown-timer" id="sstvCountdownTimer">
-                                    <span class="sstv-countdown-value" id="sstvCountdownValue">--:--:--</span>
-                                    <span class="sstv-countdown-label" id="sstvCountdownLabel">Set location</span>
-                                </div>
-                                <div class="sstv-countdown-details">
-                                    <div class="sstv-countdown-detail">
-                                        <span class="sstv-detail-label">Start</span>
-                                        <span class="sstv-detail-value" id="sstvPassStart">--:--</span>
-                                    </div>
-                                    <div class="sstv-countdown-detail">
-                                        <span class="sstv-detail-label">Max El</span>
-                                        <span class="sstv-detail-value" id="sstvPassMaxEl">--°</span>
-                                    </div>
-                                    <div class="sstv-countdown-detail">
-                                        <span class="sstv-detail-label">Duration</span>
-                                        <span class="sstv-detail-value" id="sstvPassDuration">-- min</span>
-                                    </div>
-                                    <div class="sstv-countdown-detail">
-                                        <span class="sstv-detail-label">Direction</span>
-                                        <span class="sstv-detail-value" id="sstvPassDirection">--</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="sstv-countdown-status" id="sstvCountdownStatus">
-                                <span class="sstv-status-dot"></span>
-                                <span>Waiting for pass data...</span>
-                            </div>
+                        <div class="sstv-countdown-status" id="sstvCountdownStatus">
+                            <span class="sstv-status-dot"></span>
+                            <span>Waiting for pass data...</span>
                         </div>
                     </div>
 
-                    <!-- Signal Scope -->
-                    <div id="sstvScopePanel" style="display: none; margin-bottom: 12px;">
-                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">
-                                <span>Audio Waveform</span>
-                                <div style="display: flex; gap: 14px;">
-                                    <span>RMS: <span id="sstvScopeRmsLabel" style="color: var(--accent-purple); font-variant-numeric: tabular-nums;">0</span></span>
-                                    <span>PEAK: <span id="sstvScopePeakLabel" style="color: var(--accent-red); font-variant-numeric: tabular-nums;">0</span></span>
-                                    <span id="sstvScopeToneLabel" style="color: var(--text-dim);">QUIET</span>
-                                    <span id="sstvScopeStatusLabel" style="color: var(--text-dim);">IDLE</span>
+                    <!-- ISS Tracking Map (resizable via the handle underneath) -->
+                    <div class="sstv-map-section" id="sstvMapSection">
+                        <div class="sstv-map-container">
+                            <div id="sstvIssMap" class="sstv-iss-map"></div>
+                            <button class="sstv-map-follow-btn active" id="sstvFollowBtn" onclick="SSTV.toggleFollow()" title="Keep the ISS and your location in view">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;">
+                                    <circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.5"/>
+                                    <line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/>
+                                    <line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/>
+                                </svg>
+                                Follow ISS
+                            </button>
+                            <div class="sstv-map-overlay">
+                                <div class="sstv-map-info">
+                                    <span class="sstv-map-label">ISS</span>
+                                    <span class="sstv-map-coords"><span id="sstvIssLat">--.-</span>°, <span id="sstvIssLon">--.-</span>°</span>
+                                    <span class="sstv-map-alt">Alt: <span id="sstvIssAlt">---</span> km</span>
                                 </div>
                             </div>
-                            <canvas id="sstvScopeCanvas" style="width: 100%; height: 80px; display: block; border-radius: 3px; background: #050510;"></canvas>
                         </div>
+                        <div class="sstv-map-resize-handle" id="sstvMapResizeHandle" title="Drag to resize map"></div>
                     </div>
 
                     <!-- Main Row (Live + Gallery) -->
@@ -2331,9 +2320,23 @@
                                         <circle cx="12" cy="12" r="3"/>
                                         <path d="M3 9h2M19 9h2M3 15h2M19 15h2"/>
                                     </svg>
-                                    <h4>ISS SSTV Decoder</h4>
-                                    <p>Click Start to listen for SSTV transmissions on 145.800 MHz</p>
+                                    <div class="sstv-idle-text">
+                                        <h4>Decoder idle</h4>
+                                        <p>Press Start to listen on 145.800 MHz FM</p>
+                                    </div>
                                 </div>
+                            </div>
+                            <div id="sstvScopePanel" class="sstv-scope-panel" style="display: none;">
+                                <div class="sstv-scope-header">
+                                    <span>Audio Waveform</span>
+                                    <div class="sstv-scope-stats">
+                                        <span>RMS <span id="sstvScopeRmsLabel" class="sstv-scope-rms">0</span></span>
+                                        <span>PEAK <span id="sstvScopePeakLabel" class="sstv-scope-peak">0</span></span>
+                                        <span id="sstvScopeToneLabel">QUIET</span>
+                                        <span id="sstvScopeStatusLabel">IDLE</span>
+                                    </div>
+                                </div>
+                                <canvas id="sstvScopeCanvas"></canvas>
                             </div>
                         </div>
 

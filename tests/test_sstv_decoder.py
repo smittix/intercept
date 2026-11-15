@@ -875,6 +875,27 @@ class TestSSTVDecoder:
         assert decoder.doppler_enabled is False
         assert decoder.last_doppler_info is None
 
+    def test_retune_threshold_wide_for_fm_tight_for_ssb(self):
+        """FM tolerates kHz of Doppler drift; SSB needs tight tracking."""
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        decoder._modulation = "fm"
+        assert decoder._retune_threshold_hz() == SSTVDecoder.RETUNE_THRESHOLD_FM_HZ
+        decoder._modulation = "usb"
+        assert decoder._retune_threshold_hz() == SSTVDecoder.RETUNE_THRESHOLD_HZ
+        decoder._modulation = "lsb"
+        assert decoder._retune_threshold_hz() == SSTVDecoder.RETUNE_THRESHOLD_HZ
+
+    def test_retune_marks_stream_discontinuity(self):
+        """A Doppler retune must flag the audio gap so VIS state is reset."""
+        decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())
+        decoder._running = True
+        with patch("utils.sstv.sstv_decoder.subprocess.Popen") as mock_popen:
+            mock_popen.return_value = MagicMock()
+            decoder._retune_rtl_fm(145_803_000)
+        assert decoder._stream_discontinuity is True
+        assert decoder._current_tuned_freq_hz == 145_803_000
+        decoder._running = False
+
     def test_start_passes_modulation_gain_and_ppm_to_rtl_fm(self):
         """rtl_fm should get the chosen modulation, gain and PPM correction."""
         decoder = SSTVDecoder(output_dir=tempfile.mkdtemp())

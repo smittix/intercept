@@ -12,9 +12,11 @@ from __future__ import annotations
 import base64
 import contextlib
 import io
+import os
 import subprocess
 import threading
 import time
+import wave
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -140,7 +142,14 @@ def _encode_scope_waveform(raw_samples: np.ndarray, window_size: int = 256) -> l
 class SSTVDecoder:
     """SSTV decoder using pure-Python DSP with Doppler compensation."""
 
+    # Each retune restarts rtl_fm, which cuts a ~1 s hole in the audio, so
+    # retune as rarely as each modulation allows. After FM demodulation a
+    # carrier offset does not shift the SSTV audio tones (it only adds DC,
+    # which the bandpass removes), so FM tolerates several kHz of drift
+    # within rtl_fm's passband. SSB shifts the tones 1:1 and needs tight
+    # tracking.
     RETUNE_THRESHOLD_HZ = 500
+    RETUNE_THRESHOLD_FM_HZ = 5000
     DOPPLER_UPDATE_INTERVAL = 5
 
     def __init__(self, output_dir: str | Path | None = None, url_prefix: str = "/sstv"):
@@ -160,6 +169,8 @@ class SSTVDecoder:
         self._ppm: int | None = None
         self._current_tuned_freq_hz: int = 0
         self._device_index = 0
+        self._decoding_active = False  # an image decode is in flight
+        self._stream_discontinuity = False  # a retune cut the audio stream
 
         # Doppler tracking
         self._doppler_tracker = DopplerTracker("ISS")
@@ -238,6 +249,8 @@ class SSTVDecoder:
             try:
                 freq_hz = self._get_doppler_corrected_freq_hz()
                 self._current_tuned_freq_hz = freq_hz
+                self._decoding_active = False
+                self._stream_discontinuity = False
                 # Set _running BEFORE starting the pipeline so the decode
                 # thread sees it as True on its first loop iteration.
                 self._running = True
@@ -283,6 +296,10 @@ class SSTVDecoder:
                 return corrected_hz
 
         return nominal_freq_hz
+
+    def _retune_threshold_hz(self) -> int:
+        """Hz of Doppler drift tolerated before restarting rtl_fm."""
+        return self.RETUNE_THRESHOLD_FM_HZ if self._modulation == "fm" else self.RETUNE_THRESHOLD_HZ
 
     def _build_rtl_cmd(self, freq_hz: int) -> list[str]:
         """Build the rtl_fm command for the current settings at freq_hz."""
@@ -337,6 +354,22 @@ class SSTVDecoder:
         logger.info("Audio decode thread started")
         rtl_fm_error: str = ""
 
+        # Opt-in raw audio capture for off-air debugging: set
+        # INTERCEPT_SSTV_DEBUG_WAV=1 and the demodulated audio of the whole
+        # session is written next to the images (~5.5 MB/min).
+        debug_wav = None
+        if os.environ.get("INTERCEPT_SSTV_DEBUG_WAV"):
+            try:
+                wav_path = self._output_dir / f"sstv_audio_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
+                debug_wav = wave.open(str(wav_path), "wb")
+                debug_wav.setnchannels(1)
+                debug_wav.setsampwidth(2)
+                debug_wav.setframerate(SAMPLE_RATE)
+                logger.info(f"Recording decode audio to {wav_path}")
+            except Exception as e:
+                logger.warning(f"Could not open debug WAV: {e}")
+                debug_wav = None
+
         while self._running:
             proc = self._rtl_process
             if proc is None:
@@ -361,6 +394,17 @@ class SSTVDecoder:
                             logger.warning(f"rtl_fm stderr: {stderr_msg}")
                             rtl_fm_error = stderr_msg
                     break
+
+                if debug_wav:
+                    with contextlib.suppress(Exception):
+                        debug_wav.writeframes(raw_data)
+
+                # After a Doppler retune the audio stream has a gap; a VIS
+                # header torn across it can never be valid, so start clean.
+                if self._stream_discontinuity:
+                    self._stream_discontinuity = False
+                    if image_decoder is None:
+                        vis_detector.reset()
 
                 # Convert int16 PCM to float64
                 n_samples = len(raw_data) // 2
@@ -412,6 +456,7 @@ class SSTVDecoder:
                         self._save_decoded_image(image_decoder, current_mode_name)
                         image_decoder = None
                         current_mode_name = None
+                        self._decoding_active = False
                         vis_detector.reset()
                 else:
                     # Scanning for VIS header
@@ -434,6 +479,7 @@ class SSTVDecoder:
                         if mode_spec:
                             current_mode_name = mode_name
                             last_partial_pct = -1
+                            self._decoding_active = True
                             image_decoder = SSTVImageDecoder(
                                 mode_spec,
                                 sample_rate=SAMPLE_RATE,
@@ -500,9 +546,14 @@ class SSTVDecoder:
                     break
                 time.sleep(0.1)
 
+        if debug_wav:
+            with contextlib.suppress(Exception):
+                debug_wav.close()
+
         # Clean up if the thread exits while we thought we were running.
         # This prevents a "ghost running" state where is_running is True
         # but the thread has already died (e.g. rtl_fm exited).
+        self._decoding_active = False
         orphan_proc = None
         with self._lock:
             was_running = self._running
@@ -600,7 +651,13 @@ class SSTVDecoder:
                     )
                 )
 
-                if freq_diff >= self.RETUNE_THRESHOLD_HZ:
+                if freq_diff >= self._retune_threshold_hz():
+                    if self._decoding_active:
+                        # Restarting rtl_fm cuts the audio and ruins the
+                        # frame; the drift accumulated during one image is
+                        # harmless for FM, so retune once the image is done.
+                        logger.debug(f"Deferring retune ({freq_diff} Hz off) until image decode completes")
+                        continue
                     logger.info(
                         f"Retuning: {self._current_tuned_freq_hz} -> {new_freq_hz} Hz "
                         f"(Doppler shift: {doppler_info.shift_hz:+.1f} Hz)"
@@ -651,6 +708,7 @@ class SSTVDecoder:
             if self._running:
                 self._rtl_process = new_proc
                 self._current_tuned_freq_hz = new_freq_hz
+                self._stream_discontinuity = True
             else:
                 # stop() was called during retune — clean up new process
                 with contextlib.suppress(Exception):
