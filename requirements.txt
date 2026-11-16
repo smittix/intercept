@@ -64,3 +64,4 @@ paho-mqtt>=2.2.0
 # Production WSGI server (optional - falls back to Flask dev server)
 gunicorn>=26.2.0
 gevent>=26.9.0
+dbus-python>=1.5.1

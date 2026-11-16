@@ -16,6 +16,7 @@ import shutil
 import signal
 import struct
 import subprocess
+from utils.process import safe_terminate
 import threading
 import time
 from datetime import datetime, timezone
@@ -552,12 +553,8 @@ def _stop_waterfall_internal() -> None:
 
     waterfall_running = False
     if waterfall_process and waterfall_process.poll() is None:
-        try:
-            waterfall_process.terminate()
-            waterfall_process.wait(timeout=1)
-        except Exception:
-            with contextlib.suppress(Exception):
-                waterfall_process.kill()
+        # terminate, then kill if it survives the wait: a decoder ignoring SIGTERM must not be left running
+        safe_terminate(waterfall_process, timeout=1.0)
         waterfall_process = None
 
     if waterfall_active_device is not None:
