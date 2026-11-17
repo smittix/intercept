@@ -32,7 +32,7 @@ pyserial>=3.5
 meshtastic>=2.7.11
 # meshcore 2.3.0+ required for EventType.STATS_CORE; needs Python 3.10+
 # 2.3.16 excluded: uses 3.12-only f-string syntax despite requires-python>=3.10
-meshcore>=2.3.0,!=2.3.16
+meshcore!=2.3.16,>=2.3.19
 
 # Deauthentication attack detection (optional - for WiFi TSCM)
 scapy>=2.8.0
