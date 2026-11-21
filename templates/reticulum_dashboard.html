@@ -5,8 +5,8 @@
     {% set dash_mode_css = 'css/modes/reticulum.css' %}
     {% set dash_layout_css = 'css/reticulum_dashboard.css' %}
     {% set dash_needs_chart = false %}
+    {% set dash_needs_map = false %}
     {% include 'partials/dashboard_head.html' %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
 </head>
 <body data-mode="reticulum">
     <div class="radar-bg"></div>

@@ -6,12 +6,8 @@ conversations, sending messages, and streaming live events.
 
 from __future__ import annotations
 
-import json
-import queue
-
 from flask import Blueprint, Response, jsonify, render_template, request
 
-from config import DEFAULT_LATITUDE, DEFAULT_LONGITUDE, SHARED_OBSERVER_LOCATION_ENABLED
 from utils.logging import get_logger
 from utils.responses import api_error
 from utils.reticulum import (
@@ -22,6 +18,7 @@ from utils.reticulum import (
     normalize_hash,
     save_config,
 )
+from utils.sse import sse_stream_fanout
 
 logger = get_logger("intercept.reticulum")
 
@@ -38,13 +35,7 @@ def _client():
 def reticulum_dashboard() -> Response:
     """Reticulum LXMF messaging dashboard."""
     embedded = request.args.get("embedded", "false") == "true"
-    return render_template(
-        "reticulum_dashboard.html",
-        shared_observer_location=SHARED_OBSERVER_LOCATION_ENABLED,
-        default_latitude=DEFAULT_LATITUDE,
-        default_longitude=DEFAULT_LONGITUDE,
-        embedded=embedded,
-    )
+    return render_template("reticulum_dashboard.html", embedded=embedded)
 
 
 # ---------------------------------------------------------------------------
@@ -117,17 +108,8 @@ def announce():
 
 @reticulum_bp.route("/stream")
 def stream():
-    def _gen():
-        q = _client().get_queue()
-        while True:
-            try:
-                event = q.get(timeout=30)
-                yield f"data: {json.dumps(event)}\n\n"
-            except queue.Empty:
-                yield ": keepalive\n\n"
-
     return Response(
-        _gen(),
+        sse_stream_fanout(source_queue=_client().get_queue(), channel_key="reticulum"),
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

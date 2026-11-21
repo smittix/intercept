@@ -154,3 +154,24 @@ def test_dashboard_renders(app):
     r = c.get("/reticulum/dashboard")
     assert r.status_code == 200
     assert b"js/modes/reticulum.js" in r.data
+
+
+def test_stream_reaches_every_open_page(app):
+    """Two dashboards open: each event reaches both, not one or the other."""
+    import json
+    import time
+
+    import routes.reticulum as rr
+    from utils.reticulum import ReticulumClient
+
+    rns = ReticulumClient()
+    with patch.object(rr, "get_reticulum_client", return_value=rns), app.test_request_context("/reticulum/stream"):
+        pages = [rr.stream().response for _ in range(2)]
+        for page in pages:
+            next(page)  # the opening keepalive; each page is now subscribed
+        time.sleep(1.2)  # the fan-out picks up new subscribers between its 1 s source reads
+        rns._push({"type": "node", "data": {"dest_hash": "ab" * 16}})
+        got = [json.loads(next(page).split("data: ", 1)[1]) for page in pages]
+        for page in pages:
+            page.close()
+    assert [g["type"] for g in got] == ["node", "node"]

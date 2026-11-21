@@ -731,9 +731,13 @@ def init_db() -> None:
                 title TEXT,
                 content TEXT,
                 timestamp REAL NOT NULL,
-                state TEXT
+                state TEXT,
+                verified INTEGER NOT NULL DEFAULT 1
             )
         """)
+        rns_msg_columns = {row["name"] for row in conn.execute("PRAGMA table_info(reticulum_messages)")}
+        if "verified" not in rns_msg_columns:
+            conn.execute("ALTER TABLE reticulum_messages ADD COLUMN verified INTEGER NOT NULL DEFAULT 1")
 
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_reticulum_messages_peer
@@ -2603,7 +2607,7 @@ def cleanup_old_meshtastic_messages(max_age_days: int = 90) -> int:
         return cursor.rowcount
 
 
-_RETICULUM_MESSAGE_FIELDS = ("msg_hash", "direction", "peer_hash", "title", "content", "timestamp", "state")
+_RETICULUM_MESSAGE_FIELDS = ("msg_hash", "direction", "peer_hash", "title", "content", "timestamp", "state", "verified")
 
 
 def store_reticulum_message(msg: dict) -> bool:
@@ -2612,7 +2616,7 @@ def store_reticulum_message(msg: dict) -> bool:
         cursor = conn.execute(
             f"INSERT OR IGNORE INTO reticulum_messages ({', '.join(_RETICULUM_MESSAGE_FIELDS)}) "
             f"VALUES ({', '.join('?' * len(_RETICULUM_MESSAGE_FIELDS))})",
-            tuple(msg.get(f) for f in _RETICULUM_MESSAGE_FIELDS),
+            tuple(int(msg.get(f, True)) if f == "verified" else msg.get(f) for f in _RETICULUM_MESSAGE_FIELDS),
         )
         return cursor.rowcount == 1
 
@@ -2635,7 +2639,7 @@ def get_reticulum_messages(peer_hash: str | None = None, limit: int = 500) -> li
     params.append(limit)
     with get_db() as conn:
         rows = conn.execute(query, params).fetchall()
-    return [dict(row) for row in reversed(rows)]
+    return [dict(row) | {"verified": bool(row["verified"])} for row in reversed(rows)]
 
 
 def get_reticulum_conversations() -> list[dict]:

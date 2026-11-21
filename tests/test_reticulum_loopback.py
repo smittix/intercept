@@ -124,18 +124,21 @@ def test_lxmf_loopback(tmp_path, mode):
                 stderr=subprocess.DEVNULL,
             )
         )
-        for _ in range(50):  # wait for the TCP server
+        identity_file = rnsd_dir / "storage" / "transport_identity"
+        for _ in range(50):  # wait for the TCP server, and the identity rnsd writes
             try:
                 socket.create_connection(("127.0.0.1", port), timeout=0.2).close()
-                break
+                if identity_file.exists():
+                    break
             except OSError:
-                time.sleep(0.2)
+                pass
+            time.sleep(0.2)
         else:
             pytest.skip("throwaway rnsd did not come up")
 
         # A shared-instance client with its own config dir needs rnsd's rpc_key
         # (derived from rnsd's transport identity), or inbound links fail.
-        ident = RNS.Identity.from_file(str(rnsd_dir / "storage" / "transport_identity"))
+        ident = RNS.Identity.from_file(str(identity_file))
         rpc_key = RNS.Identity.full_hash(ident.get_private_key()).hex() if mode == "shared" else ""
 
         peer = subprocess.Popen(

@@ -8,13 +8,13 @@ const Reticulum = (function () {
     // ── State ──────────────────────────────────────────────────────────────
     let _mode = 'shared';
     let _eventSource = null;
-    let _statusTimer = null;
     let _running = false;
     let _address = '';
     let _nodes = {};          // dest_hash -> node
     let _nodeFilter = '';
     let _peer = null;         // selected conversation (dest hash) or null for all
     let _msgCount = 0;
+    let _convs = [];          // conversations, most recent first
 
     // ── Init / Destroy ─────────────────────────────────────────────────────
     async function init() {
@@ -23,15 +23,13 @@ const Reticulum = (function () {
         _loadNodes();
         _loadConversations();
         _loadMessages();
-        _startSSE();
-        _statusTimer = setInterval(_checkStatus, 5000);
+        _startSSE();  // status changes arrive over SSE; no polling
         const header = document.getElementById('rnsConversationHeader');
         if (header) header.addEventListener('click', () => selectPeer(null));
     }
 
     function destroy() {
         if (_eventSource) { _eventSource.close(); _eventSource = null; }
-        if (_statusTimer) { clearInterval(_statusTimer); _statusTimer = null; }
     }
 
     async function _json(url, opts) {
@@ -136,6 +134,7 @@ const Reticulum = (function () {
     function _startSSE() {
         if (_eventSource) _eventSource.close();
         _eventSource = new EventSource('/reticulum/stream');
+        _eventSource.onopen = _checkStatus;  // catch up on anything missed while disconnected
         _eventSource.onmessage = (e) => {
             let event;
             try { event = JSON.parse(e.data); } catch (err) { return; }
@@ -181,7 +180,7 @@ const Reticulum = (function () {
         const heard = n.last_heard ? new Date(n.last_heard * 1000).toLocaleTimeString() : '';
         el.innerHTML = `
             <div class="rns-item-name">${_esc(n.name || '(no name)')}</div>
-            <div class="rns-item-meta">${_esc(n.dest_hash)}</div>
+            <div class="rns-item-meta rns-hash">${_esc(n.dest_hash)}</div>
             <div class="rns-item-meta">${hops} hops · ${_esc(heard)}</div>`;
         el.hidden = !_nodeMatches(n);
         _setText('rnsNodeCount', Object.keys(_nodes).length);
@@ -201,13 +200,19 @@ const Reticulum = (function () {
 
     // ── Conversations ──────────────────────────────────────────────────────
     async function _loadConversations() {
+        try { _convs = (await _json('/reticulum/conversations')).conversations || []; } catch (e) { return; }
+        // The total, not the message list's length: that list is capped at 500
+        _msgCount = _convs.reduce((sum, c) => sum + (c.count || 0), 0);
+        _setText('rnsMsgCount', _msgCount);
+        _renderConversations();
+    }
+
+    function _renderConversations() {
         const list = document.getElementById('rnsConversationList');
         if (!list) return;
-        let convs = [];
-        try { convs = (await _json('/reticulum/conversations')).conversations || []; } catch (e) { return; }
-        if (!convs.length) { list.innerHTML = '<div class="rns-empty">No conversations</div>'; return; }
+        if (!_convs.length) { list.innerHTML = '<div class="rns-empty">No conversations</div>'; return; }
         list.innerHTML = '';
-        convs.forEach(c => {
+        _convs.forEach(c => {
             const el = document.createElement('div');
             el.className = 'rns-item' + (c.peer_hash === _peer ? ' active' : '');
             el.addEventListener('click', () => selectPeer(c.peer_hash));
@@ -223,7 +228,7 @@ const Reticulum = (function () {
         _setText('rnsConversationHeader', hash ? `${_nodeLabel(hash)} · ${hash}  (click for all)` : 'All messages');
         if (hash) _val('rnsDestination', hash);
         _loadMessages();
-        _loadConversations();
+        _renderConversations();
         const input = document.getElementById('rnsComposeInput');
         if (hash && input) input.focus();
     }
@@ -240,14 +245,21 @@ const Reticulum = (function () {
         feed.innerHTML = '';
         if (!msgs.length) feed.innerHTML = '<div class="rns-empty rns-feed-placeholder">No messages yet</div>';
         msgs.forEach(_appendMessage);
-        if (!_peer) { _msgCount = msgs.length; _setText('rnsMsgCount', _msgCount); }
     }
 
     function _onMessage(msg) {
         _msgCount++;
         _setText('rnsMsgCount', _msgCount);
         if (!_peer || msg.peer_hash === _peer) _appendMessage(msg);
-        _loadConversations();
+        // Update the conversation list in place rather than re-fetching it
+        let c = _convs.find(x => x.peer_hash === msg.peer_hash);
+        if (c) _convs = _convs.filter(x => x !== c);
+        else c = { peer_hash: msg.peer_hash, name: null, count: 0 };
+        c.count = (c.count || 0) + 1;
+        c.last_content = msg.content;
+        c.last_timestamp = msg.timestamp;
+        _convs.unshift(c);
+        _renderConversations();
     }
 
     function _appendMessage(msg) {
@@ -258,13 +270,15 @@ const Reticulum = (function () {
         if (msg.msg_hash && document.getElementById('rns-msg-' + msg.msg_hash)) return;
         const out = msg.direction === 'out';
         const el = document.createElement('div');
-        el.className = 'rns-message' + (out ? ' out' : '') + (msg.state === 'failed' ? ' failed' : '');
+        const unverified = msg.verified === false;
+        el.className = 'rns-message' + (out ? ' out' : '') + (msg.state === 'failed' ? ' failed' : '') + (unverified ? ' unverified' : '');
         if (msg.msg_hash) el.id = 'rns-msg-' + msg.msg_hash;
         const ts = msg.timestamp ? new Date(msg.timestamp * 1000).toLocaleString() : '';
         const who = out ? `Me → ${_nodeLabel(msg.peer_hash)}` : _nodeLabel(msg.peer_hash);
         el.innerHTML = `
             <div class="rns-message-header">
-                <span class="rns-message-sender" title="${_esc(msg.peer_hash)}">${_esc(who)}</span>
+                <span class="rns-message-sender" title="${_esc(msg.peer_hash)}">${_esc(who)}${unverified
+                    ? ' <span class="rns-unverified" title="LXMF could not verify the sender: it may not be who it claims">UNVERIFIED</span>' : ''}</span>
                 <span>${_esc(ts)}${out ? ' · <span class="rns-message-state">' + _esc(msg.state || '') + '</span>' : ''}</span>
             </div>
             ${msg.title ? `<div class="rns-message-text"><strong>${_esc(msg.title)}</strong></div>` : ''}

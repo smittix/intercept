@@ -21,8 +21,8 @@ import contextlib
 import enum
 import queue
 import re
-import signal
 import socket
+import sys
 import threading
 import time
 from dataclasses import asdict, dataclass
@@ -173,15 +173,34 @@ def shared_instance_available(instance_name: str) -> bool:
         return False
 
 
+class _NoSignalInstall:
+    """Stands in for the signal module inside RNS and LXMF: signal.signal() does
+    nothing, everything else is the real module."""
+
+    def __getattr__(self, name):
+        import signal
+
+        return getattr(signal, name)
+
+    @staticmethod
+    def signal(*_args, **_kwargs):
+        return None
+
+
 @contextlib.contextmanager
 def _no_signal_handlers():
-    """RNS and LXMF install SIGINT/SIGTERM handlers that exit the process; skip them."""
-    original = signal.signal
-    signal.signal = lambda *_a, **_k: None
+    """RNS and LXMF install SIGINT/SIGTERM handlers that exit the process (and
+    signal.signal() raises off the main thread). Swap their own `signal` name
+    only, so no other code's signal.signal() is affected."""
+    modules = [m for m in (sys.modules.get("RNS.Reticulum"), sys.modules.get("LXMF.LXMRouter")) if m is not None]
+    originals = [m.signal for m in modules]
+    for m in modules:
+        m.signal = _NoSignalInstall()
     try:
         yield
     finally:
-        signal.signal = original
+        for m, original in zip(modules, originals):
+            m.signal = original
 
 
 def normalize_hash(value: str) -> str:
@@ -210,7 +229,10 @@ class ReticulumClient:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._send_lock = threading.Lock()
+        # Guards _early_states and the row write after handle_outbound(). Never
+        # held while calling into LXMF, whose callbacks also take it.
+        self._outbound_lock = threading.Lock()
+        self._early_states: dict[str, str] = {}  # delivered/failed before the row was stored
         self._event_queue: queue.Queue = queue.Queue(maxsize=500)
         self._state = ReticulumState.STOPPED
         self._message: str | None = None
@@ -280,19 +302,24 @@ class ReticulumClient:
         with self._lock:
             if self._link_key is not None and cfg.link_key() != self._link_key:
                 raise ValueError("The Reticulum connection is already set up; restart Intercept to change it")
-            if self._running or (self._worker and self._worker.is_alive()):
+            previous = self._worker if self._worker and self._worker.is_alive() else None
+            if self._running or (previous and not self._stop_event.is_set()):
                 return
             self._cfg = cfg
             self._state = ReticulumState.STARTING
             self._stop_event = threading.Event()
-            self._worker = threading.Thread(target=self._start_worker, args=(cfg, self._stop_event), daemon=True)
+            self._worker = threading.Thread(
+                target=self._start_worker, args=(cfg, self._stop_event, previous), daemon=True
+            )
         self._push({"type": "status", "data": self.get_status()})
         self._worker.start()
 
-    def _start_worker(self, cfg: ReticulumConfig, stop: threading.Event) -> None:
+    def _start_worker(self, cfg: ReticulumConfig, stop: threading.Event, previous: threading.Thread | None) -> None:
         try:
-            if self._rns is None:
-                if cfg.mode == "shared":
+            if previous is not None:  # a stop() during startup: let that worker finish first
+                previous.join()
+            if self._router is None:
+                if self._rns is None and cfg.mode == "shared":
                     while not shared_instance_available(cfg.instance_name):
                         self._set_state(
                             ReticulumState.WAITING,
@@ -306,8 +333,10 @@ class ReticulumClient:
                 self._detach()
                 return
             self._attach(cfg, stop)
-            if stop.is_set():  # stop() raced the attach
-                self.stop()
+            if stop.is_set():  # stop() raced the attach; undo it without touching a newer start
+                self._detach()
+                with self._lock:
+                    self._running = False
         except Exception as exc:  # noqa: BLE001 - surfaced to the UI
             logger.exception("Reticulum start failed")
             self._set_state(ReticulumState.ERROR, f"Start failed: {exc}")
@@ -316,14 +345,15 @@ class ReticulumClient:
         root = data_dir()
         rns_dir = root / "rns"
         rns_dir.mkdir(parents=True, exist_ok=True)
-        (rns_dir / "config").write_text(build_rns_config(cfg))
         with _no_signal_handlers():
-            self._rns = RNS.Reticulum(
-                configdir=str(rns_dir),
-                logdest=lambda line: logger.debug("RNS: %s", line),
-                require_shared_instance=cfg.mode == "shared",
-            )
-            self._link_key = cfg.link_key()
+            if self._rns is None:  # RNS can only be created once per process; keep it if LXMF fails below
+                (rns_dir / "config").write_text(build_rns_config(cfg))
+                self._rns = RNS.Reticulum(
+                    configdir=str(rns_dir),
+                    logdest=lambda line: logger.debug("RNS: %s", line),
+                    require_shared_instance=cfg.mode == "shared",
+                )
+                self._link_key = cfg.link_key()
             if cfg.mode == "shared":
                 self._check_rpc()
             id_path = root / "identity"
@@ -331,15 +361,17 @@ class ReticulumClient:
             if identity is None:
                 identity = RNS.Identity()
                 identity.to_file(str(id_path))
-            self._router = LXMF.LXMRouter(identity=identity, storagepath=str(root / "lxmf"))
-            self._local = self._router.register_delivery_identity(identity, display_name=cfg.display_name)
-        self._router.register_delivery_callback(self._on_lxmf_message)
+            router = LXMF.LXMRouter(identity=identity, storagepath=str(root / "lxmf"))
+            self._local = router.register_delivery_identity(identity, display_name=cfg.display_name)
+        router.register_delivery_callback(self._on_lxmf_message)
         self._announce_handler = _AnnounceHandler(self)
+        self._router = router  # last: a stack without a router is rebuilt on the next start
         logger.info("Reticulum stack up, LXMF address %s", self._local.hash.hex())
 
     def _check_rpc(self) -> None:
         """A shared-instance client with its own config dir needs rnsd's rpc_key,
         or RNS fails on every inbound link packet (incoming messages are lost)."""
+        self._rpc_error = None
         try:
             self._rns.get_interface_stats()
         except Exception as exc:  # noqa: BLE001 - multiprocessing AuthenticationError and friends
@@ -411,16 +443,21 @@ class ReticulumClient:
         lxm.try_propagation_on_fail = False
         lxm.register_delivery_callback(lambda m: self._on_outbound_state(m, "delivered"))
         lxm.register_failed_callback(lambda m: self._on_outbound_state(m, "failed"))
-        with self._send_lock:
-            self._router.handle_outbound(lxm)
+        # handle_outbound() applies the recipient's stamp cost before packing,
+        # and only then is lxm.hash known, so the row is stored after it. A
+        # delivered/failed callback that beats the row is kept in _early_states.
+        self._router.handle_outbound(lxm)
+        msg_hash = lxm.hash.hex()
+        with self._outbound_lock:
             msg = {
-                "msg_hash": lxm.hash.hex(),
+                "msg_hash": msg_hash,
                 "direction": "out",
                 "peer_hash": dest_hex,
                 "title": title,
                 "content": content,
                 "timestamp": time.time(),
-                "state": "outbound",
+                "state": self._early_states.pop(msg_hash, "outbound"),
+                "verified": True,
             }
             database.store_reticulum_message(msg)
         self._push({"type": "message", "data": msg})
@@ -429,9 +466,10 @@ class ReticulumClient:
     # -- Callbacks (RNS/LXMF threads) --
 
     def _on_outbound_state(self, lxm, state: str) -> None:
-        with self._send_lock:  # the row is stored right after handle_outbound()
-            msg_hash = lxm.hash.hex()
-            database.update_reticulum_message_state(msg_hash, state)
+        msg_hash = lxm.hash.hex()
+        with self._outbound_lock:
+            if not database.update_reticulum_message_state(msg_hash, state):
+                self._early_states[msg_hash] = state  # send() hasn't stored the row yet
         self._push({"type": "message_state", "data": {"msg_hash": msg_hash, "state": state}})
 
     def _on_lxmf_message(self, message) -> None:
@@ -444,6 +482,10 @@ class ReticulumClient:
                 "content": message.content_as_string(),
                 "timestamp": message.timestamp or time.time(),
                 "state": "received",
+                # LXMF delivers messages it couldn't verify: the sender's identity
+                # isn't known yet (no announce heard) or the signature is bad.
+                # Kept, but flagged, so they're shown as unverified.
+                "verified": bool(message.signature_validated),
             }
             if database.store_reticulum_message(msg):
                 self._push({"type": "message", "data": msg})

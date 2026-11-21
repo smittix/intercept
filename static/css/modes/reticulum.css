@@ -60,7 +60,7 @@
     line-height: 1;
 }
 .rns-strip-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
-.rns-address { font-family: var(--font-mono); font-size: 11px; color: var(--accent-cyan); cursor: copy; }
+.rns-address { font-family: var(--font-data); font-size: 11px; color: var(--accent-cyan); cursor: copy; }
 
 /* ── Status dot ── */
 .rns-status-dot {
@@ -108,6 +108,15 @@
 .rns-item[hidden] { display: none; }
 .rns-item-name { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rns-item-meta { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rns-item-meta.rns-hash { font-family: var(--font-data); }
+.rns-unverified {
+    margin-left: 4px;
+    padding: 0 4px;
+    border: 1px solid var(--accent-orange);
+    border-radius: 3px;
+    font-size: 9px;
+    color: var(--accent-orange);
+}
 
 .rns-node-search input {
     width: 100%;

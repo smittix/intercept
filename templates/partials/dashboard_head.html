@@ -4,6 +4,8 @@
      dash_mode_css    - path to the mode's own CSS (e.g. css/modes/aprs.css)
      dash_layout_css  - path to the dashboard layout CSS (e.g. css/aprs_dashboard.css)
      dash_needs_chart - true to also defer-load vendored Chart.js
+     dash_needs_map   - false for a page without a map: skips Leaflet and the
+                        observer location (default true)
    Dedicated dashboards use bundled assets so navigation is not blocked by CDN
    reachability. Order: shared foundation CSS, then dashboard-shell.css, then
    the mode/layout CSS so per-dashboard rules win the cascade. #}
@@ -14,7 +16,8 @@
 <title>{{ dash_title }}</title>
 <script>(function(){var t=localStorage.getItem('intercept-ui-tier')||'enhanced';document.documentElement.setAttribute('data-ui-tier',t);})();</script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts-local.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}">
+{% set dash_map = dash_needs_map is not defined or dash_needs_map %}
+{% if dash_map %}<link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}">{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/core/variables.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/ux-platform.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
@@ -26,11 +29,13 @@
 {% if dash_mode_css %}<link rel="stylesheet" href="{{ url_for('static', filename=dash_mode_css) }}">{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-shell.css') }}">
 {% if dash_layout_css %}<link rel="stylesheet" href="{{ url_for('static', filename=dash_layout_css) }}">{% endif %}
+{% if dash_map %}
 <script>
     window.INTERCEPT_SHARED_OBSERVER_LOCATION = {{ shared_observer_location | tojson }};
     window.INTERCEPT_DEFAULT_LAT = {{ default_latitude | tojson }};
     window.INTERCEPT_DEFAULT_LON = {{ default_longitude | tojson }};
 </script>
 <script defer src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
+{% endif %}
 {% if dash_needs_chart %}<script defer src="{{ url_for('static', filename='vendor/chartjs/chart.umd.min.js') }}"></script>{% endif %}
-<script defer src="{{ url_for('static', filename='js/core/observer-location.js') }}"></script>
+{% if dash_map %}<script defer src="{{ url_for('static', filename='js/core/observer-location.js') }}"></script>{% endif %}

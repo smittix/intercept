@@ -115,17 +115,25 @@ class TestLifecycle:
         fake_rns.lxmf.LXMRouter.return_value.announce.assert_called_once_with(LOCAL)
 
     def test_signal_handlers_not_installed(self, fake_rns):
+        """RNS/LXMF's own signal.signal() is a no-op while the stack is built;
+        everyone else's is the real one throughout."""
+        import signal
+        import sys
+
+        rns_module = pytest.importorskip("RNS.Reticulum")
+        real = signal.signal
         seen = []
 
         def build(**_kw):
-            import signal
-
-            seen.append(signal.signal(signal.SIGTERM, lambda *a: None))
+            seen.append(sys.modules["RNS.Reticulum"].signal.signal(signal.SIGTERM, lambda *a: None))
+            seen.append(sys.modules["RNS.Reticulum"].signal.SIGTERM)
+            seen.append(signal.signal is real)
             return MagicMock()
 
         fake_rns.rns.Reticulum.side_effect = build
         _started(fake_rns)
-        assert seen == [None]  # the patched no-op, not the real signal.signal
+        assert seen == [None, signal.SIGTERM, True]
+        assert rns_module.signal is signal  # put back afterwards
 
     def test_offline_link_is_waiting_not_error(self, fake_rns):
         fake_rns.rns.Transport.interfaces = [SimpleNamespace(online=False)]
@@ -236,3 +244,105 @@ class TestMessaging:
             1,
             "yo",
         )
+
+
+def test_send_does_not_deadlock_with_the_router_failing_an_earlier_message(fake_rns):
+    """LXMF's handle_outbound() waits for the outbound-processing lock, whose
+    holder runs failed callbacks synchronously. Those must not wait on send()."""
+    client = _started(fake_rns)
+    processing = threading.Lock()
+    inside = threading.Event()
+
+    def handle_outbound(lxm):
+        inside.set()
+        with processing:
+            pass
+
+    fake_rns.lxmf.LXMRouter.return_value.handle_outbound.side_effect = handle_outbound
+    fake_rns.lxmf.LXMessage.return_value.hash = b"\x05" * 32
+    earlier = SimpleNamespace(hash=b"\x04" * 32)
+    processing.acquire()  # the router is processing outbound messages
+    sender = threading.Thread(target=client.send, args=(PEER.hex(), "hello"), daemon=True)
+    sender.start()
+    assert inside.wait(2)
+    failer = threading.Thread(target=client._on_outbound_state, args=(earlier, "failed"), daemon=True)
+    failer.start()
+    failer.join(2)
+    processing.release()
+    sender.join(2)
+    assert not failer.is_alive() and not sender.is_alive()
+    assert get_reticulum_messages(PEER.hex())[0]["content"] == "hello"
+
+
+def test_delivery_reported_before_the_row_is_stored_is_kept(fake_rns):
+    client = _started(fake_rns)
+    lxm = fake_rns.lxmf.LXMessage.return_value
+    lxm.hash = b"\x06" * 32
+
+    def instant_delivery(message):
+        message.register_delivery_callback.call_args[0][0](message)
+
+    fake_rns.lxmf.LXMRouter.return_value.handle_outbound.side_effect = instant_delivery
+    assert client.send(PEER.hex(), "quick")["state"] == "delivered"
+    assert get_reticulum_messages(PEER.hex())[0]["state"] == "delivered"
+    assert client._early_states == {}
+
+
+def test_unverified_sender_is_kept_and_flagged(fake_rns):
+    client = _started(fake_rns)
+    good = MagicMock(hash=b"\x07" * 32, source_hash=PEER, timestamp=1.0, signature_validated=True)
+    forged = MagicMock(hash=b"\x08" * 32, source_hash=PEER, timestamp=2.0, signature_validated=False)
+    for m, text in ((good, "real"), (forged, "claims to be you")):
+        m.title_as_string.return_value = ""
+        m.content_as_string.return_value = text
+        client._on_lxmf_message(m)
+    assert [(m["content"], m["verified"]) for m in get_reticulum_messages(PEER.hex())] == [
+        ("real", True),
+        ("claims to be you", False),
+    ]
+    events = [client.get_queue().get_nowait() for _ in range(client.get_queue().qsize())]
+    assert [e["data"]["verified"] for e in events if e["type"] == "message"] == [True, False]
+
+
+def test_a_failed_lxmf_start_is_retried_without_rebuilding_rns(fake_rns):
+    fake_rns.lxmf.LXMRouter.side_effect = [OSError("storage busy"), fake_rns.lxmf.LXMRouter.return_value]
+    client = _started(fake_rns)
+    assert client.get_status()["state"] == "error"
+    client.start(ReticulumConfig(display_name="Deck"))
+    client._worker.join(5)
+    assert client.get_status()["state"] == "online"
+    assert fake_rns.rns.Reticulum.call_count == 1
+
+
+def test_rpc_error_clears_once_rnsd_accepts_us(fake_rns):
+    fake_rns.rns.Reticulum.return_value.get_interface_stats.side_effect = [EOFError("auth"), {}]
+    fake_rns.lxmf.LXMRouter.side_effect = [OSError("storage busy"), fake_rns.lxmf.LXMRouter.return_value]
+    client = _started(fake_rns)
+    assert client._rpc_error
+    client.start(ReticulumConfig(display_name="Deck"))
+    client._worker.join(5)
+    assert client._rpc_error is None and client.get_status()["state"] == "online"
+
+
+def test_stop_then_start_during_startup_runs_with_the_new_settings(fake_rns):
+    building = threading.Event()
+    release = threading.Event()
+
+    def slow_build(**_kw):
+        building.set()
+        release.wait(5)
+        return MagicMock()
+
+    fake_rns.rns.Reticulum.side_effect = slow_build
+    client = ReticulumClient()
+    client.start(ReticulumConfig(display_name="First"))
+    assert building.wait(2)
+    first = client._worker
+    client.stop()
+    client.start(ReticulumConfig(display_name="Second"))
+    assert client._worker is not first  # not dropped by the old worker still running
+    release.set()
+    client._worker.join(5)
+    status = client.get_status()
+    assert status["running"] and status["state"] == "online"
+    assert fake_rns.local.display_name == "Second"
