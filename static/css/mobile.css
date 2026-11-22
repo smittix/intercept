@@ -1,0 +1,406 @@
+/* Phone layout. Every rule is inside a max-width: 1023px query so a
+   desktop window is unchanged. The main page is not an .app-shell, so the
+   mobile rules in responsive.css (which are all under .app-shell) never
+   reach it. Loaded from partials/nav.html, after the page stylesheets,
+   because several of these have to beat inline styles and the visual
+   refresh (backdrop-filter on .main-content). */
+
+@media (max-width: 1023px) {
+    /* --- Drawer stacking ---
+       .main-content is position:relative with backdrop-filter: blur(6px).
+       That filter makes it a containing block and a stacking context, so
+       #mainSidebar (position:fixed; z-index:1000) cannot paint above the
+       sibling .drawer-overlay (z-index:999, dim, blur). Taps hit the overlay
+       and close the menu. Drop the filter on small screens so the fixed
+       drawer escapes, and put the drawer above a flat overlay. */
+    .main-content {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        transform: none !important;
+        filter: none !important;
+    }
+
+    .drawer-overlay {
+        z-index: 1090 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(0, 0, 0, 0.55) !important;
+    }
+
+    #mainSidebar.mobile-drawer,
+    .sidebar.mobile-drawer {
+        z-index: 1100 !important;
+        left: 0 !important;
+        width: min(360px, 100vw) !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-y !important;
+        overscroll-behavior: contain;
+        pointer-events: auto !important;
+        filter: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: var(--bg-secondary, #0f1218) !important;
+        isolation: isolate;
+
+        /* mobile-nav.js sets --intercept-drawer-top to the measured header
+           plus the top mode bar. The header grows past 48px when the Run
+           State strip wraps, and it sits above the drawer. Fallback is the
+           design tokens. 100vh is declared first so 100dvh wins where the
+           dynamic viewport is supported; the other way around leaves the
+           drawer as tall as the layout viewport, under the URL bar. */
+        top: var(--intercept-drawer-top, calc(var(--header-height, 48px) + var(--nav-height, 44px))) !important;
+        bottom: auto !important;
+        height: calc(100vh - var(--intercept-drawer-top, calc(var(--header-height, 48px) + var(--nav-height, 44px)))) !important;
+        height: calc(100dvh - var(--intercept-drawer-top, calc(var(--header-height, 48px) + var(--nav-height, 44px)))) !important;
+        max-height: calc(100vh - var(--intercept-drawer-top, calc(var(--header-height, 48px) + var(--nav-height, 44px)))) !important;
+        max-height: calc(100dvh - var(--intercept-drawer-top, calc(var(--header-height, 48px) + var(--nav-height, 44px)))) !important;
+        padding-top: 12px !important;
+        padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Flex children default to shrink, and .section { overflow: hidden }
+       makes their automatic min-height 0, so they clip instead of making
+       the drawer scroll. */
+    #mainSidebar.mobile-drawer > *,
+    .sidebar.mobile-drawer > * {
+        flex-shrink: 0 !important;
+        min-height: min-content;
+    }
+
+    #mainSidebar.mobile-drawer .section,
+    .sidebar.mobile-drawer .section {
+        flex-shrink: 0;
+        min-height: min-content;
+    }
+
+    /* Keep the menu button above the open drawer. Scoped to the main page:
+       dashboard headers are a different bar and should keep their stacking. */
+    body:has(#hamburgerBtn) > header {
+        position: relative;
+        z-index: 1110;
+    }
+
+    .hamburger-btn {
+        position: relative;
+        z-index: 1110 !important;
+    }
+
+    /* --- Waterfall ---
+       #waterfallVisuals (inline) and .wf-container are flex:1; min-height:0;
+       overflow:hidden inside a fixed-height column. Under 768px the monitor
+       strip becomes one column and uses the leftover height, so the spectrum
+       is clipped and the waterfall wrap computes to 0. Let the block grow
+       into the scrollable page and give the canvases a real box. */
+    #waterfallVisuals {
+        overflow: visible !important;
+        min-height: auto !important;
+        flex: 1 0 auto !important;
+    }
+
+    #waterfallVisuals .wf-container {
+        overflow: visible !important;
+        min-height: auto !important;
+        flex: 1 0 auto !important;
+    }
+
+    #waterfallVisuals .wf-spectrum-canvas-wrap {
+        height: 140px !important;
+        min-height: 140px !important;
+        flex-shrink: 0 !important;
+    }
+
+    #waterfallVisuals .wf-waterfall-canvas-wrap {
+        flex: 0 0 auto !important;
+        min-height: 240px !important;
+        height: min(50vh, 420px) !important;
+    }
+
+    #waterfallVisuals .wf-freq-axis {
+        flex-shrink: 0;
+    }
+
+    #waterfallVisuals .wf-monitor-strip {
+        gap: 6px;
+        padding: 6px 8px;
+    }
+
+    /* --- Page scrolling ---
+       body may scroll instead of clipping. While the drawer is open, lock
+       the page; an inline overflow:hidden loses to the rule above. */
+    body {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body.mobile-drawer-open {
+        overflow: hidden !important;
+    }
+
+    /* mobile-scroll.js adds these when a box is clipping text or controls. */
+    .mobile-scroll-unclip {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: auto !important;
+    }
+
+    /* A clipping box that contains a map grows to its content. A nested
+       scroller would catch the swipe and the page would stay put. */
+    .mobile-scroll-grow {
+        height: auto !important;
+        min-height: max-content !important;
+        max-height: none !important;
+        flex-shrink: 0 !important;
+        overflow: visible !important;
+    }
+
+    /* A flex/grid strip squeezed below its content. The script grows the
+       parent by the same amount so maps keep their size. */
+    .mobile-scroll-unsquash {
+        flex-shrink: 0 !important;
+        min-height: max-content !important;
+    }
+
+    /* --- Main page column (Bluetooth, WiFi, and the rest of the SPA) ---
+       .main-content is locked to calc(100vh - 96px) with overflow:hidden,
+       .bt-main-area stays a row, and .bt-side-panels at width:100% squeezes
+       the proximity radar to a sliver. Stack full-width and let the page
+       scroll. .container / .main-content / .output-panel exist only on the
+       main page. */
+    .container {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    }
+
+    .main-content {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .output-panel {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        flex: none !important;
+    }
+
+    .wifi-layout-container,
+    .bt-layout-container {
+        flex-direction: column !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        flex: none !important;
+        overflow: visible !important;
+    }
+
+    .wifi-visuals,
+    .bt-visuals-column {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+        flex: none !important;
+        min-height: 0 !important;
+    }
+
+    .bt-main-area {
+        flex-direction: column !important;
+        height: auto !important;
+        min-height: 0 !important;
+        flex: none !important;
+        overflow: visible !important;
+    }
+
+    .bt-side-panels,
+    .bt-side-panel,
+    .bt-tracker-panel,
+    .bt-detail-panel {
+        width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        flex: none !important;
+        overflow: visible !important;
+    }
+
+    .bt-radar-panel,
+    .bt-radar-panel #btProximityRadar {
+        width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        flex: none !important;
+        overflow: visible !important;
+    }
+
+    .bt-radar-panel #btProximityRadar {
+        min-height: 180px !important;
+    }
+
+    .wifi-device-list,
+    .bt-device-list {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        flex: none !important;
+    }
+
+    .bt-device-list .wifi-device-list-content,
+    #btDeviceListContent {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .bt-controls-row {
+        flex-wrap: wrap;
+        position: static;
+        top: auto;
+    }
+
+    .bt-sort-group,
+    .bt-filter-group {
+        flex-wrap: wrap;
+        border-right: none;
+        min-height: 0;
+    }
+
+    .bt-sort-btn,
+    .bt-filter-btn {
+        min-height: 36px;
+        min-width: 36px;
+    }
+
+    /* --- Pager, status bar, welcome, mesh strips ---
+       The pager sources column stays 200px beside the feed, so on a 360px
+       screen the messages are a vertical sliver of letters. The bottom bar's
+       nowrap rule (under 768px) clips Auto-scroll. Mesh connect strips run
+       off the right edge. */
+    .welcome-overlay {
+        overflow: hidden !important;
+    }
+
+    .welcome-container {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        max-height: calc(100vh - 24px) !important;
+        max-height: calc(100dvh - 24px) !important;
+    }
+
+    #signalViewWrap {
+        flex-direction: column !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        flex: none !important;
+    }
+
+    #signalViewWrap .pdir-panel,
+    #pagerDirectoryView,
+    #sensorDashboardView {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        max-height: 240px;
+        flex: none !important;
+        flex-shrink: 0 !important;
+        border-right: none;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #signalViewWrap .pdir-feed-col {
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 180px;
+        height: auto !important;
+        overflow: visible !important;
+        flex: none !important;
+    }
+
+    #signalViewWrap #output,
+    #signalViewWrap .output-content,
+    #signalViewWrap .signal-feed {
+        min-height: 160px;
+        overflow: visible !important;
+    }
+
+    .output-header {
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+        gap: 8px;
+    }
+
+    .output-header .header-controls,
+    .output-header .stats {
+        flex-wrap: wrap !important;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .status-bar {
+        flex-wrap: wrap !important;
+        overflow: visible !important;
+        row-gap: 8px;
+        padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    .status-bar > *,
+    .status-controls,
+    .status-controls > *,
+    .status-bar .control-group {
+        flex-wrap: wrap !important;
+        flex-shrink: 1 !important;
+        min-width: 0;
+    }
+
+    .mesh-stats-strip,
+    .mesh-strip-group,
+    .meshcore-strip,
+    .meshcore-strip-group {
+        flex-wrap: wrap !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+}
+
+@media (max-width: 768px) {
+    /* The default one-column monitor strip consumes the vertical space the
+       canvases need. Two columns fit under 768px. */
+    #waterfallVisuals .wf-monitor-strip {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    #waterfallVisuals .wf-rx-actions {
+        grid-column: span 2;
+    }
+
+    #waterfallVisuals .wf-waterfall-canvas-wrap {
+        min-height: 220px !important;
+        height: min(45vh, 380px) !important;
+    }
+}
+
+/* Leaflet sets touch-action:none, so a swipe that starts on a map pans the
+   map. pan-y hands a vertical one-finger swipe to the browser. Sideways
+   drags and two-finger gestures stay with the map. Touch screens only. */
+@media (max-width: 1023px) and (pointer: coarse) {
+    .leaflet-container.leaflet-touch-drag,
+    .leaflet-container.leaflet-touch-drag.leaflet-touch-zoom,
+    .leaflet-container {
+        touch-action: pan-y !important;
+        -ms-touch-action: pan-y !important;
+    }
+}
