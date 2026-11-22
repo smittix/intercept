@@ -2005,6 +2005,31 @@ const Waterfall = (function () {
         }
 
         window.addEventListener('resize', _resizeCanvases);
+        _watchMobileCanvasBox();
+    }
+
+    // The phone layout gives the canvas wraps a real height after init, and
+    // rotation changes that box without a classic window resize. Waterfall
+    // sizes the bitmaps from the parent offsetHeight, so a 0-height parent
+    // stays a blank canvas until something asks again.
+    function _watchMobileCanvasBox() {
+        const bump = () => window.setTimeout(_resizeCanvases, 80);
+        window.addEventListener('orientationchange', bump);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', bump);
+        }
+        if (typeof ResizeObserver !== 'function') return;
+        const wraps = [
+            document.querySelector('#waterfallVisuals .wf-spectrum-canvas-wrap'),
+            document.querySelector('#waterfallVisuals .wf-waterfall-canvas-wrap'),
+        ].filter(Boolean);
+        if (!wraps.length) return;
+        let timer = 0;
+        const ro = new ResizeObserver(() => {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(_resizeCanvases, 80);
+        });
+        wraps.forEach((el) => ro.observe(el));
     }
 
     function _selectedDevice() {
