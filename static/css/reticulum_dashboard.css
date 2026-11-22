@@ -1,0 +1,29 @@
+/* Reticulum dashboard layout. Page chrome is in dashboard-shell.css;
+   the console styling is in css/modes/reticulum.css. */
+
+.reticulum-dashboard {
+    position: relative;
+    z-index: 2;
+    height: calc(100vh - 52px);
+    min-height: 0;
+    box-sizing: border-box;
+    padding: 10px;
+}
+#reticulumVisuals.mesh-visuals-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+/* Phone: let the console scroll */
+@media (max-width: 767px) {
+    body { overflow: auto; }
+    .reticulum-dashboard { height: auto; min-height: calc(100vh - 52px); }
+    #reticulumVisuals.mesh-visuals-container { height: auto; overflow: visible; }
+    .rns-body { flex-direction: column !important; overflow: visible !important; }
+    .rns-panel { width: 100% !important; min-width: 0 !important; border-right: none; max-height: 40vh; }
+    .rns-messages { min-height: 300px; }
+}

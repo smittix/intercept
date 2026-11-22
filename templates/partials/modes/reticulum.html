@@ -1,0 +1,73 @@
+{# Reticulum Mode: connection strip on top, conversations/nodes on the left,
+   the selected conversation on the right. Driven by static/js/modes/reticulum.js. #}
+
+{# ── Connection strip ── #}
+<div class="rns-strip">
+  <div class="rns-strip-group">
+    <span class="rns-status-dot" id="rnsStatusDot"></span>
+    <span id="rnsStatusText" class="rns-strip-status-text">Stopped</span>
+  </div>
+  <div class="rns-strip-divider"></div>
+  <div class="rns-strip-group">
+    <div class="rns-transport-tabs" role="group" aria-label="Connection">
+      <button type="button" class="rns-transport-tab active" data-mode="shared" onclick="Reticulum.selectMode('shared')" title="Attach to the local rnsd shared instance">Local rnsd</button>
+      <button type="button" class="rns-transport-tab" data-mode="tcp" onclick="Reticulum.selectMode('tcp')" title="TCP client to a remote rnsd TCPServerInterface">TCP</button>
+    </div>
+  </div>
+  <div id="rnsTcpConfig" class="rns-strip-group" style="display:none;">
+    <input id="rnsTcpHost" aria-label="rnsd host" type="text" placeholder="Host / IP" class="rns-strip-input" style="width:130px;">
+    <input id="rnsTcpPort" aria-label="rnsd port" type="number" placeholder="Port" value="4242" min="1" max="65535" class="rns-strip-input" style="width:70px;">
+  </div>
+  <div class="rns-strip-group">
+    <input id="rnsDisplayName" aria-label="Display name" type="text" placeholder="Display name" maxlength="64" class="rns-strip-input" style="width:110px;">
+    <button type="button" class="rns-strip-btn connect" id="rnsStartBtn" onclick="Reticulum.start()">Start</button>
+    <button type="button" class="rns-strip-btn disconnect" id="rnsStopBtn" onclick="Reticulum.stop()" disabled>Stop</button>
+    <button type="button" class="rns-strip-btn" id="rnsAnnounceBtn" onclick="Reticulum.announce()" disabled title="Announce our LXMF address">Announce</button>
+  </div>
+  <div class="rns-strip-divider"></div>
+  <div class="rns-strip-group">
+    <span class="rns-strip-label">ADDR</span>
+    <span id="rnsAddress" class="rns-address" title="Our LXMF address (click to copy)" onclick="Reticulum.copyAddress()">-</span>
+  </div>
+  <div class="rns-strip-divider"></div>
+  <div class="rns-strip-group">
+    <div class="rns-strip-stat">
+      <span class="rns-strip-value" id="rnsNodeCount">0</span>
+      <span class="rns-strip-label">NODES</span>
+    </div>
+    <div class="rns-strip-stat">
+      <span class="rns-strip-value" id="rnsMsgCount">0</span>
+      <span class="rns-strip-label">MSGS</span>
+    </div>
+  </div>
+</div>
+
+{# ── Main body ── #}
+<div class="rns-body">
+  <div class="rns-panel">
+    <div class="rns-panel-section">
+      <div class="rns-panel-title">Conversations</div>
+      <div id="rnsConversationList"><div class="rns-empty">No conversations</div></div>
+    </div>
+    <div class="rns-panel-section rns-panel-section--grow">
+      <div class="rns-panel-title">Nodes heard</div>
+      <div class="rns-node-search">
+        <input id="rnsNodeSearch" type="search" placeholder="Search name or hash..." aria-label="Search nodes" oninput="Reticulum.filterNodes(this.value)">
+      </div>
+      <div id="rnsNodeList"><div class="rns-empty">No announces heard</div></div>
+    </div>
+  </div>
+
+  <div class="rns-content">
+    <div class="rns-conversation-header" id="rnsConversationHeader">All messages</div>
+    <div class="rns-messages" id="rnsMessageFeed">
+      <div class="rns-empty rns-feed-placeholder">Start Reticulum to send and receive LXMF messages</div>
+    </div>
+    <div class="rns-compose">
+      <input id="rnsDestination" aria-label="Destination LXMF address" type="text" placeholder="Destination address (32 hex)" maxlength="40" class="rns-compose-dest">
+      <input id="rnsComposeInput" aria-label="Message text" type="text" placeholder="Type a message..." maxlength="4000"
+             class="rns-compose-input" onkeydown="if(event.key==='Enter')Reticulum.sendMessage()">
+      <button type="button" class="rns-compose-btn" onclick="Reticulum.sendMessage()">Send</button>
+    </div>
+  </div>
+</div>

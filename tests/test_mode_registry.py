@@ -44,6 +44,8 @@ def test_no_orphan_mode_assets():
     referenced += (ROOT / "templates" / "meshtastic_dashboard.html").read_text()
     # meshcore.css / module belong to the Meshcore dashboard (migrated out of the SPA)
     referenced += (ROOT / "templates" / "meshcore_dashboard.html").read_text()
+    # reticulum.css / module belong to the Reticulum dashboard
+    referenced += (ROOT / "templates" / "reticulum_dashboard.html").read_text()
     for asset_dir, ext in [("static/js/modes", ".js"), ("static/css/modes", ".css")]:
         for f in (ROOT / asset_dir).glob(f"*{ext}"):
             assert f.name in referenced, f"orphaned mode asset: {f}"
