@@ -216,6 +216,14 @@ def _isolate_tle_store(tmp_path, monkeypatch):
     tle_store._reset_for_tests()
 
 
+@pytest.fixture(autouse=True)
+def _isolate_weather_sat_output(tmp_path, monkeypatch):
+    """Weather satellite captures go to a throwaway folder, not data/weather_sat."""
+    from utils import weather_sat
+
+    monkeypatch.setattr(weather_sat, "DEFAULT_OUTPUT_DIR", tmp_path / "weather_sat")
+
+
 @pytest.fixture
 def fake_process():
     """Factory for complete subprocess.Popen replacements.

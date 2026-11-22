@@ -13,6 +13,7 @@ and historical metadata, but they are no longer active operational targets.
 from __future__ import annotations
 
 import contextlib
+import functools
 import os
 import pty
 import re
@@ -30,6 +31,9 @@ from utils.logging import get_logger
 from utils.process import register_process, safe_terminate
 
 logger = get_logger("intercept.weather_sat")
+
+# Where captures go unless the decoder is given a folder (tests point it elsewhere)
+DEFAULT_OUTPUT_DIR = Path("data/weather_sat")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ALLOWED_OFFLINE_INPUT_DIRS = (
@@ -117,6 +121,26 @@ SATDUMP_SOURCES = {
 }
 
 
+
+def satdump_env() -> dict[str, str]:
+    """The environment SatDump runs in: SatDump 2.x aborts at startup without
+    HOME, which a system service such as the root intercept unit doesn't set."""
+    return {**os.environ, "HOME": os.environ.get("HOME") or os.path.expanduser("~")}
+
+
+@functools.cache
+def satdump_prefix() -> tuple[str, ...]:
+    """The start of a SatDump command line: SatDump 2.x takes the 1.x-style
+    commands used here only after its "legacy" subcommand."""
+    try:
+        out = subprocess.run(["satdump", "--help"], capture_output=True, text=True, timeout=20, env=satdump_env())
+    except Exception:  # not runnable here: the plain command, which reports why
+        return ("satdump",)
+    if out.returncode != 0 and "error while loading shared libraries" in out.stderr:
+        logger.warning(f"SatDump can't start: {out.stderr.strip()[:300]}")
+    return ("satdump", "legacy") if "legacy" in out.stdout else ("satdump",)
+
+
 @dataclass
 class WeatherSatImage:
     """Decoded weather satellite image."""
@@ -191,7 +215,7 @@ class WeatherSatDecoder:
         self._images_lock = threading.Lock()
         self._stop_event = threading.Event()
         self._callback: Callable[[CaptureProgress], None] | None = None
-        self._output_dir = Path(output_dir) if output_dir else Path("data/weather_sat")
+        self._output_dir = Path(output_dir) if output_dir else DEFAULT_OUTPUT_DIR
         self._images: list[WeatherSatImage] = []
         self._reader_thread: threading.Thread | None = None
         self._watcher_thread: threading.Thread | None = None
@@ -539,7 +563,7 @@ class WeatherSatDecoder:
         if rtl_tcp_host:
             # Remote SDR via rtl_tcp
             cmd = [
-                "satdump",
+                *satdump_prefix(),
                 "live",
                 sat_info["pipeline"],
                 str(self._capture_output_dir),
@@ -564,7 +588,7 @@ class WeatherSatDecoder:
                 source_id = self._resolve_device_id(device_index)
 
             cmd = [
-                "satdump",
+                *satdump_prefix(),
                 "live",
                 sat_info["pipeline"],
                 str(self._capture_output_dir),
@@ -601,6 +625,7 @@ class WeatherSatDecoder:
             stderr=slave_fd,
             stdin=subprocess.DEVNULL,
             close_fds=True,
+            env=satdump_env(),
         )
         register_process(self._process)
         try:
@@ -675,7 +700,7 @@ class WeatherSatDecoder:
             input_level = "baseband"
 
         cmd = [
-            "satdump",
+            *satdump_prefix(),
             sat_info["pipeline"],
             input_level,
             str(input_file),
@@ -697,6 +722,7 @@ class WeatherSatDecoder:
             stderr=slave_fd,
             stdin=subprocess.DEVNULL,
             close_fds=True,
+            env=satdump_env(),
         )
         register_process(self._process)
         try:

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 import queue
+import threading
+import time
 from pathlib import Path
 
 from flask import Blueprint, Response, jsonify, request, send_file
@@ -664,6 +666,24 @@ def get_passes():
 # ========================
 # Auto-Scheduler Endpoints
 # ========================
+
+
+@weather_sat_bp.record_once
+def _restore_schedule(_state) -> None:
+    """Switch a saved schedule back on once the app is up (it was lost on every restart)."""
+
+    def restore():
+        time.sleep(5)  # let the app finish starting
+        from utils.weather_sat_scheduler import get_weather_sat_scheduler
+
+        scheduler = get_weather_sat_scheduler()
+        scheduler.set_callbacks(_progress_callback, _scheduler_event_callback)
+        try:
+            scheduler.restore()
+        except Exception:
+            logger.exception("Failed to restore the weather satellite schedule")
+
+    threading.Thread(target=restore, daemon=True, name="weather-sat-schedule-restore").start()
 
 
 def _scheduler_event_callback(event: dict) -> None:

@@ -35,7 +35,8 @@ def _satdump_argv(mock_popen):
     """
     for call in mock_popen.call_args_list:
         argv = call[0][0] if call[0] else None
-        if isinstance(argv, (list, tuple)) and argv and argv[0] == "satdump":
+        # (satdump_prefix() asks "satdump --help" which CLI it has first)
+        if isinstance(argv, (list, tuple)) and argv and argv[0] == "satdump" and "--help" not in argv:
             return argv
     raise AssertionError(f"satdump was not launched; Popen calls: {mock_popen.call_args_list}")
 
@@ -769,3 +770,28 @@ class TestWeatherSatellitesConstant:
         assert meteor["mode"] == "LRPT"
         assert meteor["frequency"] == 137.900
         assert meteor["pipeline"] == "meteor_m2-x_lrpt"
+
+
+def test_satdump_2_runs_the_1x_commands_after_legacy(monkeypatch):
+    import subprocess as sp
+
+    from utils import weather_sat
+
+    def fake_run(stdout):
+        return lambda *a, **k: sp.CompletedProcess(a[0], 0, stdout=stdout, stderr="")
+
+    for help_text, prefix in (("SUBCOMMANDS:\n  pipeline\n  legacy  Run legacy command", ("satdump", "legacy")),
+                              ("Usage: satdump [pipeline] [input_level] ...", ("satdump",))):
+        weather_sat.satdump_prefix.cache_clear()
+        monkeypatch.setattr(weather_sat.subprocess, "run", fake_run(help_text))
+        assert weather_sat.satdump_prefix() == prefix
+    weather_sat.satdump_prefix.cache_clear()
+
+def test_satdump_gets_a_home_even_from_a_system_service(monkeypatch):
+    """SatDump 2.x aborts at startup ("basic_string: construction from null") without HOME."""
+    from utils import weather_sat
+
+    monkeypatch.delenv("HOME", raising=False)
+    assert weather_sat.satdump_env()["HOME"]
+    monkeypatch.setenv("HOME", "/srv/somewhere")
+    assert weather_sat.satdump_env()["HOME"] == "/srv/somewhere"

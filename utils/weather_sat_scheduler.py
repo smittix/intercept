@@ -29,6 +29,9 @@ except ImportError:
     WEATHER_SAT_SAMPLE_RATE = 2400000
 
 
+# Database setting holding the schedule (WeatherSatScheduler._save)
+SETTING_KEY = "weather_sat.schedule"
+
 class ScheduledPass:
     """A pass scheduled for automatic capture."""
 
@@ -134,6 +137,7 @@ class WeatherSatScheduler:
             self._bias_t = bias_t
             self._enabled = True
 
+        self._save(enabled=True)
         self._refresh_passes()
 
         return self.get_status()
@@ -159,8 +163,43 @@ class WeatherSatScheduler:
 
             self._passes.clear()
 
+        self._save(enabled=False)
         logger.info("Weather satellite auto-scheduler disabled")
         return {"status": "disabled"}
+
+    def _save(self, enabled: bool) -> None:
+        """Keep the settings, so a restart or reboot doesn't turn the schedule off."""
+        settings = {
+            "enabled": enabled,
+            "lat": self._lat,
+            "lon": self._lon,
+            "min_elevation": self._min_elevation,
+            "device": self._device,
+            "gain": self._gain,
+            "bias_t": self._bias_t,
+        }
+        try:
+            from utils.database import set_setting
+
+            set_setting(SETTING_KEY, settings)
+        except Exception as e:
+            logger.warning(f"Couldn't save the weather satellite schedule: {e}")
+
+    def restore(self) -> bool:
+        """Switch the schedule back on if it was on before the app stopped."""
+        try:
+            from utils.database import get_setting
+
+            saved = get_setting(SETTING_KEY)
+        except Exception as e:
+            logger.warning(f"Couldn't read the saved weather satellite schedule: {e}")
+            return False
+        if not isinstance(saved, dict) or not saved.get("enabled") or self._enabled:
+            return False
+        saved = {k: v for k, v in saved.items() if k != "enabled"}
+        self.enable(**saved)
+        logger.info("Weather satellite auto-scheduler restored from saved settings")
+        return True
 
     def skip_pass(self, pass_id: str) -> bool:
         """Manually skip a scheduled pass."""
@@ -225,7 +264,9 @@ class WeatherSatScheduler:
             for p in self._passes:
                 if p._timer:
                     p._timer.cancel()
-                if p._stop_timer:
+                # A capture under way keeps its stop: this runs every half hour,
+                # and a cancelled stop left a recording running for hours
+                if p._stop_timer and p.status != "capturing":
                     p._stop_timer.cancel()
 
             # Keep completed/skipped for history, replace scheduled

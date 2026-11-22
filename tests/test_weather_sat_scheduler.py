@@ -838,3 +838,61 @@ class TestSchedulerIntegration:
 
         assert scheduler.enabled is False
         assert len(scheduler._passes) == 0
+
+
+def test_the_schedule_survives_a_restart(monkeypatch):
+    """Enabled settings are saved; a fresh scheduler (after a reboot) switches back on with them."""
+    import utils.database as database
+
+    store = {}
+    monkeypatch.setattr(database, "set_setting", lambda k, v: store.__setitem__(k, v))
+    monkeypatch.setattr(database, "get_setting", lambda k, default=None: store.get(k, default))
+    monkeypatch.setattr(WeatherSatScheduler, "_refresh_passes", lambda self: None)
+
+    first = WeatherSatScheduler()
+    first.enable(lat=39.2, lon=-84.3, min_elevation=40, gain=46)
+
+    after_reboot = WeatherSatScheduler()
+    assert after_reboot.restore() is True
+    assert after_reboot.enabled
+    assert (after_reboot._lat, after_reboot._min_elevation, after_reboot._gain) == (39.2, 40, 46)
+
+    after_reboot.disable()
+    assert WeatherSatScheduler().restore() is False  # switched off stays off
+
+
+def test_a_refresh_during_a_capture_keeps_its_stop(monkeypatch):
+    """The half-hourly refresh cancelled every stop timer, so the 2026-11-09 04:22
+    capture ran on for three hours and would have blocked the next pass."""
+    monkeypatch.setattr("utils.weather_sat_predict.predict_passes", lambda **kw: [])
+    now = datetime.now(timezone.utc)
+    sp = ScheduledPass(
+        {
+            "id": "METEOR-M2-4_now",
+            "satellite": "METEOR-M2-4",
+            "name": "Meteor-M2-4",
+            "frequency": 137.9,
+            "mode": "LRPT",
+            "startTimeISO": (now - timedelta(minutes=5)).isoformat(),
+            "endTimeISO": (now + timedelta(minutes=10)).isoformat(),
+            "maxEl": 44.0,
+            "duration": 900.0,
+            "quality": "good",
+        }
+    )
+    sp.status = "capturing"
+    sp._stop_timer = MagicMock()
+    waiting = ScheduledPass({**sp.to_dict(), "id": "later", "startTimeISO": (now + timedelta(hours=3)).isoformat(),
+                             "endTimeISO": (now + timedelta(hours=3, minutes=15)).isoformat()})
+    waiting._timer = MagicMock()
+
+    scheduler = WeatherSatScheduler()
+    scheduler._enabled = True
+    scheduler._passes = [sp, waiting]
+    with patch("threading.Timer"):
+        scheduler._refresh_passes()
+
+    sp._stop_timer.cancel.assert_not_called()
+    waiting._timer.cancel.assert_called_once()
+    assert sp in scheduler._passes
+
